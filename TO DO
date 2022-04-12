@@ -1,0 +1,20 @@
+1 - Generate demand
+  we will have two windows, one for sampling the demand (ground truth) and one for sending the updates
+Updates can be sent:
+  - synchronously (every fixed interval): interval
+  - asynchronously (after a threshold crossing, compared with the last value sent): threshold
+  - combination of both
+2 - fix hardcoding of individual routers
+  - e.g. some kind of adjacency list
+        constructs the routers on the fly
+        creates links on the fly
+3 - write forwarding algorithm
+4 - put metrics in packets
+
+have load generater (LG) of load from a normal distribution
+  - configured with a mean and a stddev
+have another distribution that can update the mean of LG
+  - this can be poisson, always up, always down,
+  - from a time-series, or other we device
+  - have a knob to adjust stddev in LG so that that range of values will be closer to mean or further away
+
