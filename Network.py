@@ -1,7 +1,7 @@
 from AdjList import Graph
 from Router import Router
 
-# Convert a Graph of label and weights into a Network of Router and Link
+# Convert a Graph of label and weights into a Network of Routers and Links
 
 class Network:
     def __init__(self, env, graph):
@@ -29,8 +29,19 @@ class Network:
 
             self.routers[name].add_neighbours(neighbours)
             
-    # index into netork by node name
+    # index into network by node name
     # returns a router
     def __getitem__(self, val):
+        """Get network[val]"""
         return self.routers[val]
+
+    # The size of the network
+    def __len__(self):
+        return len(self.routers)
     
+    
+    def print(self):
+        print("{ ", end="")
+        for router in self.routers:
+            print("'{}' : {},".format(self.routers[router].routerid, self.routers[router].outgoing_ports), end="\n")
+        print("}")

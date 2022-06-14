@@ -37,6 +37,7 @@ class Graph:
             node = self.graph[index]
             return [(self.name(value[0]), value[1]) for value in node.as_list()]
 
+    # The size of the graph
     def __len__(self):
         return self.V
     

@@ -106,9 +106,11 @@ def square_topology_example_adj():
 
     # 3 - build the network
     graph = Graph.from_dict(topo)
+    graph.print()
+
     network = Network(env, graph)
-    
-    # graph.print()
+
+    # network.print()
     
     # 4 - Now we create the packet generator. For now, only router a generates packets
     pg = create_packet_generator(env,

@@ -40,7 +40,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
           # check if the neighbour_obj already has a link
           if (neighbour_obj.contains_edge(self)):
               # no need to add a link
-              print("Link Exists "  + str(neighbour) + " --> " + self.routerid)
+              print("Link Exists "  + str(neighbour) + " --> " + str(self.routerid) + " Cancel " +  str(self.routerid) + " --> " + str(neighbour) )
               pass
           else:
               print("Link Add " + self.routerid + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj.routerid) + " delay " + str(propdelay))
