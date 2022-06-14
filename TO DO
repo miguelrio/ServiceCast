@@ -18,3 +18,18 @@ have another distribution that can update the mean of LG
   - from a time-series, or other we device
   - have a knob to adjust stddev in LG so that that range of values will be closer to mean or further away
 
+
+1  LOAD TOPOLOGY
+2  ALLOCATE REPLICAS
+3  ALLOCATE CLIENTS
+4  REPLICAS SEND LOAD
+5  LOAD GETS PROPOGATED AND FORWARDING TABLE UPDATED
+6  GENERATE DEMANDS - INCLUDING DURATION
+7  REQUESTS GET PROPOGATED TOWARDS REPLICA
+8  REPLICAS UPDATE INTERNAL LOAD INFO
+9  REPLICS SEND UPDATES
+10 UPDATES GET PROPOGATED
+11 ROUTERS UPDATE FORWARDING TABLE
+
+- Add event generator at Client
+- 

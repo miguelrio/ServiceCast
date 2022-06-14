@@ -1,7 +1,7 @@
 # Simulation of the ServiceCast system
 # Uses simpy and grotto networking:
 # https://www.grotto-networking.com/DiscreteEventPython.html
-from SimComponents import SwitchPort, PacketGenerator, PacketSink
+from SimComponents import PacketGenerator
 from Router import Router
 from Link import Link
 from AdjList import Graph
@@ -87,6 +87,7 @@ def square_topology_example_orig():
                                  exponential_lambda=5)
   # This line makes packet generator member out poiting to a. it will then do self.out.put() which puts the packet in the receiving queue of router a
     pg.out = a
+
     env.run(until=400)
 
     
@@ -96,22 +97,26 @@ def square_topology_example_adj():
 
     # 2 - Define the topology
     topo = {
-        'a': { ('b', 1), ('c', 4)},
+        'a': { 'b', ('c', 4)},
         'b': { ('c', 3), ('d', 2), ('e', 2)},
         'c': { },
-        'd': { ('b', 1), ('c', 5)},
+        'd': { 'b', ('c', 5)},
         'e': { ('d', 5)}
       }
 
     # 3 - build the network
-    network = Network(simpy.Environment(), Graph.from_dict(topo))
-
+    graph = Graph.from_dict(topo)
+    network = Network(env, graph)
+    
+    # graph.print()
+    
     # 4 - Now we create the packet generator. For now, only router a generates packets
     pg = create_packet_generator(env,
                                  "a", ["b", "c", "d","e"],
                                  exponential_lambda=5)
     # This line makes packet generator member out poiting to a. it will then do self.out.put() which puts the packet in the receiving queue of router a
     pg.out = network['a']
+    
     env.run(until=400)
 
     
@@ -119,25 +124,25 @@ def square_topology_example_adj():
 
 
 # spec = {'A': set([('B', 10), ('C', 20)]),
-#              'B': set(['A', 'D', 'E']),
-#              'C': set(['A', 'F']),
-#              'D': set(['B']),
-#              'E': set(['B', 'F']),
-#              'F': set(['C', 'E'])}
+#               'B': set(['A', 'D', 'E']),
+#               'C': set(['A', 'F']),
+#               'D': set(['B']),
+#               'E': set(['B', 'F']),
+#               'F': set(['C', 'E'])}
 
 # graph = Graph.from_dict(spec)
     
-#print(graph['A'])
-#print(graph[0])
+# print(graph['A'])
+# print(graph[0])
 
-#graph.print()
+# graph.print()
 
 #network = Network(simpy.Environment(), graph)
 #print (network)
 
-#square_topology_example_adj()
+square_topology_example_adj()
 
-square_topology_example_orig()
+#square_topology_example_orig()
 
 
 
