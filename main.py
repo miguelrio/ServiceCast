@@ -2,116 +2,41 @@
 # Uses simpy and grotto networking:
 # https://www.grotto-networking.com/DiscreteEventPython.html
 from SimComponents import SwitchPort, PacketGenerator, PacketSink
+from Router import Router
+from Link import Link
+from AdjList import Graph
+from Network import Network
 import simpy
 import numpy as np
 
 
-def process_message():
-    pass
+#def process_message():
+#    pass
 
 
-
-LINKRATE = 100
-
-# Lets defind the topology of the network
-
-class Router:
-    """ A Router in the Simulation.
-      Requires a put() method as a callback from the PacketGenerator.
-    """
-    def __init__(self, env, routerid):
-        self.env = env
-        self.routerid = routerid
-        # create one SimComponent.SwitchPort for each neighbour_id
-        self.outgoing_ports = dict()
-
-        # Create a structure to retrieve packet sent to this router - think consumer (this router) and producer (the one that sent the packet) pattern
-        # e.g. https://simpy.readthedocs.io/en/latest/examples/process_communication.html
-        self.incoming_packet = simpy.Store(self.env, capacity=1)
-
-
-        # create packet sink
-        self.sink = PacketSink(env)
-
-        # "Register" the process
-        self.env.process(self.run())
-      
-    def add_neighbours(self, neighbours):
-        """ Add some neighbours from a dictionary with label : {router, propogation_delay}
-currently {'b': (routerB,1), 'c':  (routerC,4)},
-        """
-        for neighbour in neighbours.keys():
-          
-          neighbour_obj, propdelay = neighbours[neighbour]
-          self.outgoing_ports[neighbour] = SwitchPort(self.env, rate=LINKRATE, limit_bytes=False)
-        
-          # create a link object for modelling propagation delay. 
-          link = Link(env=self.env,
-                      propagation_delay=propdelay,
-                      dst_node=neighbour_obj)
-          # here we connect our port to our neighbour
-          self.outgoing_ports[neighbour].out = link
-
-    def run(self):
-        # This function defines the process (in the simpy sense) of receiving a packet
-        while True:
-
-            # yielding here will basically "freeze" this process until there is a packet in self.in_packets
-            packet = yield self.incoming_packet.get()
-
-            self.manage_packet(packet)
-
-    def manage_packet(self, packet):
-        if packet.dst == self.routerid:
-            # consume the packet
-            self.sink.put(packet)
-            print("Packet {} consumed in {} at {}".format(
-                packet.id, self.routerid, self.env.now))
-        else:
-            # If the packet is not for us, forward to all neighbours. This is where the main servicecast algorithm will be implemented.
-          for neighbour in self.outgoing_ports:
-            self.outgoing_ports[neighbour].put(packet)
-            print("Packet {} forwarded from {} to {} at {}".format(
-                 packet.id, self.routerid, neighbour, self.env.now))
-           
-
-    def put(self, packet):
-        # this function should be called by the previous hop to send a packet to this router
-        self.incoming_packet.put(packet)
-
-
-class Link:
-    """A Link in the Simulation"""
-    def __init__(self, env, propagation_delay, dst_node):
-        self.env = env
-        self.propagation_delay = propagation_delay
-        self.dst_node = dst_node
-
-    def _send(self, packet):
-        yield self.env.timeout(self.propagation_delay)
-        self.dst_node.put(packet)
-
-    def put(self, packet):
-        self.env.process(self._send(packet))
-
-
+# Lets define a packet generator
 def create_packet_generator(env,
                             id,
                             possible_destinations,
                             exponential_lambda=1,
                             packet_size=100,
                             seed=None):
+    """ Generates packets from node with 'id', and sends to 'possible_destinations'.
+        'exponential_lambda' is passed to the arrival distribution.
+        'packet_size' is used for the size distribution.
+    """
+
     # PacketGenerator accepts three (zero arguments) functions as arguments, one that gives the inter arrival times, one  the packet sizes and one that gives the destinations
 
     # We first define our random numberr generator so that we can reproduce results
     gen = np.random.RandomState(seed=seed)
 
-    def adist():
+    def arrival_dist():
         # The interarrival times of a poisson process follow an exponential
         next_time = gen.exponential(exponential_lambda)
         return next_time
 
-    def sdist():
+    def size_dist():
         # We'll just assume all packets have the same size given by packet_size
         return packet_size
 
@@ -121,15 +46,13 @@ def create_packet_generator(env,
     # Create the packet generator oobject
     packet_generator = PacketGenerator(env,
                                        id=id,
-                                       adist=adist,
-                                       sdist=sdist,
+                                       adist=arrival_dist,
+                                       sdist=size_dist,
                                        destinations_dist=destinations_dist)
     return packet_generator
 
-######################
-# Code starts here
-#############################
-def square_topology_example():
+# Lets defind the topology of the network
+def square_topology_example_orig():
 
   # 1 - First we create the simpy environment 
     env = simpy.Environment()
@@ -166,7 +89,55 @@ def square_topology_example():
     pg.out = a
     env.run(until=400)
 
+    
+def square_topology_example_adj():
+    # 1 - First we create the simpy environment 
+    env = simpy.Environment()
 
-square_topology_example()
+    # 2 - Define the topology
+    topo = {
+        'a': { ('b', 1), ('c', 4)},
+        'b': { ('c', 3), ('d', 2), ('e', 2)},
+        'c': { },
+        'd': { ('b', 1), ('c', 5)},
+        'e': { ('d', 5)}
+      }
 
-#
+    # 3 - build the network
+    network = Network(simpy.Environment(), Graph.from_dict(topo))
+
+    # 4 - Now we create the packet generator. For now, only router a generates packets
+    pg = create_packet_generator(env,
+                                 "a", ["b", "c", "d","e"],
+                                 exponential_lambda=5)
+    # This line makes packet generator member out poiting to a. it will then do self.out.put() which puts the packet in the receiving queue of router a
+    pg.out = network['a']
+    env.run(until=400)
+
+    
+# go !
+
+
+# spec = {'A': set([('B', 10), ('C', 20)]),
+#              'B': set(['A', 'D', 'E']),
+#              'C': set(['A', 'F']),
+#              'D': set(['B']),
+#              'E': set(['B', 'F']),
+#              'F': set(['C', 'E'])}
+
+# graph = Graph.from_dict(spec)
+    
+#print(graph['A'])
+#print(graph[0])
+
+#graph.print()
+
+#network = Network(simpy.Environment(), graph)
+#print (network)
+
+#square_topology_example_adj()
+
+square_topology_example_orig()
+
+
+
