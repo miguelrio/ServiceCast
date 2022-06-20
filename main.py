@@ -4,6 +4,7 @@
 
 from AdjList import Graph
 from Network import Network
+from Server import Server
 from Generator import Generator
 import simpy
 
@@ -37,19 +38,27 @@ def square_topology_example_adj():
     network = Network(env, graph)
 
     # do some test prints
-    network.print()
-    
     print(network.nodes())
     print(network.edges())
 
     print(network.links_from('a'))
 
     print(network.links_to('d'))
+
+    # add a server
+    s1 = Server(env, 's1')
+    network.linkhost(s1, network['a'])
+    
+    # add a client
+    c1 = Server(env, 'c1')
+    network.linkhost(c1, network['e'])
+    
+    network.print()
     
     # 4 - Now we create the packet generator.
 
-    # For now, only router 'a' generates packets
-    generator = Generator.packet_generator(network, "a", ["b", "c", "d","e"], exponential_lambda=5)
+    # For now, only router 's1' generates packets
+    generator = Generator.packet_generator(network, "s1", ["b", "c", "d","e"], exponential_lambda=25)
 
     # run
     print("RUN ----------------------------------------------------------------")

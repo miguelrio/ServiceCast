@@ -86,8 +86,15 @@ class PacketGenerator(object):
             # wait for next transmission
             yield self.env.timeout(self.adist())
             self.packets_sent += 1
-            p = Packet(self.env.now, self.sdist(), self.packets_sent, src=self.id, dst=self.destinations_dist(), flow_id=self.flow_id)
-            self.out.put(p)
+            self.preparePacket()
+
+    # Prepare a packet for transmission
+    # Having a separate method makes it easier to do subclasses
+    def preparePacket(self):
+        """Prepare a packet for transmission"""
+        # Use the default Packet class
+        p = Packet(self.env.now, self.sdist(), self.packets_sent, src=self.id, dst=self.destinations_dist(), flow_id=self.flow_id)
+        self.out.put(p)
 
 
 class PacketSink(object):

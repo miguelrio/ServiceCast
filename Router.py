@@ -10,7 +10,7 @@ class Router(object):
     """
     def __init__(self, env, routerid):
         self.env = env
-        self.routerid = routerid
+        self._routerid = routerid
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
@@ -27,7 +27,7 @@ class Router(object):
         # "Register" the process
         self.env.process(self.run())
 
-        print ("Router " + str(self.routerid) + " running")
+        print ("Router " + str(self._routerid) + " running")
 
       
     def add_neighbours(self, neighbours, rate=LINKRATE):
@@ -44,10 +44,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
           # check if the neighbour_obj already has a link
           if (neighbour_obj.contains_edge(self)):
               # no need to add a link
-              print("Link Exists "  + str(neighbour) + " --> " + str(self.routerid) + " Cancel " +  str(self.routerid) + " --> " + str(neighbour) )
+              print("Link Exists "  + str(neighbour) + " --> " + str(self._routerid) + " Cancel " +  str(self._routerid) + " --> " + str(neighbour) )
               pass
           else:
-              print("Link Add " + self.routerid + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj.routerid) + " delay " + str(propdelay))
+              print("Link Add " + self._routerid + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj._routerid) + " delay " + str(propdelay))
 
               self.outgoing_ports[neighbour] = SwitchPort(self.env, rate=rate, limit_bytes=False)
         
@@ -67,12 +67,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def contains_edge(self, dest):
         """Is there an edge from this router to dest
         """
-        if (dest.routerid in self.outgoing_ports):
+        if (dest._routerid in self.outgoing_ports):
             return True
         else:
             return False
-            
-            
+
+
     def run(self):
         # This function defines the process (in the simpy sense) of receiving a packet
         while True:
@@ -92,18 +92,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
          If it is for us, consume it
          Otherwise, forward it
         """
-        if packet.dst == self.routerid:
+        if packet.dst == self._routerid:
             # consume the packet
             self.sink.put(packet)
             print("{:.3f}: Packet {}.{} consumed in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, self.routerid, (self.env.now - packet.time)))
+                packet.src, packet.id, self._routerid, (self.env.now - packet.time)))
         else:
             # If the packet is not for us, forward to all neighbours.
             # This is where the main servicecast algorithm will be implemented.
           for neighbour in self.outgoing_ports:
             self.outgoing_ports[neighbour].put(packet)
             print("{:.3f}: Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now,
-                 packet.src, packet.id, self.routerid, neighbour, (self.env.now - packet.time)))
+                 packet.src, packet.id, self._routerid, neighbour, (self.env.now - packet.time)))
            
 
     def put(self, packet):
@@ -111,17 +111,24 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """
         # this function should be called by the previous hop to send a packet to this router
         # packet_store is a simpy.Store(self.env, capacity=1)
-        if packet.src == self.routerid:
-            print("{:.3f}: Packet {}.{} ({}) created in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self.routerid, (self.env.now - packet.time)))
+        if packet.src == self._routerid:
+            print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
+                packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
         else:
-            print("{:.3f}: Packet {}.{} ({}) arrived in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self.routerid, (self.env.now - packet.time)))
+            print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} after {:.3f}".format(self.env.now,
+                packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
         self.packet_store.put(packet)
 
+    def ports(self):
+        """Dict of ports"""
+        return self.outgoing_ports
+            
+    def id(self):
+        """The id of this node"""
+        return self._routerid
 
     def __str__(self):
-        return "Router " + str(self.routerid) 
+        return "Router " + str(self._routerid) 
 
     def __repr__(self):
-        return "Router " + str(self.routerid) 
+        return "Router " + str(self._routerid) 

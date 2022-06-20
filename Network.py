@@ -44,6 +44,13 @@ class Network:
         # start the simulation run
         self.env.run(until)
 
+    # add a host to the network and link it to a specified router
+    def linkhost(self, host, router):
+        # now add it to the routers
+        self.routers[host.id()] = host
+        # add link
+        link = host.set_neighbour(router)
+
         
     # index into network by node name
     # returns a router
@@ -65,16 +72,16 @@ class Network:
 
     # Links from a node - by name
     def links_from(self, val):
-        return list(filter(lambda l: l.src_node.routerid == val, self.links))
+        return list(filter(lambda l: l.src_node.id() == val, self.links))
     
     # Links to a node - by name
     def links_to(self, val):
-        return list(filter(lambda l: l.dst_node.routerid == val, self.links))
+        return list(filter(lambda l: l.dst_node.id() == val, self.links))
     
     def print(self):
         print("{ ", end="")
         for router in self.routers:
-            ports = self.routers[router].outgoing_ports
+            ports = self.routers[router].ports()
             portStr = [ str(port)  for port in ports.keys()]
-            print("'{}' : {},".format(self.routers[router].routerid, portStr ), end="\n")
+            print("'{}' : {},".format(self.routers[router].id(), portStr ), end="\n")
         print("}")

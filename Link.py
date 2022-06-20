@@ -18,8 +18,8 @@ class Link(object):
         self.dst_node.put(packet)
 
     def __str__(self):
-        return "Link " + str(self.src_node.routerid) + " --> " + str(self.dst_node.routerid) + " (" + str(self.propagation_delay) + ")"
+        return "Link " + str(self.src_node.id()) + " --> " + str(self.dst_node.id()) + " (" + str(self.propagation_delay) + ")"
 
     def __repr__(self):
-        return "Link " + str(self.src_node.routerid) + " --> " + str(self.dst_node.routerid) + " (" + str(self.propagation_delay) + ")"
+        return "Link " + str(self.src_node.id()) + " --> " + str(self.dst_node.id()) + " (" + str(self.propagation_delay) + ")"
 
