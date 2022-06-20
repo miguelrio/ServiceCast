@@ -5,6 +5,7 @@
 from AdjList import Graph
 from Network import Network
 from Server import Server
+from Client import Client
 from Generator import Generator
 import simpy
 
@@ -50,7 +51,7 @@ def square_topology_example_adj():
     network.linkhost(s1, network['a'])
     
     # add a client
-    c1 = Server(env, 'c1')
+    c1 = Client(env, 'c1')
     network.linkhost(c1, network['e'])
     
     network.print()
