@@ -31,7 +31,7 @@ class Packet(object):
         flow_id : int
             small integer that can be used to identify a flow
     """
-    def __init__(self, time, size, id, src="a", dst="z", flow_id=0):
+    def __init__(self, time, size, id, src, dst, flow_id=0):
         self.time = time
         self.size = size
         self.id = id

@@ -36,7 +36,7 @@ def square_topology_example_adj():
     graph.print()
 
     # graph -> network
-    network = Network(env, graph)
+    network = Network.from_graph(env, graph)
 
     # do some test prints
     print(network.nodes())
@@ -58,8 +58,11 @@ def square_topology_example_adj():
     
     # 4 - Now we create the packet generator.
 
-    # For now, only router 's1' generates packets
-    generator = Generator.packet_generator(network, "s1", ["b", "c", "d","e"], exponential_lambda=25)
+    # Server 's1' generates packets
+    generator_s1 = Generator.server_packet_generator(network, "s1", ["b", "c", "d","e"], exponential_lambda=25)
+
+    # Client 'c1' generates packets
+    generator_c1 = Generator.client_packet_generator(network, "c1", ["e"], exponential_lambda=50)
 
     # run
     print("RUN ----------------------------------------------------------------")

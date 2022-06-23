@@ -4,12 +4,19 @@ from Router import Router
 # Convert a Graph of label and weights into a Network of Routers and Links
 
 class Network:
-    def __init__(self, env, graph):
-        """ Create a network from a Graph representation of an adjacency list
+    def __init__(self):
+        """ Create a network
         """
         self.routers = {}         # a dictionary of routers
         self.links = []           # a list of links
-        self.env = env
+        
+    @classmethod
+    def from_graph(cls, env, graph):
+        """ Create a network from a Graph representation of an adjacency list
+        """
+        network = Network()
+        # add a handle to the simpy Environment
+        network.env = env
         
         # first we create the list of Routers
         for i in range(len(graph)):
@@ -18,7 +25,7 @@ class Network:
             # create a Router
             router = Router(env, name)
             # now add it to the routers
-            self.routers[name] = router
+            network.routers[name] = router
 
         # now add the links
         for i in range(len(graph)):
@@ -27,11 +34,13 @@ class Network:
             # get the adjacency list
             nodes = graph[i]
             # convert [ ('b', 1), ('c', 4)], into {'b': (routerB,1), 'c':  (routerC,4)},
-            neighbours = {value[0] : (self.routers[value[0]], value[1]) for value in nodes}
+            neighbours = {value[0] : (network.routers[value[0]], value[1]) for value in nodes}
 
-            links = self.routers[name].add_neighbours(neighbours)
+            links = network.routers[name].add_neighbours(neighbours)
 
-            self.links.extend(links)
+            network.links.extend(links)
+
+        return network
             
     def start(self, until=1000):
         """Start the Network processing.
@@ -51,7 +60,22 @@ class Network:
         # add link
         link = host.set_neighbour(router)
 
-        
+
+
+    # contains router
+    def contains_router(self, r):
+        if (r.id() in self.routers):
+            return True
+        else:
+            return False
+
+    # contains link
+    def contains_link(self, r1, r2):
+        if (r.id() in self.routers):
+            return True
+        else:
+            return False
+
     # index into network by node name
     # returns a router
     def __getitem__(self, val):
