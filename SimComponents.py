@@ -12,6 +12,79 @@ from simpy.resources import base
 from heapq import heappush, heappop
 
 
+class Event(object):
+    """A simple class that represents an Event.
+       It has a time, a sequence no, and  a type.
+    """
+    def __init__(self, time, seq, type):
+        self.time = time
+        self.seq = seq
+        self.type = type
+    
+    def __repr__(self):
+        return "Event time: {} seq: {} type: {}".\
+            format(self.time, self.seq, self.type)
+
+
+
+class EventGenerator(object):
+    """ Generates events with given inter-arrival time distribution.
+        Set the "out" member variable to the entity to receive the event.
+
+        Parameters
+        ----------
+        env : simpy.Environment
+            the simulation environment
+        id :  an object id
+        adist : function
+            a no parameter function that returns the successive inter-arrival times of the events
+        sdist : function
+            a no parameter function that returns the successive sizes for each event
+        destinations_dist: function
+        
+        initial_delay : number
+            Starts generation after an initial delay. Default = 0
+        finish : number
+            Stops generation at the finish time. Default is infinite
+    """
+    def __init__(self, env, id,  adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
+        self.id = id
+        self.env = env
+        self.adist = adist
+        self.sdist = sdist
+        self.destinations_dist = destinations_dist
+        self.initial_delay = initial_delay
+        self.finish = finish
+        self.out = None
+        self.event_count = 0
+        self.action = env.process(self.run())  # starts the run() method as a SimPy process
+        self.flow_id = flow_id
+
+    def run(self):
+        """The generator function used in simulations.
+        """
+        yield self.env.timeout(self.initial_delay)
+        while self.env.now < self.finish:
+            # wait for next transmission
+            yield self.env.timeout(self.adist())
+            self.event_count += 1
+            self.process_event(self.create_event())
+
+    # Create an event
+    # Having a separate method makes it easier to do subclasses
+    def create_event(self):
+        """Create an event"""
+        # Use the default Event class
+        e = Event(self.env.now, self.event_count, "Event")
+        return e
+    
+    # Process an event
+    # Having a separate method makes it easier to do subclasses
+    def process_event(self, ev):
+        """Process an event"""
+        # Put the event in the out channel
+        self.out.put(ev)
+
 class Packet(object):
     """ A very simple class that represents a packet.
         This packet will run through a queue at a switch output port.
@@ -42,59 +115,6 @@ class Packet(object):
     def __repr__(self):
         return "id: {}, src: {}, time: {}, size: {}".\
             format(self.id, self.src, self.time, self.size)
-
-
-class PacketGenerator(object):
-    """ Generates packets with given inter-arrival time distribution.
-        Set the "out" member variable to the entity to receive the packet.
-
-        Parameters
-        ----------
-        env : simpy.Environment
-            the simulation environment
-        adist : function
-            a no parameter function that returns the successive inter-arrival times of the packets
-        sdist : function
-            a no parameter function that returns the successive sizes of the packets
-        destinations_dist: function
-        
-        initial_delay : number
-            Starts generation after an initial delay. Default = 0
-        finish : number
-            Stops generation at the finish time. Default is infinite
-
-
-    """
-    def __init__(self, env, id,  adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
-        self.id = id
-        self.env = env
-        self.adist = adist
-        self.sdist = sdist
-        self.destinations_dist = destinations_dist
-        self.initial_delay = initial_delay
-        self.finish = finish
-        self.out = None
-        self.packets_sent = 0
-        self.action = env.process(self.run())  # starts the run() method as a SimPy process
-        self.flow_id = flow_id
-
-    def run(self):
-        """The generator function used in simulations.
-        """
-        yield self.env.timeout(self.initial_delay)
-        while self.env.now < self.finish:
-            # wait for next transmission
-            yield self.env.timeout(self.adist())
-            self.packets_sent += 1
-            self.preparePacket()
-
-    # Prepare a packet for transmission
-    # Having a separate method makes it easier to do subclasses
-    def preparePacket(self):
-        """Prepare a packet for transmission"""
-        # Use the default Packet class
-        p = Packet(self.env.now, self.sdist(), self.packets_sent, src=self.id, dst=self.destinations_dist(), flow_id=self.flow_id)
-        self.out.put(p)
 
 
 class PacketSink(object):

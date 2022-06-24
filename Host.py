@@ -85,18 +85,14 @@ class Host(object):
             print("{:.3f}: Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, self.neighbour, (self.env.now - packet.time)))
            
 
-    def put(self, packet):
-        """ The callback from the PacketGenerator
+    def put(self, event):
+        """ The callback from the EventGenerator
         """
-        # this function should be called by the previous hop to send a packet to this host
-        # packet_store is a simpy.Store(self.env, capacity=1)
-        if packet.src == self.hostid:
-            print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
-        else:
-            print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
-        self.packet_store.put(packet)
+        self.process_event(event)
+
+    def process_event(event):
+        print("{} Event {} type {}".format(event.time, event.seq, event.type))
+
 
     def ports(self):
         """Dict of ports"""

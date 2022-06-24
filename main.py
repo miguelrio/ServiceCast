@@ -58,11 +58,11 @@ def square_topology_example_adj():
     
     # 4 - Now we create the packet generator.
 
-    # Server 's1' generates packets
-    generator_s1 = Generator.server_packet_generator(network, "s1", ["b", "c", "d","e"], exponential_lambda=25)
+    # Server 's1' generates packets from arriving events
+    generator_s1 = Generator.server_event_generator(network, "s1", ["b", "c", "d","e"], exponential_lambda=25)
 
-    # Client 'c1' generates packets
-    generator_c1 = Generator.client_packet_generator(network, "c1", ["e"], exponential_lambda=50)
+    # Client 'c1' generates packets from arriving events
+    generator_c1 = Generator.client_event_generator(network, "c1", ["e"], exponential_lambda=50)
 
     # run
     print("RUN ----------------------------------------------------------------")
