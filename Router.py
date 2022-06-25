@@ -100,6 +100,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         else:
             # If the packet is not for us, forward to all neighbours.
             # This is where the main servicecast algorithm will be implemented.
+          # MR: if packet is data packet 
+          # MR:   STEP 8 forward to right link based on fw table
+          # MR: else
+          #       STEP 5,11 forward to appropriate links based on routing table information (fix code below)
+          #      STEP 6,12 check if fw table needs changing. If yes, change it
           for neighbour in self.outgoing_ports:
             self.outgoing_ports[neighbour].put(packet)
             print("{:.3f}: Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now,

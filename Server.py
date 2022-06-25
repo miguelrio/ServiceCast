@@ -25,6 +25,8 @@ class Server(Host):
             print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
         self.packet_store.put(packet)
+      # MR: STEP 9 update load (add or subtract)
+      # MR: STEP 10 If threshold passes send update
         
     def process_other_event(self, event):
         print("Event type {}".format(event.type))
