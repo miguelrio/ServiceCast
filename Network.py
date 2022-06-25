@@ -60,8 +60,6 @@ class Network:
         # add link
         link = host.set_neighbour(router)
 
-
-
     # contains router
     def contains_router(self, r):
         if (r.id() in self.routers):
@@ -75,6 +73,36 @@ class Network:
             return True
         else:
             return False
+
+    # add an edge
+    # add new nodes if needed
+    def add_edge(self,n1, n2, weight=1):
+        # does n1 exist
+        if not self.contains_router(n1):
+            self.routers[n1.id()] = n1
+            print("add " + n1.id())
+            
+        # does n2 exist
+        if not self.contains_router(n2):
+            self.routers[n2.id()] = n2
+            print("add " + n2.id())
+
+        # does link from n1 -> n2 exist
+        n1_n2_links = list(filter(lambda l: l.src_node.id() == n1.id() and l.dst_node.id() == n2.id(), self.links))
+        print("links " + str(n1_n2_links))
+
+        
+
+        if n1_n2_links == []:
+            # link doesnt exist
+            # create {'n2': (n2, weight) }
+            link_dict = { n2.id() : (n2, weight) }
+
+            links = self.routers[n1.id()].add_neighbours(link_dict)
+
+            self.links.extend(links)
+            print("add links " + str(links))
+
 
     # index into network by node name
     # returns a router

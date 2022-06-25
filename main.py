@@ -6,6 +6,7 @@ from AdjList import Graph
 from Network import Network
 from Server import Server
 from Client import Client
+from Router import Router
 from Generator import Generator
 import simpy
 
@@ -37,6 +38,8 @@ def square_topology_example_adj():
 
     # graph -> network
     network = Network.from_graph(env, graph)
+
+    network.add_edge(network['c'], Router(env, 'f'))
 
     # do some test prints
     print(network.nodes())
