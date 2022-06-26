@@ -1,6 +1,6 @@
 import simpy
 from SimComponents import SwitchPort, PacketSink
-from Link import Link
+from Link import LinkEnd
 
 LINKRATE = 100
 
@@ -41,33 +41,47 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
           
           neighbour_obj, propdelay = neighbours[neighbour]
 
-          # check if the neighbour_obj already has a link
-          if (neighbour_obj.contains_edge(self)):
-              # no need to add a link
-              print("Link Exists "  + str(neighbour) + " --> " + str(self._routerid) + " Cancel " +  str(self._routerid) + " --> " + str(neighbour) )
-              pass
-          else:
-              print("Link Add " + self._routerid + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj._routerid) + " delay " + str(propdelay))
+          link = self.add_neighbour(neighbour_obj, propdelay, rate)
 
-              self.outgoing_ports[neighbour] = SwitchPort(self.env, rate=rate, limit_bytes=False)
-        
-              # create a link object for modelling propagation delay. 
-              link = Link(env=self.env,
-                          propagation_delay=propdelay,
-                          src_node=self,
-                          dst_node=neighbour_obj)
-
+          if link != None:
+              # a new link was created
               links.append(link)
-              
-              # here we connect our port to our neighbour
-              self.outgoing_ports[neighbour].out = link
 
         return links
+
+    def add_neighbour(self, neighbour_obj, propdelay=1, rate=LINKRATE):
+        """Add a neighbour to this router"""
+        neighbour = neighbour_obj.id()
+            
+        # check if the neighbour_obj already has a link
+        if (self.contains_edge(neighbour_obj)):
+            # no need to add a link
+
+            print("LinkEnd Exists "  + str(self._routerid) + " --> " + str(neighbour) + " Cancel " +  str(self._routerid) + " --> " + str(neighbour) )
+
+            return ("exists", self.outgoing_ports[neighbour_obj.id()])
+
+        else:
+            print("LinkEnd Add " + self._routerid + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
+
+            self.outgoing_ports[neighbour] = SwitchPort(self.env, rate=rate, limit_bytes=False)
+
+            # create a link object for modelling propagation delay. 
+            link = LinkEnd(env=self.env,
+                        propagation_delay=propdelay,
+                        src_node=self,
+                        dst_node=neighbour_obj)
+
+            # here we connect our port to our neighbour
+            self.outgoing_ports[neighbour].out = link
+
+            return ("create", link)
+        
 
     def contains_edge(self, dest):
         """Is there an edge from this router to dest
         """
-        if (dest._routerid in self.outgoing_ports):
+        if (dest.id() in self.outgoing_ports):
             return True
         else:
             return False

@@ -45,17 +45,17 @@ def square_topology_example_adj():
     print(network.nodes())
     print(network.edges())
 
-    print(network.links_from('a'))
+    print("From a: " + str(network.links_from('a')))
 
-    print(network.links_to('d'))
+    print("To d: " + str(network.links_to('d')))
 
     # add a server
     s1 = Server(env, 's1')
-    network.linkhost(s1, network['a'])
+    network.add_host(s1, network['a'])
     
     # add a client
     c1 = Client(env, 'c1')
-    network.linkhost(c1, network['e'])
+    network.add_host(c1, network['e'])
     
     network.print()
     

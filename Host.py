@@ -1,6 +1,6 @@
 import simpy
 from SimComponents import SwitchPort, PacketSink
-from Link import Link
+from Link import LinkEnd
 
 LINKRATE = 100
 
@@ -31,17 +31,17 @@ class Host(object):
         print (self.type + " " + str(self.hostid) + " running")
 
       
-    def set_neighbour(self, neighbour_obj, propdelay=1, rate=LINKRATE):
-        """ Set a neighbour from this host to a router"""
+    def add_neighbour(self, neighbour_obj, propdelay=1, rate=LINKRATE):
+        """Add a neighbour from this host to a router"""
         link = None
         
-        print("Link Add " + self.id() + " -> " + "neighbour " + str(neighbour_obj) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
+        print("LinkEnd Add " + self.id() + " -> " + "neighbour " + str(neighbour_obj) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
 
         self.neighbour = neighbour_obj.id()
         self.outgoing_port = SwitchPort(self.env, rate=rate, limit_bytes=False)
         
         # create a link object for modelling propagation delay. 
-        link = Link(env=self.env,
+        link = LinkEnd(env=self.env,
                     propagation_delay=propdelay,
                     src_node=self,
                     dst_node=neighbour_obj)
@@ -50,7 +50,7 @@ class Host(object):
         # here we connect our port to our neighbour
         self.outgoing_port.out = link
 
-        return link
+        return ("create", link)
 
             
             

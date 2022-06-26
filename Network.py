@@ -1,5 +1,6 @@
 from AdjList import Graph
 from Router import Router
+from Link import BidirectionalLink
 
 # Convert a Graph of label and weights into a Network of Routers and Links
 
@@ -33,12 +34,22 @@ class Network:
             name = graph.name(i)
             # get the adjacency list
             nodes = graph[i]
-            # convert [ ('b', 1), ('c', 4)], into {'b': (routerB,1), 'c':  (routerC,4)},
-            neighbours = {value[0] : (network.routers[value[0]], value[1]) for value in nodes}
 
-            links = network.routers[name].add_neighbours(neighbours)
+            # try all nodes at 'name'
 
-            network.links.extend(links)
+            for node in nodes:
+                # skip through [ ('b', 1), ('c', 4)]
+                current = network.routers[name]
+                neighbour_obj = network.routers[node[0]]
+
+                # add the neighbours for current to neighbour_obj
+                # and neighbour_obj to current
+                status1 = current.add_neighbour(neighbour_obj, node[1])
+                status2 = neighbour_obj.add_neighbour(current, node[1])
+
+                # create the BidirectionalLink
+                if status1[0] == "create" and status2[0] == "create":
+                    network.links.append(BidirectionalLink(status1[1], status2[1]))
 
         return network
             
@@ -52,13 +63,6 @@ class Network:
             
         # start the simulation run
         self.env.run(until)
-
-    # add a host to the network and link it to a specified router
-    def linkhost(self, host, router):
-        # now add it to the routers
-        self.routers[host.id()] = host
-        # add link
-        link = host.set_neighbour(router)
 
     # contains router
     def contains_router(self, r):
@@ -74,6 +78,11 @@ class Network:
         else:
             return False
 
+    # add a host to the network and link it to a specified router
+    def add_host(self, host, router, weight=1):
+        # now add it to the routers and add a link
+        self.add_edge(host, router, weight)
+
     # add an edge
     # add new nodes if needed
     def add_edge(self,n1, n2, weight=1):
@@ -87,21 +96,14 @@ class Network:
             self.routers[n2.id()] = n2
             print("add " + n2.id())
 
-        # does link from n1 -> n2 exist
-        n1_n2_links = list(filter(lambda l: l.src_node.id() == n1.id() and l.dst_node.id() == n2.id(), self.links))
-        print("links " + str(n1_n2_links))
 
-        
+        # add the neighbours for the 2 nodes
+        status1 = n2.add_neighbour(n1, weight)
+        status2 = n1.add_neighbour(n2, weight)
 
-        if n1_n2_links == []:
-            # link doesnt exist
-            # create {'n2': (n2, weight) }
-            link_dict = { n2.id() : (n2, weight) }
-
-            links = self.routers[n1.id()].add_neighbours(link_dict)
-
-            self.links.extend(links)
-            print("add links " + str(links))
+        # create the BidirectionalLink
+        if status1[0] == "create" and status2[0] == "create":
+            self.links.append(BidirectionalLink(status1[1], status2[1]))
 
 
     # index into network by node name
@@ -124,11 +126,12 @@ class Network:
 
     # Links from a node - by name
     def links_from(self, val):
-        return list(filter(lambda l: l.src_node.id() == val, self.links))
+        # filter over a list of BidirectionalLink
+        return list(filter(lambda l: val in l.links(), self.links))
     
     # Links to a node - by name
     def links_to(self, val):
-        return list(filter(lambda l: l.dst_node.id() == val, self.links))
+        return list(filter(lambda l: val in l.links(), self.links))
     
     def print(self):
         print("{ ", end="")
