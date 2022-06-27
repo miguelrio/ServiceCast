@@ -2,6 +2,8 @@ from AdjList import Graph
 from Router import Router
 from Link import BidirectionalLink
 from Host import Host
+from Server import Server
+from Client import Client
 
 # Convert a Graph of label and weights into a Network of Routers and Links
 
@@ -103,18 +105,46 @@ class Network:
         else:
             raise TypeError("host must be a Host")
 
+    # add a client to the network and link it to a specified router
+    def add_client(self, host, router, weight=1):
+        """Add an edge from a Client to a Router.
+           Pass in a name or a Client, and a Router.
+        """
+        if isinstance(host, Client):
+            # now add it to the routers and add a link
+            self.add_edge(host, router, weight)
+        elif type(host) == str:
+            # got a name
+            self.add_edge(Client(host), router, weight)
+        else:
+            raise TypeError("host must be a Client or a name")
+
+    # add a server to the network and link it to a specified router
+    def add_server(self, host, router, weight=1):
+        """Add an edge from a Server to a Router.
+           Pass in a name or a Server, and a Router.
+        """
+        if isinstance(host, Server):
+            # now add it to the routers and add a link
+            self.add_edge(host, router, weight)
+        elif type(host) == str:
+            # got a name
+            self.add_edge(Server(host), router, weight)
+        else:
+            raise TypeError("host must be a Server or a name")
+
     # add an edge
     # add new nodes if needed
     # return the new edge
     # or None, if nothing created
     def add_edge(self,n1, n2, weight=1):
         """Add an edge from one Router to another Router.
-           Pass in 2 Routers.
+           Pass in 2 Routers. Binds in the Environment to both Routers.
         """
         # does n1 exist
         r1 = None
         if not self.contains_router(n1):
-
+            # new node
             if type(n1) == str:
                 # just got a name
                 # make a Router
@@ -126,15 +156,20 @@ class Network:
                 self.routers[n1.id()] = r1
                 print("add " + n1.id())
         else:
+            # existing node
             if type(n1) == str:
                 # just got a name
                 r1 = self.routers[n1]
             else:
                 r1 = self.routers[n1.id()]
+        # bind the Environment to the router
+        r1.set_env(self.env)
+
             
         # does n2 exist
         r2 = None
         if not self.contains_router(n2):
+            # new node
             if type(n2) == str:
                 # just got a name
                 # make a Router
@@ -146,12 +181,14 @@ class Network:
                 self.routers[n2.id()] = r2
                 print("add " + n2.id())
         else:
+            # existing node
             if type(n2) == str:
                 # just got a name
                 r2 = self.routers[n2]
             else:
                 r2 = self.routers[n2.id()]
-
+        # bind the Environment to the router
+        r2.set_env(self.env)
 
         # add the neighbours for the 2 nodes
         (status1, link1) = r2.add_neighbour(r1, weight)
@@ -183,6 +220,14 @@ class Network:
     # get links
     def edges(self):
         return self.links
+
+    # get neighbours of a router
+    def neighbours(self, r):
+        return self.routers[r].neighbours()
+
+    # degree at a router
+    def degree(self, r):
+        return self.routers[r].degree()
 
     # Links from a node - by name
     def links_from(self, val):

@@ -3,8 +3,8 @@ from SimComponents import Packet
 
 class Client(Host):
     """ A Client in the Simulation."""
-    def __init__(self, env, clientid):
-        super().__init__(env, clientid)
+    def __init__(self, clientid, env=None):
+        super().__init__(clientid, env)
         self.type = "Client"
 
     def process_event(self, event):

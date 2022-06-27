@@ -8,13 +8,17 @@ class Host(object):
     """ A Host in the Simulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
-    def __init__(self, env, hostid):
-        self.env = env
+    def __init__(self, hostid, env=None):
         self.hostid = hostid
         # create one SimComponent.SwitchPort for the neighbour
         self.outgoing_port = None
         self.type = "Host"
 
+        self.set_env(env)
+
+    def set_env(self,env):
+        """ Set the env"""
+        self.env = env
         # Create a structure to retrieve packet sent to this host - think consumer (this host) and producer (the one that sent the packet) pattern
         # e.g. https://simpy.readthedocs.io/en/latest/examples/process_communication.html
         self.packet_store = simpy.Store(self.env, capacity=1)
@@ -22,6 +26,7 @@ class Host(object):
         # create packet sink
         self.sink = PacketSink(env)
 
+        
     def start(self):
         """Start the Host.
         Calls back to the simpy env to start processing"""
@@ -103,6 +108,14 @@ class Host(object):
         print("{:.3f}: HOST_RECV Packet {}.{} consumed in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, link_end.src_node.id(), (self.env.now - packet.time)))
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))
+
+    def neighbours(self):
+        """Neighbours of Host"""
+        return list(self.neighbour)
+
+    def degree(self):
+        """Degree of Host"""
+        return 1
 
 
     def ports(self):

@@ -39,7 +39,7 @@ def square_topology_example_adj():
     # graph -> network
     network = Network.from_graph(graph, env)
 
-    network.add_edge(network['c'], Router('f', env))
+    network.add_edge('c', 'f')
 
     # do some test prints
     print(network.nodes())
@@ -49,14 +49,18 @@ def square_topology_example_adj():
 
     print("To d: " + str(network.links_to('d')))
 
+    print("Neighbours b: " + str(network.neighbours('b')))
+    print("Degree b: " + str(network.degree('b')))
+
     # add a server
-    s1 = Server(env, 's1')
-    network.add_host(s1, network['a'])
+    network.add_server("s1", 'a')
     
     # add a client
-    c1 = Client(env, 'c1')
-    network.add_host(c1, network['e'])
+    network.add_client("c1", 'e')
     
+    print("Neighbours s1: " + str(network.neighbours('s1')))
+    print("Degree s1: " + str(network.degree('s1')))
+
     network.print()
     
     # 4 - Now we create the packet generator.

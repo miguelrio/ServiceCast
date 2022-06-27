@@ -9,18 +9,22 @@ class Router(object):
       Requires a put() method as a callback from the PacketGenerator.
     """
     def __init__(self, routerid, env=None):
-        self.env = env
         self._routerid = routerid
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
+        self.set_env(env)
+
+    def set_env(self,env):
+        """ Set the env"""
+        self.env = env
         # Create a structure to retrieve packet sent to this router - think consumer (this router) and producer (the one that sent the packet) pattern
         # e.g. https://simpy.readthedocs.io/en/latest/examples/process_communication.html
         self.packet_store = simpy.Store(self.env, capacity=1)
 
         # create packet sink
         self.sink = PacketSink(env)
-
+        
     def start(self):
         """Start the Router.
         Calls back to the simpy env to start processing"""
@@ -150,6 +154,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))
+
+    def neighbours(self):
+        """Neighbours of Router"""
+        return list(self.outgoing_ports.keys())
+
+    def degree(self):
+        """Degree of Router"""
+        return len(self.outgoing_ports)
 
     def ports(self):
         """Dict of ports"""

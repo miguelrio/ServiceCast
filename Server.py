@@ -4,8 +4,8 @@ from SimComponents import Packet
 class Server(Host):
     """ A Server in the Simulation.
     """
-    def __init__(self, env, serverid):
-        super().__init__(env, serverid)
+    def __init__(self, serverid, env=None):
+        super().__init__(serverid, env)
         self.type = "Server"
 
 

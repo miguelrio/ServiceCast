@@ -12,10 +12,17 @@ import simpy
 
 
 
-# Use a topology by explicitly adding the edges
-def square_topology_example_edges():
-    # 1 - No topology
-    
+# Use a topology from an adjacency list
+def square_topology_example_adj():
+    # 1 - Define the topology
+    topo = {
+        'a': { 'b', ('c', 4)},
+        'b': { ('c', 3), ('d', 2), ('e', 2)},
+        'c': { },
+        'd': { 'b', ('c', 5)},
+        'e': { ('d', 5)}
+      }
+
     # 2 - create the simpy environment 
     env = simpy.Environment()
 
@@ -23,22 +30,16 @@ def square_topology_example_edges():
 
     print("SETUP ----------------------------------------------------------------")
 
-    network = Network(env)
-    
-    # use same topology as adjacency list
-    # but add edge by edge
-    network.add_edge('a', 'b')
-    network.add_edge('a', 'c', 4)
-    network.add_edge('b', 'c', 3)
-    network.add_edge('b', 'd', 2)
-    network.add_edge('b', 'e', 2)
-    network.add_edge('d', 'b')
-    network.add_edge('d', 'c', 5)
-    network.add_edge('e', 'd', 5)
+    # adjacency list -> graph
+    graph = Graph.from_dict(topo)
 
-    # add an edge: c -- f
-    network.add_edge(network['c'], 'f')
+    # test print
+    graph.print()
 
+    # graph -> network
+    network = Network.from_graph(graph, env)
+
+    network.add_edge(network['c'], Router('f', env))
 
     # do some test prints
     print(network.nodes())
@@ -69,14 +70,14 @@ def square_topology_example_edges():
     # run
     print("RUN ----------------------------------------------------------------")
 
-    network.start(until=1000)
+    network.start(until=100)
 
 
     
 
 
 # go !
-square_topology_example_edges()
+square_topology_example_adj()
 
 
 
