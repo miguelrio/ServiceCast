@@ -5,26 +5,28 @@ from Link import BidirectionalLink
 # Convert a Graph of label and weights into a Network of Routers and Links
 
 class Network:
-    def __init__(self):
+    def __init__(self, env = None):
         """ Create a network
         """
         self.routers = {}         # a dictionary of routers
         self.links = []           # a list of links
+        self.env = env            # an Environment
         
     @classmethod
-    def from_graph(cls, env, graph):
+    def from_graph(cls, graph, env):
         """ Create a network from a Graph representation of an adjacency list
         """
-        network = Network()
+
+        # create the Network
         # add a handle to the simpy Environment
-        network.env = env
+        network = Network(env)
         
         # first we create the list of Routers
         for i in range(len(graph)):
             # convert number to name
             name = graph.name(i)
             # create a Router
-            router = Router(env, name)
+            router = Router(name, env)
             # now add it to the routers
             network.routers[name] = router
 
@@ -39,17 +41,19 @@ class Network:
 
             for node in nodes:
                 # skip through [ ('b', 1), ('c', 4)]
+                (node_name, weight) = node
+                
                 current = network.routers[name]
-                neighbour_obj = network.routers[node[0]]
+                neighbour_obj = network.routers[node_name]
 
                 # add the neighbours for current to neighbour_obj
                 # and neighbour_obj to current
-                status1 = current.add_neighbour(neighbour_obj, node[1])
-                status2 = neighbour_obj.add_neighbour(current, node[1])
+                (status1, link1) = current.add_neighbour(neighbour_obj, weight)
+                (status2, link2) = neighbour_obj.add_neighbour(current, weight)
 
                 # create the BidirectionalLink
-                if status1[0] == "create" and status2[0] == "create":
-                    network.links.append(BidirectionalLink(status1[1], status2[1]))
+                if status1 == "create" or status2 == "create":
+                    network.links.append(BidirectionalLink(link1, link2))
 
         return network
             
@@ -80,30 +84,50 @@ class Network:
 
     # add a host to the network and link it to a specified router
     def add_host(self, host, router, weight=1):
+        """Add an edge from a Host to a Router.
+           Pass in a Host and a Router.
+        """
         # now add it to the routers and add a link
         self.add_edge(host, router, weight)
 
     # add an edge
     # add new nodes if needed
+    # return the new edge
+    # or None, if nothing created
     def add_edge(self,n1, n2, weight=1):
+        """Add an edge from one Router to another Router.
+           Pass in 2 Routers.
+        """
         # does n1 exist
+        r1 = None
         if not self.contains_router(n1):
             self.routers[n1.id()] = n1
+            r1 = n1
             print("add " + n1.id())
+        else:
+            r1 = self.routers[n1.id()]
             
         # does n2 exist
+        r2 = None
         if not self.contains_router(n2):
             self.routers[n2.id()] = n2
+            r2 = n2
             print("add " + n2.id())
+        else:
+            r2 = self.routers[n2.id()]
 
 
         # add the neighbours for the 2 nodes
-        status1 = n2.add_neighbour(n1, weight)
-        status2 = n1.add_neighbour(n2, weight)
+        (status1, link1) = r2.add_neighbour(r1, weight)
+        (status2, link2) = r1.add_neighbour(r2, weight)
 
         # create the BidirectionalLink
-        if status1[0] == "create" and status2[0] == "create":
-            self.links.append(BidirectionalLink(status1[1], status2[1]))
+        if status1 == "create" or status2 == "create":
+            edge = BidirectionalLink(link1, link2)
+            self.links.append(edge)
+            return edge
+        else:
+            return None
 
 
     # index into network by node name

@@ -48,10 +48,11 @@ class LinkEnd(object):
         self.env.process(self._send(packet))
 
     def _send(self, packet):
-        """ An internal method
+        """ A method to send a packet
         """
         yield self.env.timeout(self.propagation_delay)
-        self.dst_node.put(packet)
+        # The destination receives the packet
+        self.dst_node.recv(packet, self)
 
     def __str__(self):
         return "LinkEnd " + str(self.src_node.id()) + " --> " + str(self.dst_node.id()) + " (" + str(self.propagation_delay) + ")"

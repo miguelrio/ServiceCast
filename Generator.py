@@ -16,11 +16,11 @@ class ServerEventGenerator(EventGenerator):
 class ServerEvent(Event):
     """A ServerEvent is an Event that also holds an integer
     """
-    def __init__(self, time, size, id, src, dst, flow_id=0):
+    def __init__(self, time, size, seq, src, dst, flow_id=0):
         self.type = "NetworkEvent"
+        self.seq = seq
         self.time = time
         self.size = size
-        self.id = id
         self.src = src
         self.dst = dst
         self.flow_id = flow_id
@@ -41,11 +41,11 @@ class ClientEventGenerator(EventGenerator):
 class ClientEvent(Event):
     """A ClientEvent is an Event that also holds an integer
     """
-    def __init__(self, time, size, id, src, dst, flow_id=0):
+    def __init__(self, time, size, seq, src, dst, flow_id=0):
         self.type = "NetworkEvent"
+        self.seq = seq
         self.time = time
         self.size = size
-        self.id = id
         self.src = src
         self.dst = dst
         self.flow_id = flow_id

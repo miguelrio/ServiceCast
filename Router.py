@@ -8,7 +8,7 @@ class Router(object):
     """ A Router in the Simulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
-    def __init__(self, env, routerid):
+    def __init__(self, routerid, env=None):
         self.env = env
         self._routerid = routerid
         # create one SimComponent.SwitchPort for each neighbour_id
@@ -96,16 +96,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # packet_store is a simpy.Store(self.env, capacity=1)
             # which stores the packet
             # we get it out that
-            packet = yield self.packet_store.get()
+            packet_tuple = yield self.packet_store.get()
 
             # now manage the packet
-            self.manage_packet(packet)
+            self.manage_packet(packet_tuple)
 
-    def manage_packet(self, packet):
+    def manage_packet(self, packet_tuple):
         """ Manage a packet.  
          If it is for us, consume it
          Otherwise, forward it
         """
+        (link_end, packet) = packet_tuple
+        
         if packet.dst == self._routerid:
             # consume the packet
             self.sink.put(packet)
@@ -120,13 +122,23 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
           #       STEP 5,11 forward to appropriate links based on routing table information (fix code below)
           #      STEP 6,12 check if fw table needs changing. If yes, change it
           for neighbour in self.outgoing_ports:
-            self.outgoing_ports[neighbour].put(packet)
-            print("{:.3f}: Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now,
-                 packet.src, packet.id, self._routerid, neighbour, (self.env.now - packet.time)))
+            if link_end.src_node.id() == neighbour:
+                # don't send to where it came from
+                print("{:.3f}: Packet {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
+                pass
+            else:
+                self.outgoing_ports[neighbour].put(packet)
+                print("{:.3f}: Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, neighbour, (self.env.now - packet.time)))
            
 
     def put(self, packet):
         """ The callback from an EventGenerator.
+        """
+        # We don't expect to send Events to Routers
+        pass
+
+    def recv(self, packet, link_end):
+        """A packet is received from a LinkEnd of a neighbouring Router.
         """
         # this function should be called by the previous hop to send a packet to this router
         # packet_store is a simpy.Store(self.env, capacity=1)
@@ -134,9 +146,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
         else:
-            print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
-        self.packet_store.put(packet)
+            print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, link_end.src_node.id(), (self.env.now - packet.time)))
+
+        # add a tuple of (link_end, packet) to the packet store
+        self.packet_store.put((link_end, packet))
 
     def ports(self):
         """Dict of ports"""

@@ -37,9 +37,9 @@ def square_topology_example_adj():
     graph.print()
 
     # graph -> network
-    network = Network.from_graph(env, graph)
+    network = Network.from_graph(graph, env)
 
-    network.add_edge(network['c'], Router(env, 'f'))
+    network.add_edge(network['c'], Router('f', env))
 
     # do some test prints
     print(network.nodes())
