@@ -1,6 +1,7 @@
 from AdjList import Graph
 from Router import Router
 from Link import BidirectionalLink
+from Host import Host
 
 # Convert a Graph of label and weights into a Network of Routers and Links
 
@@ -69,11 +70,20 @@ class Network:
         self.env.run(until)
 
     # contains router
+    # pass in name or Router
     def contains_router(self, r):
-        if (r.id() in self.routers):
-            return True
+        if type(r) == str:
+            # we just got a name
+            if (r in self.routers):
+                return True
+            else:
+                return False
         else:
-            return False
+            # get the id() of the object r
+            if (r.id() in self.routers):
+                return True
+            else:
+                return False
 
     # contains link
     def contains_link(self, r1, r2):
@@ -87,8 +97,11 @@ class Network:
         """Add an edge from a Host to a Router.
            Pass in a Host and a Router.
         """
-        # now add it to the routers and add a link
-        self.add_edge(host, router, weight)
+        if isinstance(host, Host):
+            # now add it to the routers and add a link
+            self.add_edge(host, router, weight)
+        else:
+            raise TypeError("host must be a Host")
 
     # add an edge
     # add new nodes if needed
@@ -101,20 +114,43 @@ class Network:
         # does n1 exist
         r1 = None
         if not self.contains_router(n1):
-            self.routers[n1.id()] = n1
-            r1 = n1
-            print("add " + n1.id())
+
+            if type(n1) == str:
+                # just got a name
+                # make a Router
+                r1 = Router(n1, self.env)
+                self.routers[n1] = r1
+                print("add " + n1)
+            else:
+                r1 = n1
+                self.routers[n1.id()] = r1
+                print("add " + n1.id())
         else:
-            r1 = self.routers[n1.id()]
+            if type(n1) == str:
+                # just got a name
+                r1 = self.routers[n1]
+            else:
+                r1 = self.routers[n1.id()]
             
         # does n2 exist
         r2 = None
         if not self.contains_router(n2):
-            self.routers[n2.id()] = n2
-            r2 = n2
-            print("add " + n2.id())
+            if type(n2) == str:
+                # just got a name
+                # make a Router
+                r2 = Router(n2, self.env)
+                self.routers[n2] = r2
+                print("add " + n2)
+            else:
+                r2 = n2
+                self.routers[n2.id()] = r2
+                print("add " + n2.id())
         else:
-            r2 = self.routers[n2.id()]
+            if type(n2) == str:
+                # just got a name
+                r2 = self.routers[n2]
+            else:
+                r2 = self.routers[n2.id()]
 
 
         # add the neighbours for the 2 nodes
