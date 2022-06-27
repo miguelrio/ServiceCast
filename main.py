@@ -70,7 +70,7 @@ def square_topology_example_adj():
     # run
     print("RUN ----------------------------------------------------------------")
 
-    network.start(until=1000)
+    network.start(until=100)
 
 
     

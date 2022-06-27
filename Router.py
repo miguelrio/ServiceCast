@@ -126,7 +126,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
            
 
     def put(self, packet):
-        """ The callback from the PacketGenerator
+        """ The callback from an EventGenerator.
         """
         # this function should be called by the previous hop to send a packet to this router
         # packet_store is a simpy.Store(self.env, capacity=1)
