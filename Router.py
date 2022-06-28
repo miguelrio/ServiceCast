@@ -1,6 +1,8 @@
 import simpy
 from SimComponents import SwitchPort, PacketSink
 from Link import LinkEnd
+from Host import Host
+from Verbose import Verbose
 
 LINKRATE = 100
 
@@ -43,7 +45,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # Skip through all the neighbours
         for neighbour in neighbours.keys():
           
-          neighbour_obj, propdelay = neighbours[neighbour]
+          (neighbour_obj, propdelay) = neighbours[neighbour]
 
           link = self.add_neighbour(neighbour_obj, propdelay, rate)
 
@@ -61,12 +63,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if (self.contains_edge(neighbour_obj)):
             # no need to add a link
 
-            print("LinkEnd Exists "  + str(self._routerid) + " --> " + str(neighbour) + " Cancel " +  str(self._routerid) + " --> " + str(neighbour) )
+            if Verbose.level >= 2:
+                print("LinkEnd Exists "  + str(self._routerid) + " --> " + str(neighbour) + " Cancel " +  str(self._routerid) + " --> " + str(neighbour) )
 
             return ("exists", self.outgoing_ports[neighbour_obj.id()])
 
         else:
-            print("LinkEnd Add " + self._routerid + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
+            if Verbose.level >= 1:
+                print("LinkEnd Add " + self._routerid + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
 
             self.outgoing_ports[neighbour] = SwitchPort(self.env, rate=rate, limit_bytes=False)
 
@@ -115,8 +119,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if packet.dst == self._routerid:
             # consume the packet
             self.sink.put(packet)
-            print("{:.3f}: Packet {}.{} consumed in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, self._routerid, (self.env.now - packet.time)))
+
+            if Verbose.level >= 1:
+                print("{:.3f}: Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, (self.env.now - packet.time)))
+
         else:
             # If the packet is not for us, forward to all neighbours.
             # This is where the main servicecast algorithm will be implemented.
@@ -126,20 +132,41 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
           #       STEP 5,11 forward to appropriate links based on routing table information (fix code below)
           #      STEP 6,12 check if fw table needs changing. If yes, change it
           for neighbour in self.outgoing_ports:
-            if link_end.src_node.id() == neighbour:
-                # don't send to where it came from
-                print("{:.3f}: Packet {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
-                pass
-            else:
+              
+            #print("neighbour " + str(self.outgoing_ports[neighbour].out))
+
+            if link_end == None:
+                # looks like a local packet
+                # try and forward it
                 self.outgoing_ports[neighbour].put(packet)
-                print("{:.3f}: Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, neighbour, (self.env.now - packet.time)))
+
+            elif link_end.src_node.id() == neighbour:
+                # don't send to where it came from
+                if Verbose.level >= 2:
+                    print("{:.3f}: Packet {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
+                pass
+
+            elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                # don't send to any connected Hosts
+                if Verbose.level >= 2:
+                    print("{:.3f}: Packet {}.{} dont send from {} to host {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
+
+            else:
+                # forward the packet
+                # send to SwitchPort
+                self.outgoing_ports[neighbour].put(packet)
+
+                if Verbose.level >= 1:
+                    print("{:.3f}: Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, neighbour, (self.env.now - packet.time)))
            
 
     def put(self, packet):
         """ The callback from an EventGenerator.
         """
         # We don't expect to send Events to Routers
-        pass
+        # but for backwards compatibility, we do this
+         # add a tuple of (link_end, packet) to the packet store
+        self.packet_store.put((None, packet))
 
     def recv(self, packet, link_end):
         """A packet is received from a LinkEnd of a neighbouring Router.
@@ -147,10 +174,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # this function should be called by the previous hop to send a packet to this router
         # packet_store is a simpy.Store(self.env, capacity=1)
         if packet.src == self._routerid:
-            print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
+            if Verbose.level >= 1:
+                print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
         else:
-            print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, link_end.src_node.id(), (self.env.now - packet.time)))
+            if Verbose.level >= 1:
+                print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, link_end.src_node.id(), (self.env.now - packet.time)))
 
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))

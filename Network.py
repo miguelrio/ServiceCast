@@ -4,6 +4,7 @@ from Link import BidirectionalLink
 from Host import Host
 from Server import Server
 from Client import Client
+from Verbose import Verbose
 
 # Convert a Graph of label and weights into a Network of Routers and Links
 
@@ -150,11 +151,15 @@ class Network:
                 # make a Router
                 r1 = Router(n1, self.env)
                 self.routers[n1] = r1
-                print("add " + n1)
+
+                if Verbose.level >= 2:
+                    print(type(r1).__name__ + " add " + n1)
             else:
                 r1 = n1
                 self.routers[n1.id()] = r1
-                print("add " + n1.id())
+
+                if Verbose.level >= 2:
+                    print(type(r1).__name__ + " add " + n1.id())
         else:
             # existing node
             if type(n1) == str:
@@ -175,11 +180,15 @@ class Network:
                 # make a Router
                 r2 = Router(n2, self.env)
                 self.routers[n2] = r2
-                print("add " + n2)
+
+                if Verbose.level >= 2:
+                    print(type(r).__name__ + " add " + n2)
             else:
                 r2 = n2
                 self.routers[n2.id()] = r2
-                print("add " + n2.id())
+
+                if Verbose.level >= 2:
+                    print(type(r2).__name__ + " add " + n2.id())
         else:
             # existing node
             if type(n2) == str:

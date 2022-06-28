@@ -85,6 +85,21 @@ class EventGenerator(object):
         # Put the event in the out channel
         self.out.put(ev)
 
+class PacketGenerator(EventGenerator):
+    def __init__(self, env, id,  adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
+        super().__init__(env, id,  adist, sdist, destinations_dist, initial_delay, finish, flow_id)
+
+
+    # Prepare a packet for transmission
+    # Having a separate method makes it easier to do subclasses
+    def create_event(self):
+        """Prepare a packet for transmission"""
+        # Use the default Packet class
+        p = Packet(self.env.now, self.sdist(), self.event_count, src=self.id, dst=self.destinations_dist(), flow_id=self.flow_id)
+        return p
+
+
+        
 class Packet(object):
     """ A very simple class that represents a packet.
         This packet will run through a queue at a switch output port.
@@ -113,8 +128,8 @@ class Packet(object):
         self.flow_id = flow_id
 
     def __repr__(self):
-        return "id: {}, src: {}, time: {}, size: {}".\
-            format(self.id, self.src, self.time, self.size)
+        return "id: {}, src: {}, dst: {}, time: {}, size: {}".\
+            format(self.id, self.src, self.dst, self.time, self.size)
 
 
 class PacketSink(object):

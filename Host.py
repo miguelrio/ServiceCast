@@ -1,6 +1,7 @@
 import simpy
 from SimComponents import SwitchPort, PacketSink
 from Link import LinkEnd
+from Verbose import Verbose
 
 LINKRATE = 100
 
@@ -40,7 +41,8 @@ class Host(object):
         """Add a neighbour from this host to a router"""
         link = None
         
-        print("LinkEnd Add " + self.id() + " -> " + "neighbour " + str(neighbour_obj) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
+        if Verbose.level >= 1:
+            print("LinkEnd Add " + self.id() + " -> " + "neighbour " + str(neighbour_obj) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
 
         self.neighbour = neighbour_obj.id()
         self.outgoing_port = SwitchPort(self.env, rate=rate, limit_bytes=False)
@@ -85,13 +87,16 @@ class Host(object):
         if packet.dst == self.hostid:
             # consume the packet
             self.sink.put(packet)
-            print("{:.3f}: HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
+
+            if Verbose.level >= 1:
+                print("{:.3f}: HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
         else:
             # If the packet is not for us, forward to all neighbours.
             # This is where the main servicecast algorithm will be implemented.
             self.outgoing_port.put(packet)
-            print("{:.3f}: HOST Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, self.neighbour, (self.env.now - packet.time)))
+
+            if Verbose.level >= 2:
+                print("{:.3f}: HOST Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, self.neighbour, (self.env.now - packet.time)))
            
 
     def put(self, event):
@@ -105,7 +110,9 @@ class Host(object):
     def recv(self, packet, link_end):
         """A packet is received from a LinkEnd of a neighbouring Router.
         """
-        print("{:.3f}: HOST_RECV Packet {}.{} consumed in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, link_end.src_node.id(), (self.env.now - packet.time)))
+        if Verbose.level >= 1:
+            print("{:.3f}: HOST_RECV Packet {}.{} consumed in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, link_end.src_node.id(), (self.env.now - packet.time)))
+
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))
 

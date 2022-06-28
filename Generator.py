@@ -3,9 +3,11 @@ import numpy as np
 
 
 class ServerEventGenerator(EventGenerator):
-    """ A Packet Generator for a Server."""
+    """ An Event Generator for a Server."""
     def __init__(self, env, id,  adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
         super().__init__(env, id,  adist, sdist, destinations_dist, initial_delay, finish, flow_id)
+        self.network = None
+
 
     # Prepare a ServerEvent 
     def create_event(self):
@@ -25,17 +27,43 @@ class ServerEvent(Event):
         self.dst = dst
         self.flow_id = flow_id
 
-
+# Generate Events for a Single Client, with a specified address
 class ClientEventGenerator(EventGenerator):
-    """ A Packet Generator for a Client."""
-    def __init__(self, env, id,  adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
+    """ An Event Generator for a Client."""
+    def __init__(self, env, id, adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
         super().__init__(env, id,  adist, sdist, destinations_dist, initial_delay, finish, flow_id)
+        self.network = None
 
     # Prepare a ClientEvent
     def create_event(self):
         """Create an Event"""
+        src = self.destinations_dist()
         e = ClientEvent(self.env.now, self.sdist(), self.event_count, src=self.id, dst=self.destinations_dist(), flow_id=self.flow_id)
         return e
+
+
+# Generate Events for a Multiple Clients, with a specified address
+class MultiClientEventGenerator(EventGenerator):
+    """ An Event Generator for Multiple Clients."""
+    def __init__(self, env, id, adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
+        super().__init__(env, id,  adist, sdist, destinations_dist, initial_delay, finish, flow_id)
+        self.network = None
+
+    # Prepare a ClientEvent
+    def create_event(self):
+        """Create an Event"""
+        src = self.destinations_dist()
+        e = ClientEvent(self.env.now, self.sdist(), self.event_count, src=src, dst=None, flow_id=self.flow_id)
+        return e
+
+    # Process an event
+    # Having a separate method makes it easier to do subclasses
+    def process_event(self, ev):
+        """Process an event"""
+        # Put the event in the out channel of the selected client
+        out = self.network[ev.src]
+        out.put(ev)
+
 
 
 class ClientEvent(Event):
@@ -101,18 +129,19 @@ class Generator(object):
         # It will then do self.out.put() which puts the event in the receiving queue
         # of node 'id'
         event_generator.out = network[id]
-    
+        event_generator.network = network
 
 
         return Generator(network, event_generator)
 
-    #  A event generator for a server
+    # A event generator for a client
+    # Sends from a specific node with 'id', and sends to 'possible_destinations'
     @classmethod
     def client_event_generator(cls, network, id, possible_destinations,
                          exponential_lambda=1,
                          packet_size=100,
                          seed=None):
-        """ Generates events from node with 'id', and sends to 'possible_destinations'.
+        """ Generates events from a specific node with 'id', and sends to 'possible_destinations'.
             'exponential_lambda' is passed to the arrival distribution.
             'packet_size' is used for the size distribution.
         """
@@ -151,6 +180,56 @@ class Generator(object):
         # of node 'id'
         event_generator.out = network[id]
     
+
+
+        return Generator(network, event_generator)
+    
+    # A event generator for a number of clients
+    # Drops Events on clients in 'possible_sources' list
+    @classmethod
+    def multi_client_event_generator(cls, network, possible_sources, destination,
+                         exponential_lambda=1,
+                         packet_size=100,
+                         seed=None):
+        """ Generates events from nodes from 'possible_sources'.
+            'exponential_lambda' is passed to the arrival distribution.
+            'packet_size' is used for the size distribution.
+        """
+
+        env = network.env
+
+        # EventGenerator accepts three (zero arguments) functions as arguments,
+        # - one that gives the inter arrival times,
+        # - one that gives the event sizes, and
+        # - one that gives the sources
+
+        # We first define our random number generator so that we can reproduce results
+        gen = np.random.RandomState(seed=seed)
+
+        # The interarrival times of a poisson process follow an exponential
+        def arrival_dist():
+            next_time = gen.exponential(exponential_lambda)
+            return next_time
+
+        # Assume all packets have the same size given by packet_size
+        def size_dist():
+            return packet_size
+
+        # Send to sources
+        def sources_dist():
+            return gen.choice(possible_sources)
+
+        # Create the event generator oobject
+        event_generator = MultiClientEventGenerator(env, None,
+                                           adist=arrival_dist, sdist=size_dist,
+                                                    destinations_dist=sources_dist)
+
+
+        # This line makes event generator member out pointing to node 'id'.
+        # It will then do self.out.put() which puts the event in the receiving queue
+        # of node 'id'
+        event_generator.network = network
+
 
 
         return Generator(network, event_generator)

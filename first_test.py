@@ -3,7 +3,7 @@
 # https://www.grotto-networking.com/DiscreteEventPython.html
 from SimComponents import PacketGenerator
 from Router import Router
-from Link import Link
+from Verbose import Verbose
 import numpy as np
 import simpy
 
@@ -49,17 +49,18 @@ def create_packet_generator(env,
 
 # Lets defind the topology of the network
 def square_topology_example_orig():
-
+    Verbose.level = 2
+  
   # 1 - First we create the simpy environment 
     env = simpy.Environment()
 
 
   # 2 - We define the routers. This needs to be changed to a list/array of routers
-    a=Router(env, "a")
-    b=Router(env, "b")
-    c=Router(env, "c")
-    d=Router(env, "d")
-    e=Router(env, "e")
+    a=Router("a", env)
+    b=Router("b", env)
+    c=Router("c", env)
+    d=Router("d", env)
+    e=Router("e", env)
 
   # 3 - Now we add the neighbours from the topology.
     neighbours = {

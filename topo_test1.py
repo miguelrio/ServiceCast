@@ -8,12 +8,15 @@ from Server import Server
 from Client import Client
 from Router import Router
 from Generator import Generator
+from Verbose import Verbose
 import simpy
 
 
 
 # Use a topology from an adjacency list
 def square_topology_example_adj():
+    Verbose.level = 2
+
     # 1 - Define the topology
     topo = {
         'a': { 'b', ('c', 4)},
@@ -65,12 +68,12 @@ def square_topology_example_adj():
     generator_s1 = Generator.server_event_generator(network, "s1", ["b", "c", "d","e"], exponential_lambda=25)
 
     # Client 'c1' generates packets from arriving events
-    generator_c1 = Generator.client_event_generator(network, "c1", ["e"], exponential_lambda=50)
+    generator_c1 = Generator.client_event_generator(network, "c1", ["e"], exponential_lambda=30)
 
     # run
     print("RUN ----------------------------------------------------------------")
 
-    network.start(until=100)
+    network.start(until=400)
 
 
     

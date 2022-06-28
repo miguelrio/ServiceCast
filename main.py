@@ -8,12 +8,15 @@ from Server import Server
 from Client import Client
 from Router import Router
 from Generator import Generator
+from Verbose import Verbose
 import simpy
 
 
 
 # Use a topology from an adjacency list
 def square_topology_example_adj():
+    Verbose.level = 1
+    
     # 1 - Define the topology
     topo = {
         'a': { 'b', ('c', 4)},
@@ -49,17 +52,22 @@ def square_topology_example_adj():
 
     print("To d: " + str(network.links_to('d')))
 
-    print("Neighbours b: " + str(network.neighbours('b')))
-    print("Degree b: " + str(network.degree('b')))
 
     # add a server
     network.add_server("s1", 'a')
     
     # add a client
     network.add_client("c1", 'e')
+    network.add_client("c2", 'e')
+    network.add_client("c3", 'e')
+    network.add_client("c4", 'e')
+    network.add_client("c5", 'e')
     
-    print("Neighbours s1: " + str(network.neighbours('s1')))
-    print("Degree s1: " + str(network.degree('s1')))
+    print("Neighbours e: " + str(network.neighbours('e')))
+    print("Degree e: " + str(network.degree('e')))
+
+    print("Neighbours c1: " + str(network.neighbours('c1')))
+    print("Degree c1: " + str(network.degree('c1')))
 
     network.print()
     
@@ -68,8 +76,8 @@ def square_topology_example_adj():
     # Server 's1' generates packets from arriving events
     generator_s1 = Generator.server_event_generator(network, "s1", ["b", "c", "d","e"], exponential_lambda=25)
 
-    # Client 'c1' generates packets from arriving events
-    generator_c1 = Generator.client_event_generator(network, "c1", ["e"], exponential_lambda=50)
+    # Clients 'c1' ... 'c5' generates packets from arriving events
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], None, exponential_lambda=30)
 
     # run
     print("RUN ----------------------------------------------------------------")
