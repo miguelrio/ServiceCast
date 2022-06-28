@@ -182,7 +182,7 @@ class Network:
                 self.routers[n2] = r2
 
                 if Verbose.level >= 2:
-                    print(type(r).__name__ + " add " + n2)
+                    print(type(r2).__name__ + " add " + n2)
             else:
                 r2 = n2
                 self.routers[n2.id()] = r2

@@ -91,12 +91,12 @@ class Host(object):
             if Verbose.level >= 1:
                 print("{:.3f}: HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
         else:
-            # If the packet is not for us, forward to all neighbours.
+            # If the packet is not for us, forward to the neighbour
             # This is where the main servicecast algorithm will be implemented.
             self.outgoing_port.put(packet)
 
             if Verbose.level >= 2:
-                print("{:.3f}: HOST Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, self.neighbour, (self.env.now - packet.time)))
+                print("{:.3f}: HOST Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self.hostid, self.neighbour, (self.env.now - packet.time)))
            
 
     def put(self, event):
