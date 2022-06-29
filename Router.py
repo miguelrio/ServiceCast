@@ -124,42 +124,57 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 print("{:.3f}: Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, (self.env.now - packet.time)))
 
         else:
-            # If the packet is not for us, forward to all neighbours.
+            # If the packet is not for us, forward to neighbours.
             # This is where the main servicecast algorithm will be implemented.
-          # MR: if packet is data packet 
-          # MR:   STEP 8 forward to right link based on fw table
-          # MR: else
-          #       STEP 5,11 forward to appropriate links based on routing table information (fix code below)
-          #      STEP 6,12 check if fw table needs changing. If yes, change it
-          for neighbour in self.outgoing_ports:
-              
-            #print("neighbour " + str(self.outgoing_ports[neighbour].out))
+            # MR: if packet is data packet 
+            # MR:   STEP 8 forward to right link based on fw table
+            # MR: else
+            #       STEP 5,11 forward to appropriate links based on routing table information (fix code below)
+            #      STEP 6,12 check if fw table needs changing. If yes, change it
 
-            if link_end == None:
-                # looks like a local packet
-                # try and forward it
-                self.outgoing_ports[neighbour].put(packet)
-
-            elif link_end.src_node.id() == neighbour:
-                # don't send to where it came from
-                if Verbose.level >= 2:
-                    print("{:.3f}: Packet {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
-                pass
-
-            elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
-                # don't send to any connected Hosts
-                if Verbose.level >= 2:
-                    print("{:.3f}: Packet {}.{} dont send from {} to host {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
-
+            if self.is_service(packet.dst):
+                # this packet is for a Service name
+                print("{:.3f}: Service Packet at {} for service {} ".format(self.env.now, self.id(), packet.dst))
+                
             else:
-                # forward the packet
-                # send to SwitchPort
-                self.outgoing_ports[neighbour].put(packet)
+                # normal forwarding
+                for neighbour in self.outgoing_ports:
 
-                if Verbose.level >= 1:
-                    print("{:.3f}: Packet {}.{} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, neighbour, (self.env.now - packet.time)))
-           
+                  #print("neighbour " + str(self.outgoing_ports[neighbour].out))
 
+                  if link_end == None:
+                      # looks like a local packet
+                      # try and forward it
+                      self.outgoing_ports[neighbour].put(packet)
+
+                  elif link_end.src_node.id() == neighbour:
+                      # don't send to where it came from
+                      if Verbose.level >= 2:
+                          print("{:.3f}: Packet {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
+                      pass
+
+                  elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                      # don't send to any connected Hosts
+                      if Verbose.level >= 2:
+                          print("{:.3f}: Packet {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
+
+                  else:
+                      # forward the packet
+                      # send to SwitchPort
+                      self.outgoing_ports[neighbour].put(packet)
+
+                      if Verbose.level >= 1:
+                          print("{:.3f}: Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
+
+
+    def is_service(self, name):
+        if name == None:
+            return False
+        elif name.startswith("§"):
+            return True
+        else:
+            return False
+        
     def put(self, packet):
         """ The callback from an EventGenerator.
         """
