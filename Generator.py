@@ -28,7 +28,7 @@ class ServerLoadEventGenerator(EventGenerator):
     # Prepare a ServerEvent 
     def create_event(self):
         """Create an Event"""
-        e = ServerLoadEvent(self.env.now, self.event_count, self.flowdist(), self.loaddist(), self)
+        e = ServerLoadEvent(self.env.now, self.event_count, self.destinations_dist(), self.flowdist(), self.loaddist(), self)
         return e
 
 class ServerEvent(Event):
@@ -46,17 +46,18 @@ class ServerEvent(Event):
 class ServerLoadEvent(Event):
     """A ServerEvent is an Event that holds some load info
     """
-    def __init__(self, time, seq, flows, load, generator):
+    def __init__(self, time, seq, service_name, flows, load, generator):
         self.type = "LoadEvent"
         self.seq = seq
         self.time = time
+        self.service_name = service_name
         self.no_of_flows = flows
         self.load = load
         self.generator = generator
 
     def __repr__(self):
-        return "{}: time: {} seq: {} no_of_flows: {} load: {}".\
-            format(self.type, self.time, self.seq, self.no_of_flows, self.load)
+        return "{}: time: {} seq: {} service: {} no_of_flows: {} load: {}".\
+            format(self.type, self.time, self.seq, self.service_name, self.no_of_flows, self.load)
 
         
 # Generate Events for a Single Client, with a specified address
@@ -168,11 +169,11 @@ class Generator(object):
 
     #  A event generator for a server
     @classmethod
-    def server_load_event_generator(cls, network, id, possible_destinations,
+    def server_load_event_generator(cls, network, id, possible_service_names,
                          exponential_lambda=1,
                          packet_size=100,
                          seed=None):
-        """ Generates events from node with 'id', and sends to 'possible_destinations'.
+        """ Generates events from node with 'id', and sends to the immediate neighbour.
             'exponential_lambda' is passed to the arrival distribution.
             'packet_size' is used for the size distribution.
         """
@@ -194,22 +195,24 @@ class Generator(object):
 
         # No of flows is poisson
         def no_of_flows_dist():
-            next_val = gen.poisson(1.0, size=1)
+            next_val = gen.poisson(1.0)
             return next_val
 
         def load_dist():
             # normal 0 - 100,  mu = 50 +/- 20 stddevs
-            next_val = gen.normal(loc=50.0, scale=20, size=None)
+            # next_val = gen.normal(loc=50.0, scale=20, size=None)
+
+            next_val = gen.choice([0, 1, 2, 3, 4])
             return next_val
         
-        # Send to all destinations
-        def destinations_dist():
-            return gen.choice(possible_destinations)
+        # Select one service
+        def service_name():
+            return gen.choice(possible_service_names)
 
         event_generator = ServerLoadEventGenerator(env, id=id,
                                                adist=arrival_dist, flowdist=no_of_flows_dist,
                                                loaddist=load_dist,
-                                               destinations_dist=destinations_dist)
+                                                   destinations_dist=service_name)
 
 
         # This line makes event generator member out pointing to node 'id'.

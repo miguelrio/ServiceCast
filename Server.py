@@ -8,6 +8,7 @@ class Server(Host):
         super().__init__(serverid, env)
         self.type = "Server"
         self.saved_event = None
+        self.last_info = {}
 
 
     def process_event(self, event):
@@ -24,26 +25,39 @@ class Server(Host):
         print("{:.3f}: {}".format(self.env.now, event))
         
         # it should have: seqno, time, no_of_flows, load
-        if self.saved_event == None:
+        if self.last_info == {}:
             # first time through        
-            # convert an event into a packet
-            # set size to 2, to represent 2 values
-            packet = Packet(event.time, 2, event.seq, self.id(), dst=event.generator.destinations_dist())
-            packet.payload = { 'load': event.load, 'no-of-flows': event.no_of_flows }
-            # add a tuple of (link_end, packet) to the packet store
-            # None represents this node
-            self.packet_store.put((None, packet))
 
+            # save the values in last_info
+            last_info = { 'load': event.load, 'no_of_flows': event.no_of_flows }
+            
+            # convert an event into a packet
+            self.event_to_packet(event)
+        else:
+            # more events
+
+            if event.load != last_info.load or event.no_of_flows != last_info.no_of_flows:
+                # at least one value was changed
+                
+                # save the values in last_info
+                last_info = { 'load': event.load, 'no_of_flows': event.no_of_flows }
+
+                # convert an event into a packet
+                self.event_to_packet(event)
+
+            else:
+                # nothing changed
+                print("Server: LoadEvent no change")
+
+                
         
     def process_packet_event(self, event):
         # convert an event into a packet
         packet = Packet(event.time, event.size, event.seq, event.src, event.dst, event.flow_id)
-        if packet.src == self.hostid:
-            print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
+
+        print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
-        else:
-            print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
+
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node
@@ -53,5 +67,17 @@ class Server(Host):
         # MR: STEP 10 If threshold passes send update
         
     def process_other_event(self, event):
-        print("Event type {}: {}".format(event.type, str(event)))
+        print("Server: Event type {}: {}".format(event.type, str(event)))
 
+
+    def event_to_packet(self, event):
+        # convert an event into a packet
+        # set size to 2, to represent 2 values
+        packet = Packet(event.time, 2, event.seq, self.id(), dst=self.neighbour)
+        packet.type = "ServerLoad"
+        packet.service =  event.service_name
+        packet.payload = { 'load': event.load, 'no_of_flows': event.no_of_flows }
+
+        # add a tuple of (link_end, packet) to the packet store
+        # None represents this node
+        self.packet_store.put((None, packet))

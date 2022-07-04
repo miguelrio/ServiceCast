@@ -15,6 +15,8 @@ class Router(object):
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
+        self.incoming_metrics = {}
+
         self.set_env(env)
 
     def set_env(self,env):
@@ -111,17 +113,33 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
     def manage_packet(self, packet_tuple):
         """ Manage a packet.  
-         If it is for us, consume it
-         Otherwise, forward it
         """
         (link_end, packet) = packet_tuple
         
         if packet.dst == self._routerid:
+            # packet addressed to me
             # consume the packet
             self.sink.put(packet)
 
-            if Verbose.level >= 1:
-                print("{:.3f}: Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, (self.env.now - packet.time)))
+
+            # a server load info packet
+            if packet.type == "ServerLoad":
+                # we got a ServerLoad message
+                print("{:.3f}: Packet ServerLoad {}.{} ({:.3f}) managed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
+                # store in incoming metrics table [servicename, metrics, original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
+                servicename = packet.service
+                metrics = packet.payload
+                msgID = packet.id
+                creationTime = packet.time
+
+                print("{:.3f}: VALUES service: {} msgID: {} time: {} metrics: {}".format(self.env.now, servicename, msgID, creationTime, metrics))
+                
+            else:
+                # packet for me, but not a ServerLoad
+                if Verbose.level >= 1:
+                    print("{:.3f}: Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, (self.env.now - packet.time)))
+
+
 
         else:
             # If the packet is not for us, forward to neighbours.
@@ -134,7 +152,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             if self.is_service(packet.dst):
                 # this packet is for a Service name
-                print("{:.3f}: Service Packet at {} for service {} ".format(self.env.now, self.id(), packet.dst))
+                if packet.type == "ClientRequest":
+                    print("{:.3f}: Packet ClientRequest at {} for service {} ".format(self.env.now, self.id(), packet.dst))
                 
             else:
                 # normal forwarding
@@ -168,6 +187,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
     def is_service(self, name):
+        """Is the destination address a service name:  e.g. §a"""
         if name == None:
             return False
         elif name.startswith("§"):

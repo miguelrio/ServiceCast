@@ -16,18 +16,22 @@ class Client(Host):
 
     def process_packet_event(self, event):
         # convert an event into a packet
+        self.event_to_packet(event)
+
+    def process_other_event(self, event):
+        print("Client: Event type {}: {}".format(event.type, str(event)))
+
+    def event_to_packet(self, event):
+        # convert an event into a packet
+        # Destination is likely to be a service name: e.g. §a
         packet = Packet(event.time, event.size, event.seq, event.src, event.dst, event.flow_id)
-        if packet.src == self.hostid:
-            print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
+        packet.type = "ClientRequest"
+        
+        print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
-        else:
-            print("{:.3f}: Packet {}.{} ({:.3f}) arrived in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
+
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node
         self.packet_store.put((None, packet))
         
-    def process_other_event(self, event):
-        print("Event type {}".format(event.type))
-
