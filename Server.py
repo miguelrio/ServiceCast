@@ -76,6 +76,7 @@ class Server(Host):
         packet = Packet(event.time, 2, event.seq, self.id(), dst=self.neighbour)
         packet.type = "ServerLoad"
         packet.service =  event.service_name
+        packet.replica = self.hostid
         packet.payload = { 'load': event.load, 'no_of_flows': event.no_of_flows }
 
         # add a tuple of (link_end, packet) to the packet store

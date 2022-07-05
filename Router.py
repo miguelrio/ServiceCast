@@ -126,14 +126,28 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if packet.type == "ServerLoad":
                 # we got a ServerLoad message
                 print("{:.3f}: Packet ServerLoad {}.{} ({:.3f}) managed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
-                # store in incoming metrics table [servicename, metrics, original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
+                # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
                 servicename = packet.service
+                replica = packet.replica
                 metrics = packet.payload
                 msgID = packet.id
                 creationTime = packet.time
 
-                print("{:.3f}: VALUES service: {} msgID: {} time: {} metrics: {}".format(self.env.now, servicename, msgID, creationTime, metrics))
+                # add the delay of the last hop to the metrics
+
+                # store important data (including metrics) for later use in table
+                # (link-end, msgID, replica) is key for decision
+                # for deleting old data
                 
+                print("{:.3f}: VALUES service: {} msgID: {} time: {} metrics: {}".format(self.env.now, servicename, msgID, creationTime, metrics))
+                #      STEP 5,11 forward to appropriate links based on routing information base (fix code below)
+                # Now we need to decide which messages go on which links
+                # For each entry in the RIB
+                #   compare with all the others
+                # if any of the metrics is better than that metric in all the other entries
+                # announce on all the links that it wasn't received from
+              
+              #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.    
             else:
                 # packet for me, but not a ServerLoad
                 if Verbose.level >= 1:
@@ -144,11 +158,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         else:
             # If the packet is not for us, forward to neighbours.
             # This is where the main servicecast algorithm will be implemented.
-            # MR: if packet is data packet 
+            # MR: if packet is data packet (ClientRequest)
             # MR:   STEP 8 forward to right link based on fw table
-            # MR: else
-            #       STEP 5,11 forward to appropriate links based on routing table information (fix code below)
-            #      STEP 6,12 check if fw table needs changing. If yes, change it
+        
 
             if self.is_service(packet.dst):
                 # this packet is for a Service name
