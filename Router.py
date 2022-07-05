@@ -1,8 +1,9 @@
 import simpy
-from SimComponents import SwitchPort, PacketSink
+from SimComponents import SwitchPort, PacketSink, Packet
 from Link import LinkEnd
 from Host import Host
 from Verbose import Verbose
+from tinydb import TinyDB, Query
 
 LINKRATE = 100
 
@@ -15,8 +16,11 @@ class Router(object):
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
-        self.incoming_metrics = {}
-
+        # a database of metrics
+        self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
+        self.metrics_table = self.db.table('metrics')
+        self.metrics_table.truncate()
+        
         self.set_env(env)
 
     def set_env(self,env):
@@ -125,29 +129,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # a server load info packet
             if packet.type == "ServerLoad":
                 # we got a ServerLoad message
-                print("{:.3f}: Packet ServerLoad {}.{} ({:.3f}) managed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
-                # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
-                servicename = packet.service
-                replica = packet.replica
-                metrics = packet.payload
-                msgID = packet.id
-                creationTime = packet.time
+                self.server_load_packet(link_end, packet)
 
-                # add the delay of the last hop to the metrics
-
-                # store important data (including metrics) for later use in table
-                # (link-end, msgID, replica) is key for decision
-                # for deleting old data
-                
-                print("{:.3f}: VALUES service: {} msgID: {} time: {} metrics: {}".format(self.env.now, servicename, msgID, creationTime, metrics))
-                #      STEP 5,11 forward to appropriate links based on routing information base (fix code below)
-                # Now we need to decide which messages go on which links
-                # For each entry in the RIB
-                #   compare with all the others
-                # if any of the metrics is better than that metric in all the other entries
-                # announce on all the links that it wasn't received from
-              
-              #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.    
             else:
                 # packet for me, but not a ServerLoad
                 if Verbose.level >= 1:
@@ -198,6 +181,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                           print("{:.3f}: Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
 
 
+    # Is the destination address a service name:  e.g. §a
     def is_service(self, name):
         """Is the destination address a service name:  e.g. §a"""
         if name == None:
@@ -206,6 +190,115 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             return True
         else:
             return False
+
+    # We received a packet of type ServerLoad
+    def server_load_packet(self, link_end, packet):
+        """The process for a packet with type ServerLoad"""
+        print("{:.3f}: Packet {} ServerLoad {}.{} ({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
+
+        # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
+        servicename = packet.service
+        replica = packet.replica
+        msgID = packet.id
+        creationTime = packet.time
+        metrics = packet.payload
+
+        print("{:.3f}: VALUES {} link_end: {} msgID: {} replica: {} time: {}  service: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, metrics))
+
+        # add the delay of the last hop to the metrics
+        metrics['delay'] +=  link_end.propagation_delay
+
+        # store important data (including metrics) for later use in table
+        # (link_end, msgID, replica) is key for decision for deleting old data
+
+        # find entry from database for (link_end, msgID, replica)
+        metric = Query()
+        results = self.metrics_table.search((metric.link_end == str(link_end)) & (metric.msgID == msgID) & (metric.replica == replica))
+
+        print("{:.3f}: RESULTS {} link_end: {} msgID: {} replica: {} ==> {} ".format(self.env.now, self.id(), link_end, msgID, replica, results))
+        
+        # check results
+        announce = False
+        metrics_to_send = None
+        
+        if results == []:
+            # nothing found - it must be new, so add it
+            val = self.metrics_table.insert({'link_end': str(link_end), 'msgID': msgID, 'replica': replica, 'servicename': servicename, 'creationTime': int(creationTime), 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
+
+            announce = True
+            print ("{:.3f}: ADD {} metric {}".format(self.env.now, self.id(), val) )
+
+            metric_to_send = self.metrics_table.get(doc_id=val)
+
+        else:
+            # something found - so check it
+            if self.metric_is_better(metrics, results):
+                # the metric is better
+                print("{:.3f}: metric IS better {}".format(self.env.now, self.id()))
+                # so update
+                self.metrics_table.update({ 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
+
+                # get the result
+                metric_to_send = results[0]
+            
+                announce = True
+            else:
+                announce = False
+
+                
+        # STEP 5,11 forward to appropriate links based on routing information base (fix code below)
+        # Now we need to decide which messages go on which links
+        # For each entry in the RIB
+        #   compare with all the others
+        # if any of the metrics is better than that metric in all the other entries
+        # announce on all the links that it wasn't received from
+
+        if announce:
+            # send to neighbours
+            for neighbour in self.outgoing_ports:
+
+                if link_end.src_node.id() == neighbour:
+                    # don't send to where it came from
+                    pass
+
+                elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                    # don't send to any connected Hosts
+                    pass
+
+                else:
+                    # create a new packet
+                    new_packet = Packet(metric_to_send['creationTime'], 3, metric_to_send['msgID'], self.id(), dst=neighbour)
+                    new_packet.type = "ServerLoad"
+                    new_packet.service =  metric_to_send['servicename']
+                    new_packet.replica = metric_to_send['replica']
+                    new_packet.payload = { 'load': metric_to_send['load'], 'no_of_flows': metric_to_send['no_of_flows'], 'delay': metric_to_send['delay'] }
+
+                    # forward the packet
+                    print("{:.3f}: FORWARD {} to {}".format(self.env.now, self.id(), neighbour))
+                    # send to SwitchPort
+                    self.outgoing_ports[neighbour].put(new_packet)
+            
+
+
+
+        #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
+
+
+    # is the metric better than the ones we have
+    def metric_is_better(self, metrics, results):
+        # currently just check the first result
+        result = results[0]
+
+        if metrics['load'] < result['load']:
+            # load is lower
+            return True
+
+        if metrics['delay'] < result['delay']:
+            # delay is lower
+            return True
+
+        return False
+         
         
     def put(self, packet):
         """ The callback from an EventGenerator.

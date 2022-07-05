@@ -72,12 +72,12 @@ class Server(Host):
 
     def event_to_packet(self, event):
         # convert an event into a packet
-        # set size to 2, to represent 2 values
-        packet = Packet(event.time, 2, event.seq, self.id(), dst=self.neighbour)
+        # set size to 3, to represent 3 values
+        packet = Packet(event.time, 3, event.seq, self.id(), dst=self.neighbour)
         packet.type = "ServerLoad"
         packet.service =  event.service_name
         packet.replica = self.hostid
-        packet.payload = { 'load': event.load, 'no_of_flows': event.no_of_flows }
+        packet.payload = { 'load': event.load, 'no_of_flows': event.no_of_flows, 'delay': 0 }
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node

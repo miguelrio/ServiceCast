@@ -55,7 +55,7 @@ class LinkEnd(object):
         self.dst_node.recv(packet, self)
 
     def __str__(self):
-        return "LinkEnd " + str(self.src_node.id()) + " --> " + str(self.dst_node.id()) + " (" + str(self.propagation_delay) + ")"
+        return "Link(" + str(self.src_node.id()) + " --> " + str(self.dst_node.id()) + " /" + str(self.propagation_delay) + ")"
 
     def __repr__(self):
         return "LinkEnd " + str(self.src_node.id()) + " --> " + str(self.dst_node.id()) + " (" + str(self.propagation_delay) + ")"
