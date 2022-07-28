@@ -16,7 +16,7 @@ class Router(object):
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
-        # a database of metricss
+        # a database of metrics
         self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
         self.metrics_table = self.db.table('metrics')
         self.metrics_table.truncate()
@@ -209,26 +209,28 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         metrics['delay'] +=  link_end.propagation_delay
 
         # store important data (including metrics) for later use in table
-        # (link_end, msgID, replica) is key for decision for deleting old data
+        # (link_end, replica) is key for decision for deleting old data
 
-        # find entry from database for (link_end, msgID, replica)
+        # find entry from database for (link_end, replica)
         metric = Query()
-        results = self.metrics_table.search((metric.link_end == str(link_end)) & (metric.msgID == msgID) & (metric.replica == replica))
+        results = self.metrics_table.search((metric.link_end == str(link_end)) & (metric.replica == replica))
 
-        print("{:.3f}: RESULTS {} link_end: {} msgID: {} replica: {} ==> {} ".format(self.env.now, self.id(), link_end, msgID, replica, results))
+        print("{:.3f}: RESULTS '{}' link_end: {} replica: {} ==> {} ".format(self.env.now, self.id(), link_end, replica, results))
         
         # check results
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.metrics_table.insert({'link_end': str(link_end), 'msgID': msgID, 'replica': replica, 'servicename': servicename, 'creationTime': int(creationTime), 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
+            val = self.metrics_table.insert({'link_end': str(link_end), 'neighbour': link_end.src_node.id(), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': int(creationTime), 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
 
-            print ("{:.3f}: ADD {} metric {}".format(self.env.now, self.id(), val) )
+            print ("{:.3f}: ADD '{}' metric {}".format(self.env.now, self.id(), val) )
 
         else:
-            # something found - so update it
-            val = self.metrics_table.update({ 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
+            # something found
+            # link_end and replica stay the same
+            # update other values
+            val = self.metrics_table.update({ 'msgID': msgID, 'servicename': servicename, 'creationTime': int(creationTime), 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
 
-            print("{:.3f}: UPDATE {} metric {}".format(self.env.now, self.id(), val))
+            print("{:.3f}: UPDATE '{}' metric {}".format(self.env.now, self.id(), val))
 
                 
         # STEP 5,11 forward to appropriate links based on routing information base (fix code below)
@@ -245,35 +247,41 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         announce = self.decide_announcements(self.metrics_table.all())
 
-        print("{:.3f}: ANNOUNCE {} : {}".format(self.env.now, len(announce), str(announce)))
+        print("{:.3f}: ANNOUNCE '{}' : {} / {}".format(self.env.now, self.id(), len(announce), str(announce)))
 
-        metric_to_send = announce[0]
 
         if announce:
-            # send to neighbours
-            for neighbour in self.outgoing_ports:
+            # skip through all the announcements
+            for metric_no, metric_to_send in enumerate(announce):
 
-                if link_end.src_node.id() == neighbour:
-                    # don't send to where it came from
-                    pass
+                # send to neighbours
+                for neighbour in self.outgoing_ports:
 
-                elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
-                    # don't send to any connected Hosts
-                    pass
+                    # print("Check " +  metric_to_send['link_end'] +  " <--> " + str(neighbour))
 
-                else:
-                    # create a new packet
-                    new_packet = Packet(metric_to_send['creationTime'], 3, metric_to_send['msgID'], self.id(), dst=neighbour)
-                    new_packet.type = "ServerLoad"
-                    new_packet.service =  metric_to_send['servicename']
-                    new_packet.replica = metric_to_send['replica']
-                    new_packet.payload = { 'load': metric_to_send['load'], 'no_of_flows': metric_to_send['no_of_flows'], 'delay': metric_to_send['delay'] }
+                    if metric_to_send['neighbour'] == str(neighbour):
+                        # don't send to where it came from
+                        # print("{:.3f}: NEIGHBOUR {} to {}".format(self.env.now, self.id(), neighbour))
+                        pass
 
-                    # forward the packet
-                    print("{:.3f}: FORWARD {} to {}".format(self.env.now, self.id(), neighbour))
-                    # send to SwitchPort
-                    self.outgoing_ports[neighbour].put(new_packet)
-            
+                    elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                        # don't send to any connected Hosts
+                        # print("{:.3f}: HOST {} to {}".format(self.env.now, self.id(), self.outgoing_ports[neighbour].out.dst_node))
+                        pass
+
+                    else:
+                        # create a new packet
+                        new_packet = Packet(metric_to_send['creationTime'], 3, metric_to_send['msgID'], self.id(), dst=neighbour)
+                        new_packet.type = "ServerLoad"
+                        new_packet.service =  metric_to_send['servicename']
+                        new_packet.replica = metric_to_send['replica']
+                        new_packet.payload = { 'load': metric_to_send['load'], 'no_of_flows': metric_to_send['no_of_flows'], 'delay': metric_to_send['delay'] }
+
+                        # forward the packet
+                        print("{:.3f}: FORWARD metric {} {} to {}".format(self.env.now, metric_no, self.id(), neighbour))
+                        # send to SwitchPort
+                        self.outgoing_ports[neighbour].put(new_packet)
+
 
 
 
