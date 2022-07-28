@@ -16,7 +16,7 @@ class Router(object):
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
-        # a database of metrics
+        # a database of metricss
         self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
         self.metrics_table = self.db.table('metrics')
         self.metrics_table.truncate()
