@@ -218,32 +218,17 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         print("{:.3f}: RESULTS {} link_end: {} msgID: {} replica: {} ==> {} ".format(self.env.now, self.id(), link_end, msgID, replica, results))
         
         # check results
-        announce = False
-        metrics_to_send = None
-        
         if results == []:
             # nothing found - it must be new, so add it
             val = self.metrics_table.insert({'link_end': str(link_end), 'msgID': msgID, 'replica': replica, 'servicename': servicename, 'creationTime': int(creationTime), 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
 
-            announce = True
             print ("{:.3f}: ADD {} metric {}".format(self.env.now, self.id(), val) )
 
-            metric_to_send = self.metrics_table.get(doc_id=val)
-
         else:
-            # something found - so check it
-            if self.metric_is_better(metrics, results):
-                # the metric is better
-                print("{:.3f}: metric IS better {}".format(self.env.now, self.id()))
-                # so update
-                self.metrics_table.update({ 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
+            # something found - so update it
+            val = self.metrics_table.update({ 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
 
-                # get the result
-                metric_to_send = results[0]
-            
-                announce = True
-            else:
-                announce = False
+            print("{:.3f}: UPDATE {} metric {}".format(self.env.now, self.id(), val))
 
                 
         # STEP 5,11 forward to appropriate links based on routing information base (fix code below)
@@ -252,6 +237,17 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         #   compare with all the others
         # if any of the metrics is better than that metric in all the other entries
         # announce on all the links that it wasn't received from
+
+
+        #  find the entries to announce
+        
+        #            metric_to_send = self.metrics_table.get(doc_id=val)
+
+        announce = self.decide_announcements(self.metrics_table.all())
+
+        print("{:.3f}: ANNOUNCE {} : {}".format(self.env.now, len(announce), str(announce)))
+
+        metric_to_send = announce[0]
 
         if announce:
             # send to neighbours
@@ -285,20 +281,44 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
     # is the metric better than the ones we have
-    def metric_is_better(self, metrics, results):
-        # currently just check the first result
-        result = results[0]
-
-        if metrics['load'] < result['load']:
+    def metric_is_better(self, mi, mj):
+        if mi >= mj:
             # load is lower
             return True
-
-        if metrics['delay'] < result['delay']:
-            # delay is lower
-            return True
-
-        return False
+        else:
+            return False
          
+    # is entry j better than entry i, in all metrics
+    def  is_better_in_all_metrics(self, j,i):
+        for m in ['load', 'delay']:
+            # skip through each metric by selecting metric m of i and metric m of j
+            # print("metric = " + m)
+            if self.metric_is_better(i[m], j[m]):
+                return False
+            
+        return True
+
+    # decide the entries to announce, given a set of entries
+    def decide_announcements(self, entries):
+        if len(entries) == 1:
+            return [entries[0]]
+
+        else:
+            # the list of things to announce
+            announce = [False for i in entries]
+
+            for index, i in enumerate(entries):
+                announce[index] = True
+                for j in entries:
+                    if self.is_better_in_all_metrics(j,i): # j is better than i in all the metrics 
+                        announce[index] = False
+                        break
+
+            # at this point the announce list should have a True for all the entries to announce
+            # select those entries which are laballed as True in announce
+            return [ entry for ann, entry in zip(announce, entries) if ann == True ]
+
+
         
     def put(self, packet):
         """ The callback from an EventGenerator.
