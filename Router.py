@@ -20,6 +20,8 @@ class Router(object):
         self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
         self.metrics_table = self.db.table('metrics')
         self.metrics_table.truncate()
+        self.sent_table = self.db.table('sent')
+        self.sent_table.truncate()
         
         self.set_env(env)
 
@@ -292,16 +294,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         # send to SwitchPort
                         self.outgoing_ports[neighbour].put(new_packet)
 
+                        # check sent_table
+                        self.check_sent_table(metric_to_send, neighbour)
 
-
+                        
 
         #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
 
 
-    # is the metric better than the ones we have
+    # is the metric mj better than mi
     def metric_is_better(self, mi, mj):
         if mi >= mj:
-            # load is lower
+            # mj is lower
             return True
         else:
             return False
@@ -331,16 +335,16 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 for index_j, j in enumerate(entries):
 
                     
+                    if index_i != index_j:
 
+                        if self.is_better_in_all_metrics(j,i): # j is better than i in all the metrics 
+                            announce[index_i] = False
 
-                    if self.is_better_in_all_metrics(j,i): # j is better than i in all the metrics 
-                        announce[index_i] = False
-
-                        print("{:.3f}: j_{} is better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                            print("{:.3f}: j_{} is better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
-                        break
-                    else:
-                        print("{:.3f}: j_{} is not better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                            break
+                        else:
+                            print("{:.3f}: j_{} is not better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
 
             # at this point the announce list should have a True for all the entries to announce
@@ -361,6 +365,29 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
          # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((None, packet))
 
+    # check the sent table
+    def check_sent_table(self, metric_to_send, neighbour):
+        # add info about the transmission to the sent_table
+        # find entry from sent_table for (doc_id in metrics_table, neighbour)
+        sent_query = Query()
+        sent_results = self.sent_table.search((sent_query.metric_doc_id == metric_to_send.doc_id) & (sent_query.neighbour == neighbour))
+
+        if Verbose.level >= 1:
+            print("{:.3f}: SENT_TABLE '{}'  ==> {} ".format(self.env.now, self.id(), sent_results))
+            
+        # check results
+        if sent_results == []:
+            # nothing found - it must be new, so add it
+            val = self.sent_table.insert({'metric_doc_id': metric_to_send.doc_id, 'neighbour': neighbour })
+
+            if Verbose.level >= 1:
+                print ("{:.3f}: ADD SENT_TABLE '{}' metric no {}".format(self.env.now, self.id(), val) )
+
+        else:
+            # update the table
+            pass
+
+        
     def recv(self, packet, link_end):
         """A packet is received from a LinkEnd of a neighbouring Router.
         """
