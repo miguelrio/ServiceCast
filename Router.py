@@ -315,7 +315,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def  is_better_in_all_metrics(self, j,i):
         for m in ['load', 'delay']:
             # skip through each metric by selecting metric m of i and metric m of j
-            # print("metric = " + m)
+            print("metric = " + m)
             # we want j[m] to be lower than i[m]
             if self.metric_is_better(i[m], j[m]):
                 return False
