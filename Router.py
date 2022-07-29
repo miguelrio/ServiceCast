@@ -154,31 +154,31 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 # normal forwarding
                 for neighbour in self.outgoing_ports:
 
-                  #print("neighbour " + str(self.outgoing_ports[neighbour].out))
+                    # print("neighbour " + str(self.outgoing_ports[neighbour].out))
 
-                  if link_end == None:
-                      # looks like a local packet
-                      # try and forward it
-                      self.outgoing_ports[neighbour].put(packet)
+                    if link_end == None:
+                        # looks like a local packet
+                        # try and forward it
+                        self.outgoing_ports[neighbour].put(packet)
 
-                  elif link_end.src_node.id() == neighbour:
-                      # don't send to where it came from
-                      if Verbose.level >= 2:
-                          print("{:.3f}: Packet {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
-                      pass
+                    elif link_end.src_node.id() == neighbour:
+                        # don't send to where it came from
+                        if Verbose.level >= 2:
+                            print("{:.3f}: Packet {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
+                        pass
 
-                  elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
-                      # don't send to any connected Hosts
-                      if Verbose.level >= 2:
-                          print("{:.3f}: Packet {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
+                    elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                        # don't send to any connected Hosts
+                        if Verbose.level >= 2:
+                            print("{:.3f}: Packet {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
 
-                  else:
-                      # forward the packet
-                      # send to SwitchPort
-                      self.outgoing_ports[neighbour].put(packet)
+                    else:
+                        # forward the packet
+                        # send to SwitchPort
+                        self.outgoing_ports[neighbour].put(packet)
 
-                      if Verbose.level >= 1:
-                          print("{:.3f}: Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
+                        if Verbose.level >= 1:
+                            print("{:.3f}: Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
 
 
     # Is the destination address a service name:  e.g. §a
@@ -194,7 +194,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # We received a packet of type ServerLoad
     def server_load_packet(self, link_end, packet):
         """The process for a packet with type ServerLoad"""
-        print("{:.3f}: Packet {} ServerLoad {}.{} ({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
+
+        if Verbose.level >= 1:
+            print("{:.3f}: Packet {} ServerLoad {}.{} ({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
 
         # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
         servicename = packet.service
@@ -203,7 +205,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         creationTime = packet.time
         metrics = packet.payload
 
-        print("{:.3f}: VALUES {} link_end: {} msgID: {} replica: {} time: {}  service: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, metrics))
+        if Verbose.level >= 1:
+            print("{:.3f}: VALUES {} link_end: {} msgID: {} replica: {} time: {}  service: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, metrics))
 
         # add the delay of the last hop to the metrics
         metrics['delay'] +=  link_end.propagation_delay
@@ -215,22 +218,25 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         metric = Query()
         results = self.metrics_table.search((metric.link_end == str(link_end)) & (metric.replica == replica))
 
-        print("{:.3f}: RESULTS '{}' link_end: {} replica: {} ==> {} ".format(self.env.now, self.id(), link_end, replica, results))
+        if Verbose.level >= 1:
+            print("{:.3f}: RESULTS '{}' link_end: {} replica: {} ==> {} ".format(self.env.now, self.id(), link_end, replica, results))
         
         # check results
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.metrics_table.insert({'link_end': str(link_end), 'neighbour': link_end.src_node.id(), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': int(creationTime), 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
+            val = self.metrics_table.insert({'link_end': str(link_end), 'neighbour': link_end.src_node.id(), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
 
-            print ("{:.3f}: ADD '{}' metric {}".format(self.env.now, self.id(), val) )
+            if Verbose.level >= 1:
+                print ("{:.3f}: ADD '{}' metric no {}".format(self.env.now, self.id(), val) )
 
         else:
             # something found
             # link_end and replica stay the same
             # update other values
-            val = self.metrics_table.update({ 'msgID': msgID, 'servicename': servicename, 'creationTime': int(creationTime), 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
+            val = self.metrics_table.update({ 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
 
-            print("{:.3f}: UPDATE '{}' metric {}".format(self.env.now, self.id(), val))
+            if Verbose.level >= 1:
+                print("{:.3f}: UPDATE '{}' metric no {}".format(self.env.now, self.id(), val))
 
                 
         # STEP 5,11 forward to appropriate links based on routing information base (fix code below)
@@ -243,11 +249,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         #  find the entries to announce
         
-        #            metric_to_send = self.metrics_table.get(doc_id=val)
-
         announce = self.decide_announcements(self.metrics_table.all())
 
-        print("{:.3f}: ANNOUNCE '{}' : {} / {}".format(self.env.now, self.id(), len(announce), str(announce)))
+        if Verbose.level >= 1:
+            print("{:.3f}: ANNOUNCE '{}' : {} / {}".format(self.env.now, self.id(), len(announce), str(announce)))
 
 
         if announce:
@@ -257,16 +262,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 # send to neighbours
                 for neighbour in self.outgoing_ports:
 
-                    # print("Check " +  metric_to_send['link_end'] +  " <--> " + str(neighbour))
+                    if Verbose.level >= 3:
+                        print("Check " +  metric_to_send['link_end'] +  " <--> " + str(neighbour))
 
                     if metric_to_send['neighbour'] == str(neighbour):
                         # don't send to where it came from
-                        # print("{:.3f}: NEIGHBOUR {} to {}".format(self.env.now, self.id(), neighbour))
+                        if Verbose.level >= 2:
+                            print("{:.3f}: NEIGHBOUR {} to {}".format(self.env.now, self.id(), neighbour))
                         pass
 
                     elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
                         # don't send to any connected Hosts
-                        # print("{:.3f}: HOST {} to {}".format(self.env.now, self.id(), self.outgoing_ports[neighbour].out.dst_node))
+                        if Verbose.level >= 2:
+                            print("{:.3f}: HOST {} to {}".format(self.env.now, self.id(), self.outgoing_ports[neighbour].out.dst_node))
                         pass
 
                     else:
@@ -278,7 +286,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         new_packet.payload = { 'load': metric_to_send['load'], 'no_of_flows': metric_to_send['no_of_flows'], 'delay': metric_to_send['delay'] }
 
                         # forward the packet
-                        print("{:.3f}: FORWARD metric {} {} to {}".format(self.env.now, metric_no, self.id(), neighbour))
+                        if Verbose.level >= 1:
+                            print("{:.3f}: FORWARD metric {} {} to {}".format(self.env.now, metric_no, self.id(), neighbour))
+
                         # send to SwitchPort
                         self.outgoing_ports[neighbour].put(new_packet)
 
@@ -315,19 +325,34 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # the list of things to announce
             announce = [False for i in entries]
 
-            for index, i in enumerate(entries):
-                announce[index] = True
-                for j in entries:
+            for index_i, i in enumerate(entries):
+                announce[index_i] = True
+                
+                for index_j, j in enumerate(entries):
+
+                    
+
+
                     if self.is_better_in_all_metrics(j,i): # j is better than i in all the metrics 
-                        announce[index] = False
+                        announce[index_i] = False
+
+                        print("{:.3f}: j_{} is better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                        
                         break
+                    else:
+                        print("{:.3f}: j_{} is not better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                        
 
             # at this point the announce list should have a True for all the entries to announce
+            print("{:.3f}: announce: {}".format(self.env.now, announce))
             # select those entries which are laballed as True in announce
             return [ entry for ann, entry in zip(announce, entries) if ann == True ]
 
 
-        
+    # display metrics
+    def displayMetrics(self, label, metric):
+        return "{} replica: {} load: {} delay: {}".format(label, metric['replica'], metric['load'], metric['delay'])
+
     def put(self, packet):
         """ The callback from an EventGenerator.
         """
