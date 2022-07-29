@@ -302,10 +302,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
 
 
-    # is the metric mj better than mi
-    def metric_is_better(self, mi, mj):
-        if mi >= mj:
-            # mj is lower
+    # is the metric arg2 is lower than arg1
+    # bigger number is worse
+    def metric_is_better(self, arg1, arg2):
+        if arg2 < arg1:
+            # arg2 is lower
             return True
         else:
             return False
@@ -315,6 +316,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         for m in ['load', 'delay']:
             # skip through each metric by selecting metric m of i and metric m of j
             # print("metric = " + m)
+            # we want j[m] to be lower than i[m]
             if self.metric_is_better(i[m], j[m]):
                 return False
             
