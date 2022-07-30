@@ -313,6 +313,21 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
          
     # is entry j better than entry i, in all metrics
     def  is_better_in_all_metrics(self, j,i):
+        metrics =  ['load', 'delay']
+        better = [False for m in metrics]
+
+        for index_m, m in enumerate(metrics):
+            # skip through each metric by selecting metric m of i and metric m of j
+            # print("metric = " + m)
+            # we want j[m] to be lower than i[m]
+            if self.metric_is_better(i[m], j[m]):
+                better[index_m] = True
+            
+        print("better = " + str(better))
+        
+        return any(better)
+
+    def  is_better_in_all_metrics_orig(self, j,i):
         for m in ['load', 'delay']:
             # skip through each metric by selecting metric m of i and metric m of j
             print("metric = " + m)
