@@ -378,7 +378,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                         better_j_i = self.is_better_in_any_metrics(j,i) 
 
-                        if better_j_i == Compare.Less: # j is better than i in all the metrics 
+                        if better_j_i == Compare.Less: # j is better than i in at least 1 metrics 
                             announce[index_i] = False
 
                             print("{:.3f}: j_{} is better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
@@ -386,8 +386,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             break
 
                         elif better_j_i == Compare.Same: # j is same in all metrics
-                            print("{:.3f}: j_{} is same as i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+
                             announce[index_j] = False
+                            
+                            print("{:.3f}: j_{} is same as i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+
 
                         else:
                             print("{:.3f}: j_{} is not better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
