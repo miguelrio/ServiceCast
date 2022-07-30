@@ -4,6 +4,16 @@ from Link import LinkEnd
 from Host import Host
 from Verbose import Verbose
 from tinydb import TinyDB, Query
+from enum import Enum
+
+class Compare(Enum):
+    Same = 0
+    More = 1
+    Less = 2
+
+    def __repr__(self):
+        return self.name
+
 
 LINKRATE = 100
 
@@ -305,14 +315,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # is the metric arg2 is lower than arg1
     # bigger number is worse
     def metric_is_better(self, arg1, arg2):
-        if arg2 < arg1:
+        if arg2 == arg1:
+            # arg2 is same
+            return Compare.Same
+        elif arg2 < arg1:
             # arg2 is lower
-            return True
+            return Compare.Less
         else:
-            return False
+            # arg2 is more
+            return Compare.More
          
     # is entry j better than entry i, in all metrics
-    def  is_better_in_all_metrics(self, j,i):
+    def  is_better_in_any_metrics(self, j,i):
         metrics =  ['load', 'delay']
         better = [False for m in metrics]
 
@@ -320,12 +334,20 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # skip through each metric by selecting metric m of i and metric m of j
             # print("metric = " + m)
             # we want j[m] to be lower than i[m]
-            if self.metric_is_better(i[m], j[m]):
-                better[index_m] = True
+            better[index_m] = self.metric_is_better(i[m], j[m])
+
             
         print("better = " + str(better))
-        
-        return any(better)
+
+        # return value
+        if all(v == Compare.Same for v in better):
+            return Compare.Same
+
+        elif any(v == Compare.Less for v in better):
+            return Compare.Less
+
+        else:
+            return Compare.More
 
     def  is_better_in_all_metrics_orig(self, j,i):
         for m in ['load', 'delay']:
@@ -354,12 +376,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     
                     if index_i != index_j:
 
-                        if self.is_better_in_all_metrics(j,i): # j is better than i in all the metrics 
+                        better_j_i = self.is_better_in_any_metrics(j,i) 
+
+                        if better_j_i == Compare.Less: # j is better than i in all the metrics 
                             announce[index_i] = False
 
                             print("{:.3f}: j_{} is better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
                             break
+
+                        elif better_j_i == Compare.Same: # j is same in all metrics
+                            print("{:.3f}: j_{} is same as i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                            announce[index_j] = False
+
                         else:
                             print("{:.3f}: j_{} is not better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
