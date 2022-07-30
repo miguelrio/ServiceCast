@@ -83,14 +83,14 @@ def square_topology_example_adj():
 
     # Server 's1' generates packets from arriving events
     # and sends to service 'a'  indicated by "§a"
-    generator_s1 = Generator.server_load_event_generator(network, "s1", ["§a"], exponential_lambda=55)
-    generator_s2 = Generator.server_load_event_generator(network, "s2", ["§a"], exponential_lambda=55)
-    generator_s3 = Generator.server_load_event_generator(network, "s3", ["§a"], exponential_lambda=55)
-    generator_s4 = Generator.server_load_event_generator(network, "s4", ["§a"], exponential_lambda=55)
-    generator_s5 = Generator.server_load_event_generator(network, "s5", ["§a"], exponential_lambda=55)
+    generator_s1 = Generator.server_load_event_generator(network, "s1", ["§a"], exponential_lambda=55, seed=30072022)
+    generator_s2 = Generator.server_load_event_generator(network, "s2", ["§a"], exponential_lambda=55, seed=30072022)
+    generator_s3 = Generator.server_load_event_generator(network, "s3", ["§a"], exponential_lambda=55, seed=30072022)
+    generator_s4 = Generator.server_load_event_generator(network, "s4", ["§a"], exponential_lambda=55, seed=30072022)
+    generator_s5 = Generator.server_load_event_generator(network, "s5", ["§a"], exponential_lambda=55, seed=30072022)
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", exponential_lambda=30)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", exponential_lambda=30, seed=30072022)
 
     # run
     print("RUN ----------------------------------------------------------------")
