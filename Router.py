@@ -340,10 +340,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         print("better = " + str(better))
 
         # return value
-        if all(v == Compare.Same for v in better):
+        if all(v == Compare.Same for v in better):            # ALL the Same
             return Compare.Same
 
-        elif any(v == Compare.Less for v in better):
+        elif any(v == Compare.Less for v in better):          # At least 1 is Less
             return Compare.Less
 
         else:
