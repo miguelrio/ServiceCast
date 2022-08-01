@@ -310,7 +310,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         
 
         #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
-
+# First we define the utility function U=alpha * load + (1-alpha)*delay
+# best_utility=-1
+# best replica=1
+# for all replicas i
+#   calculate Utility
+#   if utility(i) > best_utility
+#     best_replica=i
+#     best_utility=utility(i)
+# point fw entry to best replica's announced link end
 
     # is the metric arg2 is lower than arg1
     # bigger number is worse
