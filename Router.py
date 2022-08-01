@@ -343,7 +343,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if all(v == Compare.Same for v in better):            # ALL the Same
             return Compare.Same
 
-        elif all(v == Compare.Less for v in better):          # At least 1 is Less
+        elif all((v == Compare.Less or v == Compare.Same) for v in better):          # At least 1 is Less
             return Compare.Less
 
         else:
