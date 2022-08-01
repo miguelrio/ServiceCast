@@ -11,14 +11,14 @@ r1 = Router(1, env)
 # define test entry sets
 
 entries1 = [
-    { 'load': 0, 'delay': 4, 'replica': 's1': False },
-    { 'load': 0, 'delay': 3, 'replica': 's1': True },
-    { 'load': 2, 'delay': 3, 'replica': 's1': False }
+    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': False },
+    { 'load': 0, 'delay': 3, 'replica': 's1', 'announce': True },
+    { 'load': 2, 'delay': 3, 'replica': 's1', 'announce': False }
 ]
 
 entries2 = [
-    { 'load': 0, 'delay': 4, 'replica': 's1': True },
-    { 'load': 1, 'delay': 3, 'replica': 's1': True }
+    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': True },
+    { 'load': 1, 'delay': 3, 'replica': 's1', 'announce': True }
 ]
 
 
