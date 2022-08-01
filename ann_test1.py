@@ -22,15 +22,16 @@ entries2 = [
 ]
 
 
+# from the google doc
 entries_google_doc = [
-    { 'load': 3, 'delay': 20, 'replica': 's1' },
-    { 'load': 2, 'delay': 30, 'replica': 's2' },
-    { 'load': 1, 'delay': 40, 'replica': 'r3' },
-    { 'load': 100, 'delay': 100, 'replica': 'r4' },
-    { 'load': 101, 'delay': 99, 'replica': 'r5' },
-    { 'load': 200, 'delay': 98, 'replica': 'r6' },
-    { 'load': 2, 'delay': 99, 'replica': 'r7' },
-    { 'load': 2.5, 'delay': 35, 'replica': 'r8' }
+    { 'load': 3, 'delay': 20, 'replica': 's1', 'announce': True },
+    { 'load': 2, 'delay': 30, 'replica': 's2', 'announce': True  },
+    { 'load': 1, 'delay': 40, 'replica': 's3', 'announce': True  },
+    { 'load': 100, 'delay': 100, 'replica': 's4', 'announce': False },
+    { 'load': 101, 'delay': 99, 'replica': 's5', 'announce': False },
+    { 'load': 200, 'delay': 98, 'replica': 's6', 'announce': False },
+    { 'load': 2, 'delay': 99, 'replica': 's7', 'announce': False },
+    { 'load': 2.5, 'delay': 35, 'replica': 's8', 'announce': False }
 ]
 
 
