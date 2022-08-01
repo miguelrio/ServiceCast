@@ -33,15 +33,15 @@ entries_google_doc = [
     { 'load': 1, 'delay': 40, 'replica': 's3', 'announce': True  },
     { 'load': 2, 'delay': 99, 'replica': 's7', 'announce': False },
     { 'load': 2.5, 'delay': 35, 'replica': 's8', 'announce': False },
-    { 'load': 3, 'delay': 21, 'replica': 's1', 'announce': True }
+    { 'load': 3, 'delay': 21, 'replica': 's1', 'announce': False }
 ]
 
 
 entries4 = [
-    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': True },
-    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': True },
-    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': True },
-    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': True },
+    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': False },
+    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': False },
+    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': False },
+    { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': False },
     { 'load': 0, 'delay': 4, 'replica': 's1', 'announce': True }
 ]
 
