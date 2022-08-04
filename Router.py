@@ -17,6 +17,7 @@ class Compare(Enum):
 
 LINKRATE = 100
 
+
 class Router(object):
     """ A Router in the Simulation.
       Requires a put() method as a callback from the PacketGenerator.
@@ -26,14 +27,29 @@ class Router(object):
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
+        # set the simulation environment
+        self.set_env(env)
+
         # a database of metrics
         self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
+        # the table for metrics
         self.metrics_table = self.db.table('metrics')
         self.metrics_table.truncate()
+        # the table for announcements which have been sent
         self.sent_table = self.db.table('sent')
         self.sent_table.truncate()
+
+        # best replica info
+        self.best_replica = None
+        self.best_utility = -1
+
+        # forwarding table
+        self.forwarding_table = dict()
         
-        self.set_env(env)
+        # alpha
+        alpha = 0
+
+
 
     def set_env(self,env):
         """ Set the env"""
@@ -135,11 +151,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if packet.dst == self._routerid:
             # packet addressed to me
             # consume the packet
+
+            # pass to the PacketSink which collects arrival information
+            # may or may not be useful here
             self.sink.put(packet)
 
 
             # a server load info packet
-            if packet.type == "ServerLoad":
+            if getattr(packet, 'type', False) == "ServerLoad":   #  packet.type == "ServerLoad":
                 # we got a ServerLoad message
                 self.server_load_packet(link_end, packet)
 
@@ -159,38 +178,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             if self.is_service(packet.dst):
                 # this packet is for a Service name
-                if packet.type == "ClientRequest":
-                    print("{:.3f}: RECV PACKET ClientRequest at {} for service {} ".format(self.env.now, self.id(), packet.dst))
-                
+                if getattr(packet, 'type', False) == "ClientRequest": #  packet.type == "ClientRequest":
+                    self.client_request_packet(link_end, packet)
+                    
             else:
                 # normal forwarding
-                for neighbour in self.outgoing_ports:
+                self.normal_forwarding_packet(link_end, packet)
 
-                    # print("neighbour " + str(self.outgoing_ports[neighbour].out))
-
-                    if link_end == None:
-                        # looks like a local packet
-                        # try and forward it
-                        self.outgoing_ports[neighbour].put(packet)
-
-                    elif link_end.src_node.id() == neighbour:
-                        # don't send to where it came from
-                        if Verbose.level >= 2:
-                            print("{:.3f}: PACKET {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
-                        pass
-
-                    elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
-                        # don't send to any connected Hosts
-                        if Verbose.level >= 2:
-                            print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
-
-                    else:
-                        # forward the packet
-                        # send to SwitchPort
-                        self.outgoing_ports[neighbour].put(packet)
-
-                        if Verbose.level >= 1:
-                            print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
 
 
     # Is the destination address a service name:  e.g. §a
@@ -293,13 +287,16 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         pass
 
                     else:
-
+                        # a candidate for forwarding
+                        
                         if self.check_sent_table(metric_to_send, neighbour):
                             # this is in the sent table, so no need to send
                             if Verbose.level >= 1:
                                 print ("{:.3f}: ALREADY IN SENT_TABLE '{}' --> {} metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
                             pass
                         else:
+                            # send a new packet
+                            
                             # create a new packet
                             new_packet = Packet(metric_to_send['creationTime'], 3, metric_to_send['msgID'], self.id(), dst=neighbour)
                             new_packet.type = "ServerLoad"
@@ -311,7 +308,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             if Verbose.level >= 1:
                                 print("{:.3f}: FORWARD metric {} from {} to {}".format(self.env.now, metric_to_send.doc_id, self.id(), neighbour))
 
-                            # send to SwitchPort
+                            # send to relevant SwitchPort
                             self.outgoing_ports[neighbour].put(new_packet)
 
                             # update sent_table
@@ -321,15 +318,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
-        # First we define the utility function U=alpha * load + (1-alpha)*delay
-        # best_utility=-1
-        # best replica=1
-        # for all replicas i
-        #   calculate Utility
-        #   if utility(i) > best_utility
-        #     best_replica=i
-        #     best_utility=utility(i)
-        # point fw entry to best replica's announced link end
+        self.choose_best_forwarding_replica(self.metrics_table.all())
 
 
     # is the metric arg2 is lower than arg1
@@ -430,6 +419,89 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # display metrics
     def displayMetrics(self, label, metric):
         return "{} replica: {} load: {} delay: {}".format(label, metric['replica'], metric['load'], metric['delay'])
+
+
+    #  Check if fw table needs changing
+    def choose_best_forwarding_replica(self, entries):
+        # best_utility=-1
+        # best replica=1
+        # for all replicas i
+        #   calculate Utility
+        #   if utility(i) > best_utility
+        #     best_replica=i
+        #     best_utility=utility(i)
+        # point fw entry to best replica's announced link end
+
+        self.best_replica = None
+        self.best_utility = -1
+
+        # create a list of utility values
+        utility = [-1 for e in entries]
+
+        for entry_no, entry in enumerate(entries):
+            utility_i = self.forwarding_utility(self.alpha, entry['load'], entry['delay'])
+            utility[entry_no] = utility_i
+
+            if (utility_i > self.best_utility):
+                self.best_replica = entry['replica']
+
+        if Verbose.level >= 1:
+            print ("{:.3f}: utility '{}' = {} ".format(self.env.now, self.id(), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  entry['load'], entry['delay'], entry['replica'], entry['neighbour']), entries)))))
+
+        if Verbose.level >= 1:
+            print("{:.3f}: best_replica '{}' {} ".format(self.env.now, self.id(), self.best_replica))
+
+        self.forwarding_table[entry['servicename']] =  entry['link_end']
+
+        if Verbose.level >= 1:
+            print("{:.3f}: forwarding_table '{}' {}".format(self.env.now, self.id(), self.forwarding_table))
+
+    # the forwarding utility function
+    def forwarding_utility(self, alpha, load, delay):
+        """ the utility function U=alpha * load + (1-alpha)*delay """
+        # we define the utility function U=alpha * load + (1-alpha)*delay
+        return alpha * load + (1-alpha) * delay 
+        
+
+
+    # Handle a ClientRequest
+    def client_request_packet(self, link_end, packet):
+        """A Client has sent a request"""
+
+        # service name is in packet.dst
+        print("{:.3f}: RECV PACKET ClientRequest at {} for service {} ".format(self.env.now, self.id(), packet.dst))
+                
+
+    # Do normal forwarding
+    def normal_forwarding_packet(self, link_end, packet):
+         for neighbour in self.outgoing_ports:
+
+             # print("neighbour " + str(self.outgoing_ports[neighbour].out))
+
+             if link_end == None:
+                 # looks like a local packet
+                 # try and forward it
+                 self.outgoing_ports[neighbour].put(packet)
+
+             elif link_end.src_node.id() == neighbour:
+                 # don't send to where it came from
+                 if Verbose.level >= 2:
+                     print("{:.3f}: PACKET {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
+                 pass
+
+             elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                 # don't send to any connected Hosts
+                 if Verbose.level >= 2:
+                     print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
+
+             else:
+                 # forward the packet
+                 # send to SwitchPort
+                 self.outgoing_ports[neighbour].put(packet)
+
+                 if Verbose.level >= 1:
+                     print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
+
 
     def put(self, packet):
         """ The callback from an EventGenerator.
