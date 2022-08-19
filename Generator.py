@@ -28,7 +28,7 @@ class ServerLoadEventGenerator(EventGenerator):
     # Prepare a ServerEvent 
     def create_event(self):
         """Create an Event"""
-        e = ServerLoadEvent(self.env.now, self.event_count, self.destinations_dist(), self.flowdist(), self.loaddist(), self)
+        e = ServerLoadEvent(self.env.now, self.id, self.event_count, self.destinations_dist(), self.flowdist(), self.loaddist(), self)
         return e
 
 class ServerEvent(Event):
@@ -46,18 +46,19 @@ class ServerEvent(Event):
 class ServerLoadEvent(Event):
     """A ServerEvent is an Event that holds some load info
     """
-    def __init__(self, time, seq, service_name, flows, load, generator):
+    def __init__(self, time, id, seq, service_name, flows, load, generator):
         self.type = "LoadEvent"
         self.seq = seq
         self.time = time
+        self.id = id
         self.service_name = service_name
         self.no_of_flows = flows
         self.load = load
         self.generator = generator
 
     def __repr__(self):
-        return "{}: time: {} seq: {} service: {} no_of_flows: {} load: {}".\
-            format(self.type, self.time, self.seq, self.service_name, self.no_of_flows, self.load)
+        return "{}: time: {} id: {} seq: {} service: {} no_of_flows: {} load: {}".\
+            format(self.type, self.time, self.id, self.seq, self.service_name, self.no_of_flows, self.load)
 
         
 # Generate Events for a Single Client, with a specified address
@@ -188,9 +189,10 @@ class Generator(object):
         # We first define our random number generator so that we can reproduce results
         gen = np.random.RandomState(seed=seed)
 
-        # The interarrival times of a poisson process follow an exponential
+        # The interarrival time is the same
         def arrival_dist():
-            next_time = gen.exponential(exponential_lambda)
+            ##next_time = gen.exponential(exponential_lambda)
+            next_time = 10
             return next_time
 
         # No of flows is poisson

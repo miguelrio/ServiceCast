@@ -5,6 +5,18 @@ from Host import Host
 from Verbose import Verbose
 from tinydb import TinyDB, Query
 from enum import Enum
+# importing "collections" for defaultdict
+import collections
+
+# the forwarding utility function
+def forwarding_utility(alpha, load, delay):
+    """ the utility function U=alpha * load + (1-alpha)*delay """
+    # we define the utility function U=alpha * load + (1-alpha)*delay
+    return alpha * load + (1-alpha) * delay 
+    
+
+
+
 
 class Compare(Enum):
     Same = 0
@@ -45,10 +57,13 @@ class Router(object):
 
         # forwarding table
         self.forwarding_table = dict()
-        
+ 
+        # declaring defaultdict
+        # sets default value 'Key Not found' to absent keys
+        defd = collections.defaultdict(lambda : None)
+
         # alpha
         alpha = 0
-
 
 
     def set_env(self,env):
@@ -439,7 +454,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         utility = [-1 for e in entries]
 
         for entry_no, entry in enumerate(entries):
-            utility_i = self.forwarding_utility(self.alpha, entry['load'], entry['delay'])
+            utility_i = forwarding_utility(self.alpha, entry['load'], entry['delay'])
             utility[entry_no] = utility_i
 
             if (utility_i > self.best_utility):
@@ -451,26 +466,38 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if Verbose.level >= 1:
             print("{:.3f}: best_replica '{}' {} ".format(self.env.now, self.id(), self.best_replica))
 
-        self.forwarding_table[entry['servicename']] =  entry['link_end']
+        self.forwarding_table[entry['servicename']] =  entry['neighbour']
 
         if Verbose.level >= 1:
             print("{:.3f}: forwarding_table '{}' {}".format(self.env.now, self.id(), self.forwarding_table))
-
-    # the forwarding utility function
-    def forwarding_utility(self, alpha, load, delay):
-        """ the utility function U=alpha * load + (1-alpha)*delay """
-        # we define the utility function U=alpha * load + (1-alpha)*delay
-        return alpha * load + (1-alpha) * delay 
-        
 
 
     # Handle a ClientRequest
     def client_request_packet(self, link_end, packet):
         """A Client has sent a request"""
 
-        # service name is in packet.dst
-        print("{:.3f}: RECV PACKET ClientRequest at {} for service {} ".format(self.env.now, self.id(), packet.dst))
-                
+        if Verbose.level >= 1:
+            print("{:.3f}: RECV PACKET ClientRequest at {} for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+
+        # Destination is likely to be a service name: e.g. §a
+        service_name = packet.dst
+
+        # First we look up the service name
+        neighbour = self.forwarding_table[service_name]
+
+        if Verbose.level >= 2:
+            print ("{:.3f}: ClientRequest neighbour =  {}".format(self.env.now, neighbour))
+
+        if neighbour == None:
+            # service_name isn't in forwarding_table
+            print("{:.3f}: NO FORWARDING_TABLE ENTRY ClientRequest  at {} for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+        else:
+            # value is link_end
+            # so forwarding the packet
+            if Verbose.level >= 1:
+                print("{:.3f}: FORWARD PACKET ClientRequest at {} for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
+
+            self.outgoing_ports[neighbour].put(packet)                
 
     # Do normal forwarding
     def normal_forwarding_packet(self, link_end, packet):

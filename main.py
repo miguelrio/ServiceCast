@@ -100,7 +100,9 @@ def square_topology_example_adj():
 
     
 # Set alpha value
-Router.alpha = 0.75
+Router.alpha = 0.50
+
+
 
 
 
