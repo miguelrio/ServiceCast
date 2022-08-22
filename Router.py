@@ -8,6 +8,7 @@ from enum import Enum
 # importing "collections" for defaultdict
 import collections
 
+
 # the forwarding utility function
 def forwarding_utility(alpha, load, delay):
     """ the utility function U=alpha * load + (1-alpha)*delay """
@@ -333,6 +334,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
+        if Verbose.level >= 1:
+            print("{:.3f}: METRIC_TABLE '{}' {}".format(self.env.now, self.id(), str(self.metrics_table.all())))
+
         self.choose_best_forwarding_replica(self.metrics_table.all())
 
 
@@ -448,7 +452,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # point fw entry to best replica's announced link end
 
         self.best_replica = None
-        self.best_utility = -1
+        self.best_neighbour = None
+        self.best_utility = float('inf')
+        self.servicename = None
 
         # create a list of utility values
         utility = [-1 for e in entries]
@@ -457,8 +463,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             utility_i = forwarding_utility(self.alpha, entry['load'], entry['delay'])
             utility[entry_no] = utility_i
 
-            if (utility_i > self.best_utility):
+            #print ("entry_no " + str(entry_no) + " neighbour " + entry['neighbour'] + " utility_i = " + str(utility_i))
+
+            if (utility_i < self.best_utility):
                 self.best_replica = entry['replica']
+                self.best_neighbour = entry['neighbour']
+                self.servicename = entry['servicename']
+                self.best_utility = utility_i
 
         if Verbose.level >= 1:
             print ("{:.3f}: utility '{}' = {} ".format(self.env.now, self.id(), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  entry['load'], entry['delay'], entry['replica'], entry['neighbour']), entries)))))
@@ -466,7 +477,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if Verbose.level >= 1:
             print("{:.3f}: best_replica '{}' {} ".format(self.env.now, self.id(), self.best_replica))
 
-        self.forwarding_table[entry['servicename']] =  entry['neighbour']
+        self.forwarding_table[self.servicename] =  self.best_neighbour
 
         if Verbose.level >= 1:
             print("{:.3f}: forwarding_table '{}' {}".format(self.env.now, self.id(), self.forwarding_table))
