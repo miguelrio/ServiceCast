@@ -442,11 +442,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
     #  Check if fw table needs changing
     def choose_best_forwarding_replica(self, entries):
-        # best_utility=-1
+        # best_utility=Infinity
         # best replica=1
         # for all replicas i
         #   calculate Utility
-        #   if utility(i) > best_utility
+        #   if utility(i) < best_utility
         #     best_replica=i
         #     best_utility=utility(i)
         # point fw entry to best replica's announced link end
