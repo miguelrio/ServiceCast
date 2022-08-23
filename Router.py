@@ -472,7 +472,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 self.best_utility = utility_i
 
         if Verbose.level >= 1:
-            print ("{:.3f}: utility '{}' = {} ".format(self.env.now, self.id(), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  entry['load'], entry['delay'], entry['replica'], entry['neighbour']), entries)))))
+            print ("{:.3f}: utility '{}' = {} ".format(self.env.now, self.id(), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  doc['load'], doc['delay'], doc['replica'], doc['neighbour']), entries)))))
 
         if Verbose.level >= 1:
             print("{:.3f}: best_replica '{}' {} ".format(self.env.now, self.id(), self.best_replica))
