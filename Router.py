@@ -281,7 +281,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         announce = self.decide_announcements(self.metrics_table.all())
 
         if Verbose.level >= 1:
-            print("{:.3f}: ANNOUNCE '{}' : {} / {}".format(self.env.now, self.id(), len(announce), list(zip (map(lambda doc: doc.doc_id, announce), announce))))
+            self.print_announce_info(announce)
 
 
         if announce:
@@ -628,6 +628,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             for entry_no, entry in enumerate(entries):
                 print("       {:2d}  ({})  {}".format(entry.doc_id, utility[entry_no], entry))
 
+
+    # Print announce info
+    def print_announce_info(self, announce):
+        if Verbose.table == 0:
+            print("{:.3f}: ANNOUNCE '{}' : {} / {}".format(self.env.now, self.id(), len(announce), list(zip (map(lambda doc: doc.doc_id, announce), announce))))
+        else:
+            print("{:.3f}: ANNOUNCE '{}' {}".format(self.env.now, self.id(), len(announce)))
+            for entry_no, entry in enumerate(announce):
+                print("       {:2d}  {}".format(entry.doc_id, entry))
+
+                # list(zip (map(lambda doc: doc.doc_id, announce), announce))))
+            
 
     def recv(self, packet, link_end):
         """A packet is received from a LinkEnd of a neighbouring Router.
