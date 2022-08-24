@@ -16,6 +16,7 @@ import simpy
 # Use a topology from an adjacency list
 def square_topology_example_adj():
     Verbose.level = 2
+    Verbose.table = 1
     
     # 1 - Define the topology
     topo = {

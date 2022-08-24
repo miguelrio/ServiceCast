@@ -246,7 +246,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # check results
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.metrics_table.insert({'link_end': str(link_end), 'neighbour': link_end.src_node.id(), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
+            val = self.metrics_table.insert({'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
 
             if Verbose.level >= 1:
                 print ("{:.3f}: ADD METRIC '{}' metric no {}".format(self.env.now, self.id(), val) )
@@ -273,7 +273,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         if Verbose.level >= 1:
-            print("{:.3f}: METRIC_TABLE '{}' {}".format(self.env.now, self.id(), str(self.metrics_table.all())))
+            self.print_metric_table()
 
 
         #  find the entries to announce
@@ -474,10 +474,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 self.best_utility = utility_i
 
         if Verbose.level >= 1:
-            print ("{:.3f}: utility '{}' = {} ".format(self.env.now, self.id(), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  doc['load'], doc['delay'], doc['replica'], doc['neighbour']), entries)))))
+            self.print_utility_info(entries, utility)
+            
 
         if Verbose.level >= 1:
-            print("{:.3f}: best_replica '{}' {} ".format(self.env.now, self.id(), self.best_replica))
+            if self.best_replica == self.best_neighbour:
+                print("{:.3f}: best_replica '{}' {} direct ".format(self.env.now, self.id(), self.best_replica))
+            else:
+                print("{:.3f}: best_replica '{}' {} -> {} ".format(self.env.now, self.id(), self.best_replica, self.best_neighbour))
 
         self.forwarding_table[self.servicename] =  self.best_neighbour
 
@@ -604,6 +608,25 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         after = len(self.sent_table)
         # print("size after = " + str(after))
+
+    # Print metric table
+    def print_metric_table(self):
+        if Verbose.table == 0:
+            print("{:.3f}: METRIC_TABLE '{}' {}".format(self.env.now, self.id(), str(self.metrics_table.all())))
+        else:
+            print("{:.3f}: METRIC_TABLE '{}'".format(self.env.now, self.id()))
+            for metric_no, metric in enumerate(self.metrics_table.all()):
+                print("       {:2d}  {}".format(metric_no+1, metric))
+
+
+    # Print utility info
+    def print_utility_info(self, entries, utility):
+        if Verbose.table == 0:
+            print ("{:.3f}: UTILITY '{}' = {} ".format(self.env.now, self.id(), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  doc['load'], doc['delay'], doc['replica'], doc['neighbour']), entries)))))
+        else:
+            print ("{:.3f}: UTILITY '{}'".format(self.env.now, self.id()))
+            for entry_no, entry in enumerate(entries):
+                print("       {:2d}  ({})  {}".format(entry.doc_id, utility[entry_no], entry))
 
 
     def recv(self, packet, link_end):
