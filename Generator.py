@@ -189,6 +189,8 @@ class Generator(object):
         # We first define our random number generator so that we can reproduce results
         gen = np.random.RandomState(seed=seed)
 
+        gen2 = np.random.RandomState(seed=None)
+
         # The interarrival time is the same
         def arrival_dist():
             ##next_time = gen.exponential(exponential_lambda)
@@ -197,23 +199,23 @@ class Generator(object):
 
         # No of flows is poisson
         def no_of_flows_dist():
-            next_val = gen.poisson(1.0)
+            next_val = gen2.poisson(1.0)
             return next_val
 
         def load_dist():
             # normal 0 - 100,  mu = 50 +/- 20 stddevs
-            # next_val = gen.normal(loc=50.0, scale=20, size=None)
-
-            next_val = gen.choice([0, 1, 2, 3, 4])
-            return next_val
+            next_val = gen2.normal(loc=10, scale=4, size=None)
+            # next_val = gen2.exponential(10)
+            # next_val = gen.choice([0, 1, 2, 3, 4])
+            return next_val if next_val > 0 else 0
         
         # Select one service
         def service_name():
             return gen.choice(possible_service_names)
 
         event_generator = ServerLoadEventGenerator(env, id=id,
-                                               adist=arrival_dist, flowdist=no_of_flows_dist,
-                                               loaddist=load_dist,
+                                                   adist=arrival_dist, flowdist=no_of_flows_dist,
+                                                   loaddist=load_dist,
                                                    destinations_dist=service_name)
 
 
@@ -263,8 +265,8 @@ class Generator(object):
 
         # Create the event generator oobject
         event_generator = ClientEventGenerator(env, id=id,
-                                           adist=arrival_dist, sdist=size_dist,
-                                           destinations_dist=destinations_dist)
+                                               adist=arrival_dist, sdist=size_dist,
+                                               destinations_dist=destinations_dist)
 
 
         # This line makes event generator member out pointing to node 'id'.
@@ -313,7 +315,7 @@ class Generator(object):
 
         # Create the event generator oobject
         event_generator = MultiClientEventGenerator(env, target_name,
-                                           adist=arrival_dist, sdist=size_dist,
+                                                    adist=arrival_dist, sdist=size_dist,
                                                     destinations_dist=sources_dist)
 
 

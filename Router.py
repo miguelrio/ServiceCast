@@ -258,7 +258,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             val = self.metrics_table.update({ 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
 
             if Verbose.level >= 1:
-                print("{:.3f}: UPDATE METRIC '{}' metric no {}".format(self.env.now, self.id(), val))
+                print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {} load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
 
             # clear out sent_table entries for this doc_id
             self.clear_sent_table(val[0])
@@ -270,6 +270,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         #   compare with all the others
         # if any of the metrics is better than that metric in all the other entries
         # announce on all the links that it wasn't received from
+
+
+        if Verbose.level >= 1:
+            print("{:.3f}: METRIC_TABLE '{}' {}".format(self.env.now, self.id(), str(self.metrics_table.all())))
 
 
         #  find the entries to announce
@@ -334,8 +338,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
-        if Verbose.level >= 1:
-            print("{:.3f}: METRIC_TABLE '{}' {}".format(self.env.now, self.id(), str(self.metrics_table.all())))
 
         self.choose_best_forwarding_replica(self.metrics_table.all())
 

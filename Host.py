@@ -98,6 +98,16 @@ class Host(object):
             if Verbose.level >= 2:
                 print("{:.3f}: HOST Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self.hostid, self.neighbour, (self.env.now - packet.time)))
            
+    # Is the destination address a service name:  e.g. §a
+    def is_service(self, name):
+        """Is the destination address a service name:  e.g. §a"""
+        if name == None:
+            return False
+        elif name.startswith("§"):
+            return True
+        else:
+            return False
+
 
     def put(self, event):
         """ The callback from the EventGenerator
