@@ -9,6 +9,9 @@ class Server(Host):
         super().__init__(serverid, env)
         self.type = "Server"
         self.saved_event = None
+
+        self.load_packet_number = 1;
+        
         # values from last LoadEvent
         self.last_event_info =  { 'load': 0, 'no_of_flows': 0 }
         # values from client requests
@@ -39,7 +42,7 @@ class Server(Host):
             self.last_event_info = { 'load': event.load, 'no_of_flows': event.no_of_flows }
 
             # convert an event into a packet
-            self.load_event_to_packet(event)
+            self.send_load_packet(event.time, event.service_name)
 
         else:
             # nothing changed
@@ -58,21 +61,24 @@ class Server(Host):
         # None represents this node
         self.packet_store.put((None, packet))
 
-        # MR: STEP 9 update load (add or subtract)
-        # MR: STEP 10 If threshold passes send update
-        
     def process_other_event(self, event):
         print("Server: Event type {}: {}".format(event.type, str(event)))
 
-
-    def load_event_to_packet(self, event):
+    # Send a ServerLoad packet
+    def send_load_packet(self, time, service_name):
+        """Send a ServerLoad packet"""
         # convert an event into a packet
         # set size to 3, to represent 3 values
-        packet = Packet(event.time, 3, event.seq, self.id(), dst=self.neighbour)
+        packet = Packet(time, 3, self.load_packet_number, self.id(), dst=self.neighbour)
         packet.type = "ServerLoad"
-        packet.service =  event.service_name
+        packet.service =  service_name
         packet.replica = self.hostid
-        packet.payload = { 'load': int(event.load), 'no_of_flows': int(event.no_of_flows), 'delay': 0 }
+        packet.payload = { 'load': int(self.last_event_info['load']) + int(self.request_info['load']),
+                           'no_of_flows': int(self.last_event_info['no_of_flows']) + int(self.request_info['no_of_flows']),
+                           'delay': 0 }
+
+        # update load_packet_number for next time
+        self.load_packet_number += 1
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node
@@ -108,7 +114,7 @@ class Server(Host):
                 self.outgoing_port.put(packet)
 
                 if Verbose.level >= 2:
-                    print("{:.3f}: HOST Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self.hostid, self.neighbour, (self.env.now - packet.time)))
+                    print("{:.3f}: HOST Packet {}.{} for {} deliver to {}".format(self.env.now, packet.src, packet.id, packet.dst,  self.neighbour))
            
 
     # Handle a ClientRequest
@@ -118,9 +124,6 @@ class Server(Host):
         if Verbose.level >= 1:
             print("{:.3f}: SERVER_PROCESS ClientRequest at {} for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
 
-        # Destination is likely to be a service name: e.g. §a
-        service_name = packet.dst
-
         # process the request packet
         self. process_client_request_packet(packet)
 
@@ -128,8 +131,17 @@ class Server(Host):
     # Process a ClientRequest packet
     def process_client_request_packet(self, packet):
         """Process a ClientRequest packet"""
+
+        # MR: STEP 9 update load (add or subtract)
+        # MR: STEP 10 If threshold passes send update
+
         self.request_info = { 'load': self.request_info['load']+2, 'no_of_flows': self.request_info['no_of_flows']+1 }
 
         if Verbose.level >= 1:
             print("{:.3f}: REQUEST_FLOWS at {} {}".format(self.env.now, self.id(), self.request_info))
         
+        
+        # Destination is likely to be a service name: e.g. §a
+        service_name = packet.dst
+
+        self.send_load_packet(self.env.now, service_name)
