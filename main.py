@@ -14,9 +14,14 @@ import simpy
 
 
 # Use a topology from an adjacency list
-def square_topology_example_adj():
+def topology_setup():
     Verbose.level = 2
     Verbose.table = 1
+
+    # Set alpha value
+    Router.alpha = 0.50
+
+
     
     # 1 - Define the topology
     topo = {
@@ -100,15 +105,12 @@ def square_topology_example_adj():
 
 
     
-# Set alpha value
-Router.alpha = 0.50
-
 
 
 
 
 # go !
-square_topology_example_adj()
+topology_setup()
 
 
 
