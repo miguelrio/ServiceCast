@@ -218,7 +218,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """The process for a packet with type ServerLoad"""
 
         if Verbose.level >= 1:
-            print("{:.3f}: RECV PACKET '{}' ServerLoad {}.{} ({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
+            print("{:.3f}: RECV PACKET '{}' ServerLoad {}.{} ({:.3f}) [{}.{}] managed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, packet.replica, packet.id, self._routerid, (self.env.now - packet.time)))
 
         # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
         servicename = packet.service
@@ -236,6 +236,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # add the delay of the last hop to the metrics
         metrics['delay'] +=  link_end.propagation_delay
+
+
+        # for a specific replica
+        # if there is a metric entry with a lower delay,
+        # then drop incoming msg BUT we might keep them in future labelled DO_NOT_USE
+        # i.e. incoming delay is higher
+        #
+        # if  there is a metric entry with an equal or higher delay
+        # then update the metric
+        #
+        # NEW:   (link_end, replica) is NOT key for decision
+        #
+        # never have more than 1 entry for each replica
 
         # store important data (including metrics) for later use in table
         # (link_end, replica) is key for decision for deleting old data
