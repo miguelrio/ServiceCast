@@ -238,13 +238,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         metrics['delay'] +=  link_end.propagation_delay
 
 
-        # for a specific replica
-        # if there is a metric entry with a lower delay,
-        # then drop incoming msg BUT we might keep them in future labelled DO_NOT_USE
-        # i.e. incoming delay is higher
-        #
-        # if  there is a metric entry with an equal or higher delay
-        # then update the metric
         #
         # NEW:   (link_end, replica) is NOT key for decision
         #
@@ -253,9 +246,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # store important data (including metrics) for later use in table
         # (link_end, replica) is key for decision for deleting old data
 
-        # find entry from database for (link_end, replica)
-        metric = Query()
-        results = self.metrics_table.search((metric.link_end == str(link_end)) & (metric.replica == replica))
+        # find entry from database for replica
+        search = Query()
+        results = self.metrics_table.search((search.replica == replica))
 
         if Verbose.level >= 1:
             print("{:.3f}: METRIC_SEARCH_RESULTS '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), results))))
@@ -274,16 +267,37 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # check if the new metrics are worse than the found result
             (update_val, found_in_sent_table) = self.check_metrics_worse(metrics, results[0])
 
+            
+            # for a specific replica
+            # if there is a metric entry with a lower delay,
 
-            # link_end and replica stay the same
-            # update other values
-            val = self.metrics_table.update({ 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
+            searchD = Query()
+            resultsD = self.metrics_table.search((searchD.replica == replica) & (search.delay < metrics['delay']))
 
             if Verbose.level >= 1:
-                print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {} load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
+                print("{:.3f}: METRIC_LOWER_DELAY '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsD))))
 
-            # clear out sent_table entries for this doc_id
-            self.clear_sent_table(val[0])
+            # check results
+            if resultsD != []:
+                # then drop incoming msg BUT we might keep them in future labelled DO_NOT_USE
+                # i.e. incoming delay is higher
+                pass
+            else:
+                # if  there is a metric entry with an equal or higher delay
+                # then update the metric
+                # replica stays the same
+                # update other values
+
+
+                # replica stay the same
+                # update other values
+                val = self.metrics_table.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
+
+                if Verbose.level >= 1:
+                    print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
+
+                # clear out sent_table entries for this doc_id
+                self.clear_sent_table(val[0])
 
                 
         # STEP 5,11 forward to appropriate links based on routing information base (fix code below)
