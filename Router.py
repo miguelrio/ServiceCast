@@ -265,6 +265,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # something found in metrics_table
 
             # check if the new metrics are worse than the found result
+            # needs to be done early
             (update_val, found_in_sent_table) = self.check_metrics_worse(metrics, results[0])
 
             
@@ -272,32 +273,48 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # if there is a metric entry with a lower delay,
 
             searchD = Query()
-            resultsD = self.metrics_table.search((searchD.replica == replica) & (search.delay < metrics['delay']))
+            resultsD = self.metrics_table.search((searchD.replica == replica) & (searchD.delay < metrics['delay']))
 
             if Verbose.level >= 1:
                 print("{:.3f}: METRIC_LOWER_DELAY '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsD))))
 
             # check results
             if resultsD != []:
+                # The incoming delay is higher -- i.e. the existing metric has lower delay
                 # then drop incoming msg BUT we might keep them in future labelled DO_NOT_USE
-                # i.e. incoming delay is higher
                 pass
             else:
-                # if  there is a metric entry with an equal or higher delay
-                # then update the metric
-                # replica stays the same
-                # update other values
+                # There is an existing metric entry with an equal or higher delay
+
+                # if they are equal we need to do more checks
+                searchE = Query()
+                resultsE = self.metrics_table.search((searchD.replica == replica) & (searchD.delay == metrics['delay']))
+
+                # check results
+                neighbourVal = None
+                linkVal = None
+                
+                if resultsE != []:
+                    # choose one of them
+                    # a.  keep the one that's in there
+                    # OR b.  select the one with the 'lowest' name
+                    print("{:.3f}: METRIC_EQUAL_DELAY '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsE))))
+                else:
+
+                    # then update the metric
+                    # replica stays the same
+                    # update other values
 
 
-                # replica stay the same
-                # update other values
-                val = self.metrics_table.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
+                    # replica stay the same
+                    # update other values
+                    val = self.metrics_table.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
 
-                if Verbose.level >= 1:
-                    print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
+                    if Verbose.level >= 1:
+                        print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
 
-                # clear out sent_table entries for this doc_id
-                self.clear_sent_table(val[0])
+                    # clear out sent_table entries for this doc_id
+                    self.clear_sent_table(val[0])
 
                 
         # STEP 5,11 forward to appropriate links based on routing information base (fix code below)
