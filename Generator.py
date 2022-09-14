@@ -170,11 +170,11 @@ class Generator(object):
 
     #  A event generator for a server
     @classmethod
-    def server_load_event_generator(cls, network, id, possible_service_names,
+    def server_load_event_generator(cls, network, idstr, possible_service_names,
                          exponential_lambda=1,
                          packet_size=100,
                          seed=None):
-        """ Generates events from node with 'id', and sends to the immediate neighbour.
+        """ Generates events from node with 'idstr', and sends to the immediate neighbour.
             'exponential_lambda' is passed to the arrival distribution.
             'packet_size' is used for the size distribution.
         """
@@ -189,7 +189,7 @@ class Generator(object):
         # We first define our random number generator so that we can reproduce results
         gen = np.random.RandomState(seed=seed)
 
-        gen2 = np.random.RandomState(seed=None)
+        gen2 = np.random.RandomState(seed=int(idstr[1]))
 
         # The interarrival time is the same
         def arrival_dist():
@@ -213,16 +213,16 @@ class Generator(object):
         def service_name():
             return gen.choice(possible_service_names)
 
-        event_generator = ServerLoadEventGenerator(env, id=id,
+        event_generator = ServerLoadEventGenerator(env, id=idstr,
                                                    adist=arrival_dist, flowdist=no_of_flows_dist,
                                                    loaddist=load_dist,
                                                    destinations_dist=service_name)
 
 
-        # This line makes event generator member out pointing to node 'id'.
+        # This line makes event generator member out pointing to node 'idstr'.
         # It will then do self.out.put() which puts the event in the receiving queue
         # of node 'id'
-        event_generator.out = network[id]
+        event_generator.out = network[idstr]
         event_generator.network = network
 
 

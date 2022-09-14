@@ -271,7 +271,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             
             # for a specific replica
             # if there is a metric entry with a lower delay,
-
+            # this is a Proxy for determining if it's on the unicast path
             searchD = Query()
             resultsD = self.metrics_table.search((searchD.replica == replica) & (searchD.delay < metrics['delay']))
 
@@ -281,7 +281,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # check results
             if resultsD != []:
                 # The incoming delay is higher -- i.e. the existing metric has lower delay
-                # then drop incoming msg BUT we might keep them in future labelled DO_NOT_USE
+                # then drop incoming msg
+                # BUT we might keep them in future labelled DO_NOT_USE
                 pass
             else:
                 # There is an existing metric entry with an equal or higher delay
@@ -296,9 +297,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 
                 if resultsE != []:
                     # choose one of them
-                    # a.  keep the one that's in there
+                    # a.  keep the one that's in there  [DOING THIS]
                     # OR b.  select the one with the 'lowest' name
                     print("{:.3f}: METRIC_EQUAL_DELAY '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsE))))
+                    
                 else:
 
                     # then update the metric
