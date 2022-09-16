@@ -17,6 +17,9 @@ import simpy
 def square_topology_example_adj():
     Verbose.level = 2
     
+    # Set alpha value
+    Router.alpha = 0.50
+
     # 1 - Define the topology
     topo = {
         'a': { 'b', ('c', 4)},

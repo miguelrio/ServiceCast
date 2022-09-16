@@ -84,7 +84,7 @@ def topology_setup():
 
 
 # go !
-small_topology_example_adj()
+topology_setup()
 
 
 
