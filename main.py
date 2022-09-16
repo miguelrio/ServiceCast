@@ -95,19 +95,29 @@ def topology_setup():
     network.add_client("c3", 'e')
     network.add_client("c4", 'e')
     network.add_client("c5", 'e')
+
+    # now calculate all the routing_tables
+    network.calculate_routing_tables()
     
+    # some test values
+    print("Network = ")
+    network.print()
+
     print("Network neighbours e: " + str(network.neighbours('e')))
     print("Network degree e: " + str(network.degree('e')))
 
     print("Network neighbours c1: " + str(network.neighbours('c1')))
     print("Network degree c1: " + str(network.degree('c1')))
 
-    print("Network = ")
-    network.print()
-
     print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
     print("Network: dijkstra from d = " + str(Graph.dijkstra_algorithm(network, 'd')))
 
+    print("Network: routing table at d = " + str(network['d'].get_routing_table()))
+
+    print("Network: route from d to s1 = " + str(network['d'].route_to('s1')) +  "  distance: " + str(network['d'].distance_to('s1')) )
+    
+    print("Network: route from s1 to c1  = " + str(network['s1'].route_to('c1')) +  "  distance: " + str(network['s1'].distance_to('c1')) )
+    
     # 4 - Now we create the packet generator.
 
     # Services are not addresses -- they start with §

@@ -15,6 +15,10 @@ class Host(object):
         self.outgoing_port = None
         self.type = "Host"
 
+        # a routing table
+        # each entry is (destination, next_hop, weight)
+        self.routing_table = dict()
+
         self.set_env(env)
 
     def set_env(self,env):
@@ -107,6 +111,37 @@ class Host(object):
             return True
         else:
             return False
+
+    def set_routing_table(self, list_of_routes):
+        """Set the routing table"""
+        # takes a list of  entries like (destination, next_hop, weight)
+        # and coverts into the internal routing table format
+
+        for entry in list_of_routes:
+            self.routing_table[entry[0]] = entry
+
+    # Get the routing table
+    def get_routing_table(self):
+        """Get the routing table"""
+
+        return self.routing_table
+
+    # Get the route to a specific node
+    def route_to(self, dst):
+        """Get the next hop for a route to a destination"""
+        if isinstance(dst, str):
+            return self.routing_table[dst][1]
+        else:
+            return self.routing_table[dst.id()][1]
+
+    # Get the distance to a specific node
+    def distance_to(self, dst):
+        """Get the distance to a destination"""
+        if isinstance(dst, str):
+            return self.routing_table[dst][2]
+        else:
+            return self.routing_table[dst.id()][2]
+
 
 
     def put(self, event):

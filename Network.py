@@ -281,6 +281,74 @@ class Network:
     # Links to a node - by name
     def links_to(self, val):
         return list(filter(lambda l: val in l.links(), self.links))
+
+    # calculate the routing table for every node
+    def calculate_routing_tables(self):
+        """Calculate the routing tables for all nodes"""
+        for node in self.nodes():            
+            table = self.routing_table(node)
+            self[node].set_routing_table(table)
+
+    # calculate a routing table for a router r
+    # each entry is (destination, next_hop, weight)
+    def routing_table(self, r):
+        """Calculate the routing table for router r"""
+        router = None
+
+        if isinstance(r, str):
+            router = r
+        else:
+            router = r.id()
+
+        # calculate Dijkstra's algorithm for the router
+        # this returns a dict of 3 values
+        # the 'source' node, the 'shortest_path' to other nodes,
+        # the 'previous_nodes' for other nodes. 
+        dijkstra_r = Graph.dijkstra_algorithm(self, router)
+
+        # we combine shortest_path and previous_nodes to
+        # create the routing table entries
+        table = self.dijkstra_to_routing(router, dijkstra_r['shortest_path'], dijkstra_r['previous_nodes'])
+        return table
+
+    # convert shortest_path and previous_nodes dicts into 
+    # a list of  entries like (destination, next_hop, weight)
+    def dijkstra_to_routing(self, router, shortest_path, previous_nodes):
+        """Convert dijkstra_algorithm dict into a routing table"""
+        
+        # example inputs are:
+        # 'shortest_path': {'a': 3, 'b': 2, 'c': 5, 'd': 0, 'e': 4, 'f': 6, 's1': 4, 's2': 4, 's3': 4, 's4': 4, 's5': 4, 'c1': 5, 'c2': 5, 'c3': 5, 'c4': 5, 'c5': 5},
+        # 'previous_nodes': {'b': 'd', 'c': 'd', 'e': 'b', 'a': 'b', 's1': 'a', 's2': 'a', 's3': 'a', 's4': 'a', 's5': 'a', 'c1': 'e', 'c2': 'e', 'c3': 'e', 'c4': 'e', 'c5': 'e', 'f': 'c'}
+
+        table = []
+        
+        # visit the shortest_path dict and work out which is the
+        # directly connected node to send to
+        for node, weight in shortest_path.items():
+            if node == router:
+                # found myself - nothing to do
+                pass
+            else:
+                # now find the directly connected node
+                connected = None
+                lookup = node
+
+                while True:
+                    # find lookup in previous_nodes
+                    connected = previous_nodes[lookup]
+
+                    if connected == router:
+                        # next is directly connected to router
+                        break
+                    else:
+                        lookup = connected
+
+                tuple = (node, lookup, weight) 
+
+                table.append(tuple)
+
+        return table
+        
     
     def print(self):
         print("{", end="\n")

@@ -40,6 +40,10 @@ class Router(object):
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
+        # a routing table
+        # each entry is (destination, next_hop, weight)
+        self.routing_table = dict()
+        
         # set the simulation environment
         self.set_env(env)
 
@@ -741,7 +745,38 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 print("       {:2d}  {}".format(entry.doc_id, entry))
 
                 # list(zip (map(lambda doc: doc.doc_id, announce), announce))))
-            
+
+    # Set the routing table
+    def set_routing_table(self, list_of_routes):
+        """Set the routing table"""
+        # takes a list of  entries like (destination, next_hop, weight)
+        # and coverts into the internal routing table format
+
+        for entry in list_of_routes:
+            self.routing_table[entry[0]] = entry
+
+    # Get the routing table
+    def get_routing_table(self):
+        """Get the routing table"""
+
+        return self.routing_table
+
+    # Get the route to a specific node
+    def route_to(self, dst):
+        """Get the next hop for a route to a destination"""
+        if isinstance(dst, str):
+            return self.routing_table[dst][1]
+        else:
+            return self.routing_table[dst.id()][1]
+
+    # Get the distance to a specific node
+    def distance_to(self, dst):
+        """Get the distance to a destination"""
+        if isinstance(dst, str):
+            return self.routing_table[dst][2]
+        else:
+            return self.routing_table[dst.id()][2]
+
 
     def recv(self, packet, link_end):
         """A packet is received from a LinkEnd of a neighbouring Router.

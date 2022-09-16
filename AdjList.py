@@ -273,6 +273,12 @@ class Graph:
     
     @classmethod
     def dijkstra_algorithm(cls, graph, start_node):
+        """Dijkstra algorithm which returns 3 values:
+        the 'source' node, the 'shortest_path' to other nodes,
+        the 'previous_nodes' for other nodes. An example:
+        {'source': 'a', 'shortest_path': {'a': 0, 'b': 1, 'c': 4,
+        'd': 3, 'e': 3}, 'previous_nodes': {'b': 'a', 'c': 'a', 'd': 'b', 'e': 'b'}}"""
+        
         unvisited_nodes = list(graph.nodes())
 
         # We'll use this dict to save the cost of visiting each node and update it as we move along the graph   
