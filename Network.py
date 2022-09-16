@@ -75,7 +75,7 @@ class Network:
     # contains router
     # pass in name or Router
     def contains_router(self, r):
-        if type(r) == str:
+        if isinstance(r, str):
             # we just got a name
             if (r in self.routers):
                 return True
@@ -114,7 +114,8 @@ class Network:
         if isinstance(host, Client):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
-        elif type(host) == str:
+
+        elif isinstance(host, str):
             # got a name
             self.add_edge(Client(host), router, weight)
         else:
@@ -128,7 +129,8 @@ class Network:
         if isinstance(host, Server):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
-        elif type(host) == str:
+
+        elif isinstance(host, str):
             # got a name
             self.add_edge(Server(host), router, weight)
         else:
@@ -211,6 +213,25 @@ class Network:
         else:
             return None
 
+    # get a specific node
+    def node(self, r):
+        """Get the node represented by val.
+           Can be a Router or a name"""
+        
+        if isinstance(r, str):
+            return self.routers[r]
+        else:
+            # it's a router
+            return self.routers[r.id()]
+
+    def weight(self, node1, node2):
+        "Returns the weight of an edge between two nodes."
+        router1 = self.node(node1)
+        router2 = self.node(node2)
+        
+        return  router1.weight_edge(router2)
+
+        
 
     # index into network by node name
     # returns a router
@@ -224,19 +245,33 @@ class Network:
 
     # get routers
     def nodes(self):
+        return [ r.id()  for r in self.routers.values() ]
+
+    def network_nodes(self):
         return list(self.routers.values())
 
     # get links
     def edges(self):
+        return [ (l.link1.src_node.id(), l.link2.src_node.id(), l.link1.propagation_delay) for l in self.links ]
+
+    
+    def network_edges(self):
         return self.links
 
     # get neighbours of a router
     def neighbours(self, r):
-        return self.routers[r].neighbours()
+        if isinstance(r, str):
+            return self.routers[r].neighbours()
+        else:
+            # it's a router
+            return self.routers[r.id()].neighbours()
 
     # degree at a router
     def degree(self, r):
-        return self.routers[r].degree()
+        if isinstance(r, str):
+            return self.routers[r].degree()
+        else:
+            return self.routers[r.id()].degree()
 
     # Links from a node - by name
     def links_from(self, val):
@@ -248,9 +283,9 @@ class Network:
         return list(filter(lambda l: val in l.links(), self.links))
     
     def print(self):
-        print("{ ", end="")
+        print("{", end="\n")
         for router in self.routers:
             ports = self.routers[router].ports()
             portStr = [ str(port)  for port in ports.keys()]
-            print("'{}' : {},".format(self.routers[router].id(), portStr ), end="\n")
+            print("  '{}' : {},".format(self.routers[router].id(), portStr ), end="\n")
         print("}")

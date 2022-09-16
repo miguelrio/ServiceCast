@@ -43,21 +43,42 @@ def topology_setup():
     graph = Graph.from_dict(topo)
 
     # test print
+    print("graph adjacency list = ")
     graph.print()
 
+    # test dijkstra_algorithm
+    print ("graph nodes = " + str(graph.nodes()))
+
+    print("graph edges = " + str(graph.edges()))
+
+    print("graph edge b->c " + str(graph.contains_edge('b', 'c')) + " " + str(graph.edge('b', 'c')))
+
+    print("graph neighbours b = " + str(graph.neighbours('b')))
+
+    print("graph weight b->c = " + str(graph.weight('b', 'c')))
+
+    print("graph dijkstra from a = " + str(Graph.dijkstra_algorithm(graph, 'a')))
+
     # graph -> network
+
+    print("--- Convert Graph to Network Begin ---")
+    
     network = Network.from_graph(graph, env)
 
+    print("--- Convert Graph to Network End ---")
+    
     network.add_edge('c', 'f')
 
     # do some test prints
-    print(network.nodes())
-    print(network.edges())
+    print("Network nodes = " + str(network.nodes()))
+    print("Network edges = " + str(network.edges()))
 
-    print("From a: " + str(network.links_from('a')))
+    print("Network from a: " + str(network.links_from('a')))
 
-    print("To d: " + str(network.links_to('d')))
+    print("Network to d: " + str(network.links_to('d')))
 
+
+    print("--- Add Servers and Clients to Network ---")
 
     # add some servers
     # connected to 'a'
@@ -75,14 +96,18 @@ def topology_setup():
     network.add_client("c4", 'e')
     network.add_client("c5", 'e')
     
-    print("Neighbours e: " + str(network.neighbours('e')))
-    print("Degree e: " + str(network.degree('e')))
+    print("Network neighbours e: " + str(network.neighbours('e')))
+    print("Network degree e: " + str(network.degree('e')))
 
-    print("Neighbours c1: " + str(network.neighbours('c1')))
-    print("Degree c1: " + str(network.degree('c1')))
+    print("Network neighbours c1: " + str(network.neighbours('c1')))
+    print("Network degree c1: " + str(network.degree('c1')))
 
+    print("Network = ")
     network.print()
-    
+
+    print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
+    print("Network: dijkstra from d = " + str(Graph.dijkstra_algorithm(network, 'd')))
+
     # 4 - Now we create the packet generator.
 
     # Services are not addresses -- they start with §

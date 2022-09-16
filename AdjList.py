@@ -19,6 +19,10 @@ class AdjNode:
         return result
         
 
+    def __str__(self):
+        return "AdjNode value: " + str(self.vertex) + " weight: " + str(self.weight) + " next: (" + "None" if self.next == None else str(self.next.vertex) + ")"
+
+
 
 class Graph:
     def __init__(self, num):
@@ -112,6 +116,18 @@ class Graph:
 
     # Contains an edge
     def contains_edge(self, s, d):
+        # s can be int or value
+        if type(s) == int:
+            pass
+        else:
+            s = self.labels.index(s)
+        
+        # d can be int or value
+        if type(d) == int:
+            pass
+        else:
+            d = self.labels.index(d)
+        
         # get head of the adjacency
         node = self.graph[s]
 
@@ -123,6 +139,81 @@ class Graph:
                 node = node.next
         return False
         
+    # Get an edge
+    def edge(self, s, d):
+        """Returns a 3-tuple (src, dst, weight)  or None"""
+        # s can be int or value
+        if type(s) == int:
+            pass
+        else:
+            s = self.labels.index(s)
+        
+        # d can be int or value
+        if type(d) == int:
+            pass
+        else:
+            d = self.labels.index(d)
+        
+        # get head of the adjacency
+        node = self.node(s)
+        head = node
+
+        # Skip through all the nodes
+        while node != None:
+            if node.vertex == d:
+                return (self.name(s), self.name(node.vertex), node.weight)
+            else:
+                node = node.next
+        return None
+
+    # get a list of edges
+    def edges(self):
+        nodes = self.labels
+
+        edges = []
+
+        for label in nodes:
+            # get head of the adjacency
+            node = self.node(label)
+
+
+            # Skip through all the nodes
+            while True:
+                weight = node.weight
+                dst = self.name(node.vertex)
+
+                if  (label, dst, weight) in edges:
+                    pass
+                elif (dst, label, weight) in edges:
+                    pass
+                else:
+                    edges.append( (label, dst, weight) )
+
+                # end
+                if (node.next == None):
+                    break
+                else:
+                    node = node.next            
+
+        return edges
+        
+
+    # get a list of the node names
+    def nodes(self):
+        return self.labels
+
+    # get a specific node
+    def node(self, val):
+        """Get the node represented by val.
+           Can be an int or a name"""
+        if type(val) == int:
+            node = self.graph[val]
+            return node
+        else:
+            index = self.labels.index(val)
+            node = self.graph[index]
+            return node
+
     # Label for node
     def name(self, i):
         if len(self.labels) > i:
@@ -150,9 +241,75 @@ class Graph:
 
 
     def print(self):
-        print("{ ", end="")
+        print("{", end="\n")
         for label in self.labels:
-            print("'{}' : {},".format(label, self[label]), end="\n")
+            print("  '{}' : {},".format(label, self[label]), end="\n")
         print("}")
 
 
+    def neighbours(self, s):
+        "Returns the neighbors of a node s."
+        
+        connections = []
+
+        # get head of the adjacency
+        node = self.node(s)
+
+        # Skip through all the nodes
+        while node != None:
+            connections.append(self.name(node.vertex))
+            node = node.next
+
+        return connections
+    
+    def weight(self, node1, node2):
+        "Returns the weight of an edge between two nodes."
+        edge = self.edge(node1, node2)
+
+        return edge[2]
+
+    # simple Dijkstra algorithm - adapted
+    # from https://www.udacity.com/blog/2021/10/implementing-dijkstras-algorithm-in-python.html
+    
+    @classmethod
+    def dijkstra_algorithm(cls, graph, start_node):
+        unvisited_nodes = list(graph.nodes())
+
+        # We'll use this dict to save the cost of visiting each node and update it as we move along the graph   
+        shortest_path = {}
+
+        # We'll use this dict to save the shortest known path to a node found so far
+        previous_nodes = {}
+
+        # We'll use max_value to initialize the "infinity" value of the unvisited nodes   
+        max_value = float('inf')
+
+        for node in unvisited_nodes:
+            shortest_path[node] = max_value
+            
+        # However, we initialize the starting node's value with 0   
+        shortest_path[start_node] = 0
+
+        # The algorithm executes until we visit all nodes
+        while unvisited_nodes:
+            # The code block below finds the node with the lowest score
+            current_min_node = None
+            for node in unvisited_nodes: # Iterate over the nodes
+                if current_min_node == None:
+                    current_min_node = node
+                elif shortest_path[node] < shortest_path[current_min_node]:
+                    current_min_node = node
+
+            # The code block below retrieves the current node's neighbors and updates their distances
+            neighbors = graph.neighbours(current_min_node)
+            for neighbor in neighbors:
+                tentative_value = shortest_path[current_min_node] + graph.weight(current_min_node, neighbor)
+                if tentative_value < shortest_path[neighbor]:
+                    shortest_path[neighbor] = tentative_value
+                    # We also update the best path to the current node
+                    previous_nodes[neighbor] = current_min_node
+
+            # After visiting its neighbors, we mark the node as "visited"
+            unvisited_nodes.remove(current_min_node)
+
+        return { 'source': start_node, 'shortest_path': shortest_path, 'previous_nodes': previous_nodes }

@@ -763,6 +763,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """Neighbours of Router"""
         return list(self.outgoing_ports.keys())
 
+    def weight_edge(self, dest):
+        """What is the weight of the edge from this router to dest"""
+        if (dest.id() in self.outgoing_ports):
+            link =  self.outgoing_ports[dest.id()].out
+            return link.propagation_delay
+        else:
+            return 0
+        
     def degree(self):
         """Degree of Router"""
         return len(self.outgoing_ports)

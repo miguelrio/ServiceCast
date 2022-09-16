@@ -126,6 +126,10 @@ class Host(object):
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))
 
+    def weight_edge(self, node1):
+        """What is the weight of the edge from this router to dest"""
+        return self.outgoing_port.out.propagation_delay
+
     def neighbours(self):
         """Neighbours of Host"""
         return list(self.neighbour)
