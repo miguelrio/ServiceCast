@@ -272,7 +272,7 @@ class Graph:
     # from https://www.udacity.com/blog/2021/10/implementing-dijkstras-algorithm-in-python.html
     
     @classmethod
-    def dijkstra_algorithm(cls, graph, start_node):
+    def dijkstra_algorithm(cls, graph, start_node, use_weights=False):
         """Dijkstra algorithm which returns 3 values:
         the 'source' node, the 'shortest_path' to other nodes,
         the 'previous_nodes' for other nodes. An example:
@@ -309,7 +309,16 @@ class Graph:
             # The code block below retrieves the current node's neighbors and updates their distances
             neighbors = graph.neighbours(current_min_node)
             for neighbor in neighbors:
-                tentative_value = shortest_path[current_min_node] + graph.weight(current_min_node, neighbor)
+
+                if use_weights:
+                    # use the actual weight for the shortest_path
+                    next = graph.weight(current_min_node, neighbor)
+                else:
+                    # use the hop count for the shortest_path
+                    next = 1
+
+                tentative_value = shortest_path[current_min_node] + next
+                
                 if tentative_value < shortest_path[neighbor]:
                     shortest_path[neighbor] = tentative_value
                     # We also update the best path to the current node

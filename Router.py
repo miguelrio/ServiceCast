@@ -41,7 +41,7 @@ class Router(object):
         self.outgoing_ports = dict()
 
         # a routing table
-        # each entry is (destination, next_hop, weight)
+        # each entry is { destination: (destination, next_hop, weight) }
         self.routing_table = dict()
         
         # set the simulation environment
