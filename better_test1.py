@@ -1,6 +1,8 @@
 from Router import Router
+from Verbose import Verbose
 
 def setup():
+    Verbose.level = 3
 
     group1 = [
 

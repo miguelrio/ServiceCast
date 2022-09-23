@@ -443,8 +443,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             better[index_m] = self.metric_is_better(i[m], j[m])
 
             
-        if Verbose.level == 3:
-            print("better = " + str(better))
+            if Verbose.level == 4:
+                print("metric_is_better = " + str(better[index_m]) + " for " + "i["+ m + "] and j[" + m + "]")
 
         # return value
         if all(v == Compare.Same for v in better):            # ALL the Same
@@ -489,7 +489,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             announce[index_i] = False
 
                             if Verbose.level == 3:
-                                print("{:.3f}: j_{} is better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                                print("Compare.Less: j_{} is better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
                             break
 
@@ -498,17 +498,17 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             announce[index_j] = False
                             
                             if Verbose.level == 3:
-                                print("{:.3f}: j_{} is same as i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                                print("Compare.Same: j_{} is same as i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
 
 
                         else:
                             if Verbose.level == 3:
-                                print("{:.3f}: j_{} is not better than i_{}: {} {}".format(self.env.now, index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                                print("Compare.More: j_{} is not better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
 
             # at this point the announce list should have a True for all the entries to announce
             if Verbose.level == 3:
-                print("{:.3f}: announce: {}".format(self.env.now, announce))
+                print("announce: {}".format(announce))
             # select those entries which are laballed as True in announce
             return [ entry for ann, entry in zip(announce, entries) if ann == True ]
 
