@@ -251,8 +251,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # (link_end, replica) is key for decision for deleting old data
 
         # find entry from database for replica
-        search = Query()
-        results = self.metrics_table.search((search.replica == replica))
+        searchR = Query()
+        results = self.metrics_table.search((searchR.replica == replica))
 
         if Verbose.level >= 1:
             print("{:.3f}: METRIC_SEARCH_RESULTS '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), results))))
@@ -293,7 +293,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 # if they are equal we need to do more checks
                 searchE = Query()
-                resultsE = self.metrics_table.search((searchD.replica == replica) & (searchD.delay == metrics['delay']))
+                resultsE = self.metrics_table.search((searchE.replica == replica) & (searchE.delay == metrics['delay']))
 
                 # check results
                 neighbourVal = None
