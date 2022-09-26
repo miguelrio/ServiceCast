@@ -40,18 +40,20 @@ class Router(object):
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
-        # a routing table
+        # a unicast forwarding table
         # each entry is { destination: (destination, next_hop, weight) }
-        self.routing_table = dict()
+        self.unicast_forwarding_table = dict()
         
         # set the simulation environment
         self.set_env(env)
 
         # a database of metrics
         self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
+        
         # the table for metrics
-        self.metrics_table = self.db.table('metrics')
-        self.metrics_table.truncate()
+        self.service_RIB = self.db.table('metrics')
+        self.service_RIB.truncate()
+        
         # the table for announcements which have been sent
         self.sent_table = self.db.table('sent')
         self.sent_table.truncate()
@@ -60,8 +62,8 @@ class Router(object):
         self.best_replica = None
         self.best_utility = -1
 
-        # forwarding table
-        self.forwarding_table = dict()
+        # service forwarding table
+        self.service_forwarding_table = dict()
  
         # declaring defaultdict
         # sets default value 'Key Not found' to absent keys
@@ -252,7 +254,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # find entry from database for replica
         searchR = Query()
-        results = self.metrics_table.search((searchR.replica == replica))
+        results = self.service_RIB.search((searchR.replica == replica))
 
         if Verbose.level >= 1:
             print("{:.3f}: METRIC_SEARCH_RESULTS '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), results))))
@@ -260,13 +262,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # check results
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.metrics_table.insert({'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
+            val = self.service_RIB.insert({'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
 
             if Verbose.level >= 1:
                 print ("{:.3f}: ADD METRIC '{}' metric no {}".format(self.env.now, self.id(), val) )
 
         else:
-            # something found in metrics_table
+            # something found in service_RIB
 
             # check if the new metrics are worse than the found result
             # needs to be done early
@@ -277,7 +279,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # if there is a metric entry with a lower delay,
             # this is a Proxy for determining if it's on the unicast path
             searchD = Query()
-            resultsD = self.metrics_table.search((searchD.replica == replica) & (searchD.delay < metrics['delay']))
+            resultsD = self.service_RIB.search((searchD.replica == replica) & (searchD.delay < metrics['delay']))
 
             if Verbose.level >= 1:
                 print("{:.3f}: METRIC_LOWER_DELAY '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsD))))
@@ -293,7 +295,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 # if they are equal we need to do more checks
                 searchE = Query()
-                resultsE = self.metrics_table.search((searchE.replica == replica) & (searchE.delay == metrics['delay']))
+                resultsE = self.service_RIB.search((searchE.replica == replica) & (searchE.delay == metrics['delay']))
 
                 # check results
                 neighbourVal = None
@@ -314,7 +316,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                     # replica stay the same
                     # update other values
-                    val = self.metrics_table.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
+                    val = self.service_RIB.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
 
                     if Verbose.level >= 1:
                         print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
@@ -337,7 +339,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         #  find the entries to announce
         
-        announce = self.decide_announcements(self.metrics_table.all())
+        announce = self.decide_announcements(self.service_RIB.all())
 
         if Verbose.level >= 1:
             self.print_announce_info(announce)
@@ -349,7 +351,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if not (update_val in [ r.doc_id for r in announce ]):
                 # it's not in the announce list
                 # so collect it and add it
-                extra = self.metrics_table.get(doc_id=update_val)
+                extra = self.service_RIB.get(doc_id=update_val)
 
                 print("{:.3f}: EXTRA_ANNOUNCE '{}' with {}".format(self.env.now, self.id(), update_val))
                 self.print_announce_info([extra])
@@ -415,7 +417,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         #      STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
 
-        self.choose_best_forwarding_replica(self.metrics_table.all())
+        self.choose_best_forwarding_replica(self.service_RIB.all())
 
 
     # is the metric arg2 is lower than arg1
@@ -587,10 +589,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             else:
                 print("{:.3f}: BEST_REPLICA '{}' {} -> {} ".format(self.env.now, self.id(), self.best_replica, self.best_neighbour))
 
-        self.forwarding_table[self.servicename] =  self.best_neighbour
+        self.service_forwarding_table[self.servicename] =  self.best_neighbour
 
         if Verbose.level >= 1:
-            print("{:.3f}: FORWARDING_TABLE '{}' {}".format(self.env.now, self.id(), self.forwarding_table))
+            print("{:.3f}: SERVICE_FORWARDING_TABLE '{}' {}".format(self.env.now, self.id(), self.service_forwarding_table))
 
 
     # Handle a ClientRequest
@@ -604,14 +606,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         service_name = packet.dst
 
         # First we look up the service name
-        neighbour = self.forwarding_table[service_name]
+        neighbour = self.service_forwarding_table[service_name]
 
         if Verbose.level >= 2:
             print ("{:.3f}: ClientRequest neighbour =  {}".format(self.env.now, neighbour))
 
         if neighbour == None:
-            # service_name isn't in forwarding_table
-            print("{:.3f}: NO FORWARDING_TABLE ENTRY ClientRequest '{}' for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+            # service_name isn't in service_forwarding_table
+            print("{:.3f}: NO SERVICE_FORWARDING_TABLE ENTRY ClientRequest '{}' for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
         else:
             # value is link_end
             # so forwarding the packet
@@ -663,7 +665,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def check_sent_table(self, metric_to_send, neighbour):
         #print ("check_sent_table: " + neighbour + " ==> " + str(metric_to_send))
         
-        # find entry from sent_table for (doc_id in metrics_table, neighbour)
+        # find entry from sent_table for (doc_id in service_RIB, neighbour)
         sent_query = Query()
         sent_results = self.sent_table.search((sent_query.metric_doc_id == metric_to_send.doc_id) & (sent_query.neighbour == neighbour))
 
@@ -672,7 +674,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # update the sent table
     def update_sent_table(self, metric_to_send, neighbour):
         # add info about the transmission to the sent_table
-        # find entry from sent_table for (doc_id in metrics_table, neighbour)
+        # find entry from sent_table for (doc_id in service_RIB, neighbour)
         sent_query = Query()
         sent_results = self.sent_table.search((sent_query.metric_doc_id == metric_to_send.doc_id) & (sent_query.neighbour == neighbour))
 
@@ -718,10 +720,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Print metric table
     def print_metric_table(self):
         if Verbose.table == 0:
-            print("{:.3f}: METRIC_TABLE '{}' {}".format(self.env.now, self.id(), str(self.metrics_table.all())))
+            print("{:.3f}: METRIC_TABLE '{}' {}".format(self.env.now, self.id(), str(self.service_RIB.all())))
         else:
             print("{:.3f}: METRIC_TABLE '{}'".format(self.env.now, self.id()))
-            for metric_no, metric in enumerate(self.metrics_table.all()):
+            for metric_no, metric in enumerate(self.service_RIB.all()):
                 print("       {:2d}  {}".format(metric_no+1, metric))
 
 
@@ -746,36 +748,36 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 # list(zip (map(lambda doc: doc.doc_id, announce), announce))))
 
-    # Set the routing table
-    def set_routing_table(self, list_of_routes):
-        """Set the routing table"""
+    # Set the unicast forwarding table
+    def set_unicast_forwarding_table(self, list_of_routes):
+        """Set the forwarding table"""
         # takes a list of  entries like (destination, next_hop, weight)
-        # and coverts into the internal routing table format
+        # and coverts into the internal forwarding table format
 
         for entry in list_of_routes:
-            self.routing_table[entry[0]] = entry
+            self.unicast_forwarding_table[entry[0]] = entry
 
-    # Get the routing table
-    def get_routing_table(self):
-        """Get the routing table"""
+    # Get the unicast forwarding table
+    def get_unicast_forwarding_table(self):
+        """Get the forwarding table"""
 
-        return self.routing_table
+        return self.unicast_forwarding_table
 
     # Get the route to a specific node
     def route_to(self, dst):
         """Get the next hop for a route to a destination"""
         if isinstance(dst, str):
-            return self.routing_table[dst][1]
+            return self.unicast_forwarding_table[dst][1]
         else:
-            return self.routing_table[dst.id()][1]
+            return self.unicast_forwarding_table[dst.id()][1]
 
     # Get the distance to a specific node
     def distance_to(self, dst):
         """Get the distance to a destination"""
         if isinstance(dst, str):
-            return self.routing_table[dst][2]
+            return self.unicast_forwarding_table[dst][2]
         else:
-            return self.routing_table[dst.id()][2]
+            return self.unicast_forwarding_table[dst.id()][2]
 
 
     def recv(self, packet, link_end):

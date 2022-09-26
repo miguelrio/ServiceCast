@@ -282,17 +282,17 @@ class Network:
     def links_to(self, val):
         return list(filter(lambda l: val in l.links(), self.links))
 
-    # calculate the routing table for every node
-    def calculate_routing_tables(self):
-        """Calculate the routing tables for all nodes"""
+    # calculate the forwarding table for every node
+    def calculate_forwarding_tables(self):
+        """Calculate the forwarding tables for all nodes"""
         for node in self.nodes():            
-            table = self.routing_table(node)
-            self[node].set_routing_table(table)
+            table = self.forwarding_table(node)
+            self[node].set_unicast_forwarding_table(table)
 
-    # calculate a routing table for a router r
+    # calculate a forwarding table for a router r
     # each entry is (destination, next_hop, weight)
-    def routing_table(self, r):
-        """Calculate the routing table for router r"""
+    def forwarding_table(self, r):
+        """Calculate the forwarding table for router r"""
         router = None
 
         if isinstance(r, str):

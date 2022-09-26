@@ -96,8 +96,8 @@ def topology_setup():
     network.add_client("c4", 'e')
     network.add_client("c5", 'e')
 
-    # now calculate all the routing_tables
-    network.calculate_routing_tables()
+    # now calculate all the forwarding tables
+    network.calculate_forwarding_tables()
     
     # some test values
     print("Network = ")
@@ -112,7 +112,7 @@ def topology_setup():
     print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
     print("Network: dijkstra from d = " + str(Graph.dijkstra_algorithm(network, 'd')))
 
-    print("Network: routing table at d = " + str(network['d'].get_routing_table()))
+    print("Network: unicast forwarding table at d = " + str(network['d'].get_unicast_forwarding_table()))
 
     print("Network: route from d to s1 = " + str(network['d'].route_to('s1')) +  "  distance: " + str(network['d'].distance_to('s1')) )
     
