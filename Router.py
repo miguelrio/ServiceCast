@@ -266,7 +266,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         valid_route = self.arrived_from_unicast_route(replica, link_end)
 
         if Verbose.level >= 1:
-            print("{:.3f}: UNICAST_ROUTE '{}' for {} from {} --> {} ".format(self.env.now, self.id(), replica, link_end.src_node.id(), 'VALID' if valid_route else 'RETURN'))
+            print("{:.3f}: UNICAST_ROUTE '{}' for {} from {} --> {} ".format(self.env.now, self.id(), replica, link_end.src_node.id(), 'VALID' if valid_route else 'INVALID'))
 
         if not valid_route:
             return
