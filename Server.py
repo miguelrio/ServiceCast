@@ -73,9 +73,10 @@ class Server(Host):
         packet.type = "ServerLoad"
         packet.service =  service_name
         packet.replica = self.hostid
-        packet.payload = { 'load': int(self.last_event_info['load']) + int(self.request_info['load']),
-                           'no_of_flows': int(self.last_event_info['no_of_flows']) + int(self.request_info['no_of_flows']),
-                           'delay': 0 }
+        packet.payload = { 'load': self.calculate_load(),
+                           'no_of_flows': self.calculate_flows(),
+                           'delay': 0,
+                           'slots': self.calculate_slots() }
 
         # update load_packet_number for next time
         self.load_packet_number += 1
@@ -83,6 +84,28 @@ class Server(Host):
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node
         self.packet_store.put((None, packet))
+
+
+    # Calculate the load
+    def calculate_load(self):
+        # we take the load from the last_event_info and
+        # the load from the Client requests to
+        # make the result
+        return int(self.last_event_info['load']) + int(self.request_info['load'])
+    
+    # Calculate the no of flows
+    def calculate_flows(self):
+        # we take the no_of_flows from the last_event_info and
+        # the no_of_flows from the Client requests to
+        # make the result
+        return int(self.last_event_info['no_of_flows']) + int(self.request_info['no_of_flows'])
+
+    # Calculate the slots available
+    def calculate_slots(self):
+        # this is currently:  fn(100 - load)
+        raw = 100 - self.calculate_load()
+        return int(raw / 4)
+    
 
     # We override manage_packet() to handle ClientRequests
     def manage_packet(self, packet_tuple):

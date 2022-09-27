@@ -21,8 +21,8 @@ def forwarding_utility(alpha, load, delay):
 
 class Compare(Enum):
     Same = 0
-    More = 1
-    Less = 2
+    Worse = 1
+    Better = 2
 
     def __repr__(self):
         return self.name
@@ -30,11 +30,24 @@ class Compare(Enum):
 
 LINKRATE = 100
 
+# < as a passable fn
+less_than = lambda x,y: x < y
+# > as a passable fn
+greater_than = lambda x,y: x > y
 
 class Router(object):
     """ A Router in the Simulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
+
+    # alpha
+    alpha = 0
+
+    # relevant metrics
+    metric_list =  [{ 'name': 'load', 'better': less_than }, { 'name': 'delay', 'better': less_than} ]
+    
+
+
     def __init__(self, routerid, env=None):
         self._routerid = routerid
         # create one SimComponent.SwitchPort for each neighbour_id
@@ -68,9 +81,6 @@ class Router(object):
         # declaring defaultdict
         # sets default value 'Key Not found' to absent keys
         defd = collections.defaultdict(lambda : None)
-
-        # alpha
-        alpha = 0
 
 
     def set_env(self,env):
@@ -165,6 +175,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # now manage the packet
             self.manage_packet(packet_tuple)
 
+    # manage an incoming packet
     def manage_packet(self, packet_tuple):
         """ Manage a packet.  
         """
@@ -176,7 +187,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             # pass to the PacketSink which collects arrival information
             # may or may not be useful here
-            self.sink.put(packet)
+            # self.sink.put(packet)
 
 
             # a server load info packet
@@ -233,9 +244,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         creationTime = packet.time
         metrics = packet.payload
 
-        # holds a doc_id
-        update_val = None
-        found_in_sent_table = 0
+        # a list of entries to forcibly announce
+        forcibly = []
+
 
         if Verbose.level >= 1:
             print("{:.3f}: INCOMING VALUES '{}' link_end: {} msgID: {} replica: {} time: {}  service: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, metrics))
@@ -245,14 +256,24 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         #
-        # NEW:   (link_end, replica) is NOT key for decision
-        #
         # never have more than 1 entry for each replica
 
         # store important data (including metrics) for later use in table
-        # (link_end, replica) is key for decision for deleting old data
+        # 'replica' is key for decision for deleting old data
 
-        # find entry from database for replica
+        # If the announcement has arrived on a link that is not the one
+        # in the forwarding table, for the replica then Drop the message
+        valid_route = self.arrived_from_unicast_route(replica, link_end)
+
+        if Verbose.level >= 1:
+            print("{:.3f}: UNICAST_ROUTE '{}' for {} from {} --> {} ".format(self.env.now, self.id(), replica, link_end.src_node.id(), 'VALID' if valid_route else 'RETURN'))
+
+        if not valid_route:
+            return
+
+
+        # If there is an existing entry in the service RIB 
+        # so find entry from database for replica
         searchR = Query()
         results = self.service_RIB.search((searchR.replica == replica))
 
@@ -260,9 +281,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print("{:.3f}: METRIC_SEARCH_RESULTS '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), results))))
         
         # check results
+        # If there is NO existing entry in the service RIB
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.service_RIB.insert({'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']) })
+            val = self.service_RIB.insert({'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots']  })
 
             if Verbose.level >= 1:
                 print ("{:.3f}: ADD METRIC '{}' metric no {}".format(self.env.now, self.id(), val) )
@@ -270,59 +292,42 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         else:
             # something found in service_RIB
 
+            # existing entry is newer than the incoming update
+            searchT = Query()
+            resultsT = self.service_RIB.search((searchT.replica == replica) & (searchT.creationTime > creationTime))
+
+            # check results
+            if resultsT != []:
+                # we found an entry with a newer time
+                if Verbose.level >= 1:
+                    print("{:.3f}: METRIC_TOO_OLD '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsT))))
+                    
+                return
+            
+
+
             # check if the new metrics are worse than the found result
             # needs to be done early
             (update_val, found_in_sent_table) = self.check_metrics_worse(metrics, results[0])
 
-            
-            # for a specific replica
-            # if there is a metric entry with a lower delay,
-            # this is a Proxy for determining if it's on the unicast path
-            searchD = Query()
-            resultsD = self.service_RIB.search((searchD.replica == replica) & (searchD.delay < metrics['delay']))
+            # double check the update_val and found_in_sent_table
+            if update_val != None and found_in_sent_table > 0:
+                # add it to the forcibly announce list
+                forcibly.append(self.service_RIB.get(doc_id=update_val))
+
+                print("{:.3f}: FORCE_ANNOUNCE '{}' with {}".format(self.env.now, self.id(), update_val))
+
+            # Update the metrics in the existing RIB entry
+
+            # replica stay the same
+            # update other values
+            val = self.service_RIB.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
 
             if Verbose.level >= 1:
-                print("{:.3f}: METRIC_LOWER_DELAY '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsD))))
+                print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
 
-            # check results
-            if resultsD != []:
-                # The incoming delay is higher -- i.e. the existing metric has lower delay
-                # then drop incoming msg
-                # BUT we might keep them in future labelled DO_NOT_USE
-                pass
-            else:
-                # There is an existing metric entry with an equal or higher delay
-
-                # if they are equal we need to do more checks
-                searchE = Query()
-                resultsE = self.service_RIB.search((searchE.replica == replica) & (searchE.delay == metrics['delay']))
-
-                # check results
-                neighbourVal = None
-                linkVal = None
-                
-                if resultsE != []:
-                    # choose one of them
-                    # a.  keep the one that's in there  [DOING THIS]
-                    # OR b.  select the one with the 'lowest' name
-                    print("{:.3f}: METRIC_EQUAL_DELAY '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsE))))
-                    
-                else:
-
-                    # then update the metric
-                    # replica stays the same
-                    # update other values
-
-
-                    # replica stay the same
-                    # update other values
-                    val = self.service_RIB.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']) } , doc_ids=[ r.doc_id for r in results ])
-
-                    if Verbose.level >= 1:
-                        print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
-
-                    # clear out sent_table entries for this doc_id
-                    self.clear_sent_table(val[0])
+            # clear out sent_table entries for this doc_id
+            self.clear_sent_table(val[0])
 
                 
         # STEP 5,11 forward to appropriate links based on routing information base (fix code below)
@@ -336,29 +341,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if Verbose.level >= 1:
             self.print_metric_table()
 
+        # Announcement decision phase 
+            
 
         #  find the entries to announce
         
-        announce = self.decide_announcements(self.service_RIB.all())
+        decide_announce = self.decide_announcements(self.service_RIB.all())
 
         if Verbose.level >= 1:
-            self.print_announce_info(announce)
+            self.print_announce_info(decide_announce)
 
-        # double check the update_val and found_in_sent_table
-        if update_val != None and found_in_sent_table > 0:
-
-            # is update_val already in announce list
-            if not (update_val in [ r.doc_id for r in announce ]):
-                # it's not in the announce list
-                # so collect it and add it
-                extra = self.service_RIB.get(doc_id=update_val)
-
-                print("{:.3f}: EXTRA_ANNOUNCE '{}' with {}".format(self.env.now, self.id(), update_val))
-                self.print_announce_info([extra])
-
-
-                announce.append(extra)
-
+        # create a unique list from the forcibly announced
+        # and the decided announcements
+        announce = decide_announce + [f for f in forcibly if f.doc_id not in  [ r.doc_id for r in decide_announce ]]
 
             
 
@@ -400,7 +395,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             new_packet.type = "ServerLoad"
                             new_packet.service =  metric_to_send['servicename']
                             new_packet.replica = metric_to_send['replica']
-                            new_packet.payload = { 'load': metric_to_send['load'], 'no_of_flows': metric_to_send['no_of_flows'], 'delay': metric_to_send['delay'] }
+                            new_packet.payload = { 'load': metric_to_send['load'], 'no_of_flows': metric_to_send['no_of_flows'], 'delay': metric_to_send['delay'], 'slots': metric_to_send['slots'] }
 
                             # forward the packet
                             if Verbose.level >= 1:
@@ -419,30 +414,48 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         self.choose_best_forwarding_replica(self.service_RIB.all())
 
+    # If the announcement has arrived on a link that is not the one
+    # in the forwarding table, for the replica then Drop the message
+    def arrived_from_unicast_route(self, replica, link_end):
+        # unicast_forwarding_table entries look like:  's1': ('s1', 'b', 3)
 
-    # is the metric arg2 is lower than arg1
-    # bigger number is worse
-    def metric_is_better(self, arg1, arg2):
+        entry = self.unicast_forwarding_table[replica]
+
+        # get the Dijkstra link for the servicename
+        link = entry[1]
+
+        if link_end.src_node.id() == link:
+            return True
+        else:
+            return False
+        
+    # is the metric arg2 is better than arg1
+    def metric_is_better(self, arg1, arg2, better_fn=less_than):
         if arg2 == arg1:
             # arg2 is same
             return Compare.Same
-        elif arg2 < arg1:
-            # arg2 is lower
-            return Compare.Less
+        elif better_fn(arg2, arg1):
+            # arg2 is better
+            return Compare.Better
         else:
-            # arg2 is more
-            return Compare.More
+            # arg2 is worse
+            return Compare.Worse
          
     # is entry j better than entry i, in all metrics
     def  is_better_in_any_metrics(self, j,i):
-        metrics =  ['load', 'delay']
-        better = [False for m in metrics]
+        # results list for better-ness
+        better = [False for m in self.metric_list]
 
-        for index_m, m in enumerate(metrics):
-            # skip through each metric by selecting metric m of i and metric m of j
+        for index_m, m_dict in enumerate(self.metric_list):
+            # m_dict has the name of the metric and the better-ness function
+            m = m_dict['name']
+            fn = m_dict['better']
+            
             # print("metric = " + m)
-            # we want j[m] to be lower than i[m]
-            better[index_m] = self.metric_is_better(i[m], j[m])
+
+            # skip through each metric by selecting metric m of i and metric m of j
+            # we want j[m] to be better than i[m]
+            better[index_m] = self.metric_is_better(i[m], j[m], fn)
 
             
             if Verbose.level == 4:
@@ -452,18 +465,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if all(v == Compare.Same for v in better):            # ALL the Same
             return Compare.Same
 
-        elif all((v == Compare.Less or v == Compare.Same) for v in better): # ALL Less or Same
-            return Compare.Less
+        elif all((v == Compare.Better or v == Compare.Same) for v in better): # ALL Better or Same
+            return Compare.Better
 
         else:
-            return Compare.More
+            return Compare.Worse
 
     def  is_better_in_all_metrics_orig(self, j,i):
-        for m in ['load', 'delay']:
+        for m in metrics:
             # skip through each metric by selecting metric m of i and metric m of j
             print("metric = " + m)
-            # we want j[m] to be lower than i[m]
-            if self.metric_is_better(i[m], j[m]):
+            # we want j[m] to be better than i[m]
+            if self.metric_is_better(i[m], j[m]) == Compare.Worse:
                 return False
             
         return True
@@ -477,26 +490,33 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # the list of things to announce
             announce = [False for i in entries]
 
+            # skip through all entries - outer loop
             for index_i, i in enumerate(entries):
+
+                # label i as True
                 announce[index_i] = True
                 
+                # skip through all entries - inner loop
                 for index_j, j in enumerate(entries):
 
-                    
+                    # no need to do the diagonal
                     if index_i != index_j:
 
+                        # is j better than i
                         better_j_i = self.is_better_in_any_metrics(j,i) 
 
-                        if better_j_i == Compare.Less: # j is better than i in at least 1 metrics 
+                        if better_j_i == Compare.Better: # j is better than i in at least 1 metrics 
+                            # so we don't need i anymore
                             announce[index_i] = False
 
                             if Verbose.level == 3:
-                                print("Compare.Less: j_{} is better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                                print("Compare.Better: j_{} is better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
                             break
 
                         elif better_j_i == Compare.Same: # j is same in all metrics
 
+                            # so we don't need j
                             announce[index_j] = False
                             
                             if Verbose.level == 3:
@@ -504,13 +524,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
                         else:
+                            # we keep i
                             if Verbose.level == 3:
-                                print("Compare.More: j_{} is not better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
+                                print("Compare.Worse: j_{} is not better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
 
             # at this point the announce list should have a True for all the entries to announce
             if Verbose.level == 3:
                 print("announce: {}".format(announce))
+
             # select those entries which are laballed as True in announce
             return [ entry for ann, entry in zip(announce, entries) if ann == True ]
 
@@ -520,7 +542,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # is it better or worse
         better_j_i = self.is_better_in_any_metrics(metrics, doc)
 
-        if better_j_i == Compare.More:
+        if better_j_i == Compare.Worse:
             # it looks worse
 
             if Verbose.level >= 2:
@@ -530,6 +552,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             sent_query = Query()
             sent_results = self.sent_table.search((sent_query.metric_doc_id == doc.doc_id))
 
+            # how many times did we find this doc_id in the sent_table
             no_found_in_sent_table = len(sent_results)
 
             if no_found_in_sent_table > 0:
@@ -537,15 +560,22 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if Verbose.level >= 2:
                     print("{:.3f}: is in sent_table: metric [{}] need to resend".format(self.env.now, doc.doc_id))
 
-
+            # return the doc_id of the metric (so it can be found later)
+            # and how many times it was found
             return (doc.doc_id, no_found_in_sent_table)
         else:
+            # Nothing found
             return (None, 0)
-            # END of check if new metrics are worse than found result
+
+        # END of check if new metrics are worse than found result
 
     # display metrics
     def displayMetrics(self, label, metric):
         return "{} replica: {} load: {} delay: {}".format(label, metric['replica'], metric['load'], metric['delay'])
+
+    def displayMetrics2(self, label, metric):
+        return "{} replica: {} load: {} delay: {}".format(label, metric['replica'], metric['load'], metric['delay'])
+
 
 
     #  Check if fw table needs changing
@@ -629,7 +659,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
              # print("neighbour " + str(self.outgoing_ports[neighbour].out))
 
              if link_end == None:
-                 # looks like a local packet
+                 # looks like it is a locally generated packet
                  # try and forward it
                  self.outgoing_ports[neighbour].put(packet)
 
@@ -746,7 +776,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             for entry_no, entry in enumerate(announce):
                 print("       {:2d}  {}".format(entry.doc_id, entry))
 
-                # list(zip (map(lambda doc: doc.doc_id, announce), announce))))
 
     # Set the unicast forwarding table
     def set_unicast_forwarding_table(self, list_of_routes):
