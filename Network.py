@@ -5,6 +5,7 @@ from Host import Host
 from Server import Server
 from Client import Client
 from Verbose import Verbose
+from collections import OrderedDict
 
 # Convert a Graph of label and weights into a Network of Routers and Links
 
@@ -12,7 +13,7 @@ class Network:
     def __init__(self, env = None):
         """ Create a network
         """
-        self.routers = {}         # a dictionary of routers
+        self.routers = OrderedDict()         # a dictionary of routers
         self.links = []           # a list of links
         self.env = env            # an Environment
         
@@ -28,7 +29,10 @@ class Network:
         # first we create the list of Routers
         for i in range(len(graph)):
             # convert number to name
-            name = graph.name(i)
+            name = graph.name_of(i)
+
+            # print("name_of " + str(i) + " = " + name)
+            
             # create a Router
             router = Router(name, env)
             # now add it to the routers
@@ -37,11 +41,12 @@ class Network:
         # now add the links
         for i in range(len(graph)):
             # convert number to name
-            name = graph.name(i)
+            name = graph.name_of(i)
             # get the adjacency list
-            nodes = graph[i]
+            nodes = graph.adjacency(i)
 
             # try all nodes at 'name'
+            #print("from_graph: nodes at " + name + " = " + str(nodes))
 
             for node in nodes:
                 # skip through [ ('b', 1), ('c', 4)]
@@ -75,6 +80,10 @@ class Network:
     # contains router
     # pass in name or Router
     def contains_router(self, r):
+        return self.contains_node(r)
+
+    # pass in name or Router
+    def contains_node(self, r):
         if isinstance(r, str):
             # we just got a name
             if (r in self.routers):
@@ -88,13 +97,14 @@ class Network:
             else:
                 return False
 
-    # contains link
-    def contains_link(self, r1, r2):
-        if (r.id() in self.routers):
-            return True
-        else:
-            return False
+    # add a node
+    def add_node(self, name):
+        # create a Router
+        router = Router(name, self.env)
+        # now add it to the routers
+        self.routers[name] = router
 
+        
     # add a host to the network and link it to a specified router
     def add_host(self, host, router, weight=1):
         """Add an edge from a Host to a Router.
@@ -146,64 +156,77 @@ class Network:
         """
         # does n1 exist
         r1 = None
-        if not self.contains_router(n1):
-            # new node
-            if type(n1) == str:
-                # just got a name
-                # make a Router
-                r1 = Router(n1, self.env)
-                self.routers[n1] = r1
 
-                if Verbose.level >= 2:
-                    print(type(r1).__name__ + " add " + n1)
-            else:
-                r1 = n1
-                self.routers[n1.id()] = r1
-
-                if Verbose.level >= 2:
-                    print(type(r1).__name__ + " add " + n1.id())
+        if isinstance(n1, int):
+            # we got a number
+            r1 = self[n1]
+            print("add_edge int " + r1.id() + " " + str(r1))
         else:
-            # existing node
-            if type(n1) == str:
-                # just got a name
-                r1 = self.routers[n1]
+            if not self.contains_router(n1):
+                # new node
+                if type(n1) == str:
+                    # just got a name
+                    # make a Router
+                    r1 = Router(n1, self.env)
+                    self.routers[n1] = r1
+
+                    if Verbose.level >= 2:
+                        print(type(r1).__name__ + " add " + n1)
+                else:
+                    r1 = n1
+                    self.routers[n1.id()] = r1
+
+                    if Verbose.level >= 2:
+                        print(type(r1).__name__ + " add " + n1.id())
             else:
-                r1 = self.routers[n1.id()]
-        # bind the Environment to the router
-        r1.set_env(self.env)
+                # existing node
+                if type(n1) == str:
+                    # just got a name
+                    r1 = self.routers[n1]
+                else:
+                    r1 = self.routers[n1.id()]
+            # bind the Environment to the router
+            r1.set_env(self.env)
 
             
         # does n2 exist
         r2 = None
-        if not self.contains_router(n2):
-            # new node
-            if type(n2) == str:
-                # just got a name
-                # make a Router
-                r2 = Router(n2, self.env)
-                self.routers[n2] = r2
 
-                if Verbose.level >= 2:
-                    print(type(r2).__name__ + " add " + n2)
-            else:
-                r2 = n2
-                self.routers[n2.id()] = r2
-
-                if Verbose.level >= 2:
-                    print(type(r2).__name__ + " add " + n2.id())
+        if isinstance(n2, int):
+            # we got a number
+            r2 = self[n2]
+            print("add_edge int " + r2.id() + " " + str(r2))
         else:
-            # existing node
-            if type(n2) == str:
-                # just got a name
-                r2 = self.routers[n2]
+            if not self.contains_router(n2):
+                # new node
+                if type(n2) == str:
+                    # just got a name
+                    # make a Router
+                    r2 = Router(n2, self.env)
+                    self.routers[n2] = r2
+
+                    if Verbose.level >= 2:
+                        print(type(r2).__name__ + " add " + n2)
+                else:
+                    r2 = n2
+                    self.routers[n2.id()] = r2
+
+                    if Verbose.level >= 2:
+                        print(type(r2).__name__ + " add " + n2.id())
             else:
-                r2 = self.routers[n2.id()]
-        # bind the Environment to the router
-        r2.set_env(self.env)
+                # existing node
+                if type(n2) == str:
+                    # just got a name
+                    r2 = self.routers[n2]
+                else:
+                    r2 = self.routers[n2.id()]
+            # bind the Environment to the router
+            r2.set_env(self.env)
 
         # add the neighbours for the 2 nodes
-        (status1, link1) = r2.add_neighbour(r1, weight)
-        (status2, link2) = r1.add_neighbour(r2, weight)
+        (status1, link1) = r1.add_neighbour(r2, weight)
+        (status2, link2) = r2.add_neighbour(r1, weight)
+
 
         # create the BidirectionalLink
         if status1 == "create" or status2 == "create":
@@ -213,12 +236,38 @@ class Network:
         else:
             return None
 
+    # contains link
+    def contains_link(self, r1, r2):
+        return self.contains_edge(r1, r2)
+        
+    # contains edge
+    def contains_edge(self, r1, r2):
+        if isinstance(r1, int):
+            # we got a number
+            r1 = self.name_of(r1)
+            
+        if isinstance(r2, int):
+            # we got a number
+            r2 = self.name_of(r2)
+            
+        # edges:  [('b', 'a', 1), ('c', 'a', 4), ('d', 'b', 3), ('e', 'b', 2), ('c', 'd', 1) ...]
+
+        found = [ e for e in  self.edges() if (e[0] == r1 and e[1] == r2) or  (e[0] == r2 and e[1] == r1) ]
+
+        if len(found) > 0:
+            return True
+        else:
+            return False
+
     # get a specific node
     def node(self, r):
         """Get the node represented by val.
-           Can be a Router or a name"""
+           Can be a Router or a name or a number"""
         
-        if isinstance(r, str):
+        if isinstance(r, int):
+            name = self.name_of(r)
+            return self.routers[name]
+        elif isinstance(r, str):
             return self.routers[r]
         else:
             # it's a router
@@ -237,7 +286,11 @@ class Network:
     # returns a router
     def __getitem__(self, val):
         """Get network[val]"""
-        return self.routers[val]
+        if isinstance(val, int):
+            name = self.name_of(val)
+            return self.routers[name]
+        else:
+            return self.routers[val]
 
     # The size of the network
     def __len__(self):
@@ -260,7 +313,10 @@ class Network:
 
     # get neighbours of a router
     def neighbours(self, r):
-        if isinstance(r, str):
+        if isinstance(r, int):
+            name = self.name_of(r)
+            return self.routers[name].neighbours()
+        elif isinstance(r, str):
             return self.routers[r].neighbours()
         else:
             # it's a router
@@ -268,19 +324,36 @@ class Network:
 
     # degree at a router
     def degree(self, r):
-        if isinstance(r, str):
+        if isinstance(r, int):
+            name = self.name_of(r)
+            return self.routers[name].degree()
+        elif isinstance(r, str):
             return self.routers[r].degree()
         else:
             return self.routers[r.id()].degree()
 
+    # name of node a position N
+    def name_of(self, n):
+        return list(self.routers.keys())[n]
+
     # Links from a node - by name
     def links_from(self, val):
+        if isinstance(val, int):
+            name = self.name_of(val)
+        else:
+            name = val
+            
         # filter over a list of BidirectionalLink
-        return list(filter(lambda l: val in l.links(), self.links))
+        return list(filter(lambda l: name in l.links(), self.links))
     
     # Links to a node - by name
     def links_to(self, val):
-        return list(filter(lambda l: val in l.links(), self.links))
+        if isinstance(val, int):
+            name = self.name_of(val)
+        else:
+            name = val
+            
+        return list(filter(lambda l: name in l.links(), self.links))
 
     # calculate the forwarding table for every node
     def calculate_forwarding_tables(self):
@@ -295,7 +368,10 @@ class Network:
         """Calculate the forwarding table for router r"""
         router = None
 
-        if isinstance(r, str):
+        # work with router name
+        if isinstance(r, int):
+            router = self.name_of(r)
+        elif isinstance(r, str):
             router = r
         else:
             router = r.id()

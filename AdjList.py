@@ -1,6 +1,8 @@
 # Adjacency List representation in Python
 # Ideas from https://www.programiz.com/dsa/graph-adjacency-list
 
+from Verbose import Verbose
+
 # Adjacency nodes are linked together
 class AdjNode:
     def __init__(self, value, weight=1):
@@ -25,21 +27,18 @@ class AdjNode:
 
 
 class Graph:
-    def __init__(self, num):
+    def __init__(self, num=0):
         self.V = num                    # the size of the graph
         self.graph = [None] * self.V    # an array of AdjNode lists
         self.labels = []                 # an array of names
 
     # index into graph by index or node name
-    # returns a list of adjacency info
+    # returns a name
     def __getitem__(self, val):
         if type(val) == int:
-            node = self.graph[val]
-            return [(self.name(value[0]), value[1]) for value in node.as_list()]
+            return self.labels[val]
         else:
-            index = self.labels.index(val)
-            node = self.graph[index]
-            return [(self.name(value[0]), value[1]) for value in node.as_list()]
+            return val
 
     # The size of the graph
     def __len__(self):
@@ -103,29 +102,84 @@ class Graph:
                 # print ("graph: {} {}\n".format(len(graph.graph), graph.graph))
 
         return graph
+
+    # Add node
+    def add_node(self, s):
+        if self.contains_node(s):
+            # graph already has s
+            pass
+        else:
+            self.V += 1
+            self.labels.append(s)
+            self.graph.append(None)
+
+    # Contains node
+    def contains_node(self, s):
+        # s can be int or value
+        if type(s) == int:
+            s = self.labels[s]
+
+
+        if s in self.labels:
+            return True
+        else:
+            return False
         
     # Add edges
     def add_edge(self, s, d, weight=1):
-        node = AdjNode(d,weight)
-        node.next = self.graph[s]
-        self.graph[s] = node
+        if Verbose.level >= 2:
+            print("add_edge " + str(s) + " " + str(d))
 
-        node = AdjNode(s,weight)
-        node.next = self.graph[d]
-        self.graph[d] = node
+        if not self.contains_node(s):
+            if Verbose.level >= 2:
+                print("add_node " + str(s))
+            self.add_node(s)
 
+        if not self.contains_node(d):
+            if Verbose.level >= 2:
+                print("add_node " + str(d))
+            self.add_node(d)
+
+        if not self.contains_edge(s, d):
+            node = AdjNode(d,weight)
+            if type(s) == int:
+                pass
+            else:
+                # label to number
+                s = self.labels.index(s)
+                
+            node.next = self.graph[s]
+            self.graph[s] = node
+
+            node = AdjNode(s,weight)
+            # d can be int or value
+            if type(d) == int:
+                pass
+            else:
+                # label to number
+                d = self.labels.index(d)
+            node.next = self.graph[d]
+            self.graph[d] = node
+            
+
+    # Contains a link
+    def contains_link(self, s, d):
+        return self.contains_edge(s, d)
+    
     # Contains an edge
     def contains_edge(self, s, d):
         # s can be int or value
         if type(s) == int:
             pass
         else:
+            # label to number
             s = self.labels.index(s)
         
         # d can be int or value
         if type(d) == int:
             pass
         else:
+            # label to number
             d = self.labels.index(d)
         
         # get head of the adjacency
@@ -161,7 +215,7 @@ class Graph:
         # Skip through all the nodes
         while node != None:
             if node.vertex == d:
-                return (self.name(s), self.name(node.vertex), node.weight)
+                return (self.name_of(s), self.name_of(node.vertex), node.weight)
             else:
                 node = node.next
         return None
@@ -178,22 +232,23 @@ class Graph:
 
 
             # Skip through all the nodes
-            while True:
-                weight = node.weight
-                dst = self.name(node.vertex)
+            if node != None:   # None means no edges
+                while True:
+                    weight = node.weight
+                    dst = self.name_of(node.vertex)
 
-                if  (label, dst, weight) in edges:
-                    pass
-                elif (dst, label, weight) in edges:
-                    pass
-                else:
-                    edges.append( (label, dst, weight) )
+                    if  (label, dst, weight) in edges:
+                        pass
+                    elif (dst, label, weight) in edges:
+                        pass
+                    else:
+                        edges.append( (label, dst, weight) )
 
-                # end
-                if (node.next == None):
-                    break
-                else:
-                    node = node.next            
+                    # end
+                    if (node.next == None):
+                        break
+                    else:
+                        node = node.next            
 
         return edges
         
@@ -215,7 +270,11 @@ class Graph:
             return node
 
     # Label for node
-    def name(self, i):
+    def name_of(self, i):
+        if type(i) == str:
+            i = self.labels.index(i)
+            
+
         if len(self.labels) > i:
             # we have a list of labels
             return self.labels[i]
@@ -223,14 +282,45 @@ class Graph:
             # no labels, so use number
             return str(i)
 
+    # adjacency at val
+    def adjacency(self, val):
+        if type(val) == int:
+            node = self.graph[val]
+            return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
+        else:
+            index = self.labels.index(val)
+            node = self.graph[index]
+            return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
+
+    # neighbours of s
+    def neighbours(self, s):
+        "Returns the neighbors of a node s."
+        
+        connections = []
+
+        # get head of the adjacency
+        node = self.node(s)
+
+        # Skip through all the nodes
+        while node != None:
+            connections.append(self.name_of(node.vertex))
+            node = node.next
+
+        return connections
     
+    def weight(self, node1, node2):
+        "Returns the weight of an edge between two nodes."
+        edge = self.edge(node1, node2)
+
+        return edge[2]
+
     # Print the graph
     def print_agraph(self):
         for i in range(self.V):
-            print(str(self.name(i)) + ":", end="")
+            print(str(self.name_of(i)) + ":", end="")
             node = self.graph[i]
             while node:
-                print("\t-> {}".format(self.name(node.vertex)), end="")
+                print("\t-> {}".format(self.name_of(node.vertex)), end="")
                 if node.weight > 1:
                     print(" ({})".format(node.weight), end="")
                 if node.next != None:
@@ -243,30 +333,9 @@ class Graph:
     def print(self):
         print("{", end="\n")
         for label in self.labels:
-            print("  '{}' : {},".format(label, self[label]), end="\n")
+            print("  '{}' : {},".format(label, self.adjacency(label), end="\n"))
         print("}")
 
-
-    def neighbours(self, s):
-        "Returns the neighbors of a node s."
-        
-        connections = []
-
-        # get head of the adjacency
-        node = self.node(s)
-
-        # Skip through all the nodes
-        while node != None:
-            connections.append(self.name(node.vertex))
-            node = node.next
-
-        return connections
-    
-    def weight(self, node1, node2):
-        "Returns the weight of an edge between two nodes."
-        edge = self.edge(node1, node2)
-
-        return edge[2]
 
     # simple Dijkstra algorithm - adapted
     # from https://www.udacity.com/blog/2021/10/implementing-dijkstras-algorithm-in-python.html

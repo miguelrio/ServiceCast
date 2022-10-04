@@ -28,7 +28,7 @@ class Compare(Enum):
         return self.name
 
 
-LINKRATE = 100
+LINKRATE = 10000000
 
 # < as a passable fn
 less_than = lambda x,y: x < y

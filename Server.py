@@ -10,8 +10,6 @@ class Server(Host):
         self.type = "Server"
         self.saved_event = None
 
-        self.load_packet_number = 1;
-        
         # values from last LoadEvent
         self.last_event_info =  { 'load': 0, 'no_of_flows': 0 }
         # values from client requests
@@ -51,11 +49,12 @@ class Server(Host):
         
     def process_packet_event(self, event):
         # convert an event into a packet
-        packet = Packet(event.time, event.size, event.seq, event.src, event.dst, event.flow_id)
+        packet = Packet(event.time, event.size, self.pkt_no, event.src, event.dst, event.flow_id)
 
         print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
+        self.pkt_no += 1
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node
@@ -69,7 +68,7 @@ class Server(Host):
         """Send a ServerLoad packet"""
         # convert an event into a packet
         # set size to 3, to represent 3 values
-        packet = Packet(time, 3, self.load_packet_number, self.id(), dst=self.neighbour)
+        packet = Packet(time, 3, self.pkt_no, self.id(), dst=self.neighbour)
         packet.type = "ServerLoad"
         packet.service =  service_name
         packet.replica = self.hostid
@@ -78,8 +77,8 @@ class Server(Host):
                            'delay': 0,
                            'slots': self.calculate_slots() }
 
-        # update load_packet_number for next time
-        self.load_packet_number += 1
+        # update packet number for next time
+        self.pkt_no += 1
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node

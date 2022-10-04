@@ -3,7 +3,7 @@ from SimComponents import SwitchPort, PacketSink
 from Link import LinkEnd
 from Verbose import Verbose
 
-LINKRATE = 100
+LINKRATE = 10000000
 
 class Host(object):
     """ A Host in the Simulation.
@@ -14,6 +14,7 @@ class Host(object):
         # create one SimComponent.SwitchPort for the neighbour
         self.outgoing_port = None
         self.type = "Host"
+        self.pkt_no = 1
 
         # a forwarding table
         # each entry is (destination, next_hop, weight)

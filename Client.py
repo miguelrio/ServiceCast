@@ -24,12 +24,13 @@ class Client(Host):
     def event_to_packet(self, event):
         # convert an event into a packet
         # Destination is likely to be a service name: e.g. §a
-        packet = Packet(event.time, event.size, event.seq, event.src, event.dst, event.flow_id)
+        packet = Packet(event.time, event.size, self.pkt_no, event.src, event.dst, event.flow_id)
         packet.type = "ClientRequest"
         
         print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
+        self.pkt_no += 1
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node
