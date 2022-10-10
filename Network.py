@@ -6,8 +6,7 @@ from Server import Server
 from Client import Client
 from Verbose import Verbose
 from collections import OrderedDict
-
-# Convert a Graph of label and weights into a Network of Routers and Links
+from gml import read_gml, write_gml
 
 class Network:
     def __init__(self, env = None):
@@ -66,6 +65,15 @@ class Network:
 
         return network
             
+    # Build a graph from a GML file
+    @classmethod
+    def from_gml_file(cls, gml_file, env):
+        """ Add some neighbours from a GML file.
+        """
+        graph = read_gml(gml_file)
+
+        return Network.from_graph(graph, env)
+    
     def start(self, until=1000):
         """Start the Network processing.
         Calls back to the simpy env to start elements"""
@@ -84,7 +92,11 @@ class Network:
 
     # pass in name or Router
     def contains_node(self, r):
-        if isinstance(r, str):
+        if type(r) == int:
+            # it's an int -- check size
+            return val < len(self.routers)
+
+        elif isinstance(r, str):
             # we just got a name
             if (r in self.routers):
                 return True
@@ -295,6 +307,10 @@ class Network:
     # The size of the network
     def __len__(self):
         return len(self.routers)
+
+    # contains a val
+    def __contains__(self, val):
+        return contains_router(val)
 
     # get routers
     def nodes(self):

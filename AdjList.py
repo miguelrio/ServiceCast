@@ -30,7 +30,9 @@ class Graph:
     def __init__(self, num=0):
         self.V = num                    # the size of the graph
         self.graph = [None] * self.V    # an array of AdjNode lists
-        self.labels = []                 # an array of names
+        self.labels = []                # an array of names
+        self.meta_data = {}             # a dict of meta data
+        self.node_meta_data = {}        # a dict of meta data for each node
 
     # index into graph by index or node name
     # returns a name
@@ -39,6 +41,10 @@ class Graph:
             return self.labels[val]
         else:
             return val
+
+    # contains a val
+    def __contains__(self, val):
+        return self.contains_node(val)
 
     # The size of the graph
     def __len__(self):
@@ -103,6 +109,16 @@ class Graph:
 
         return graph
 
+    # Build a graph from a GML file
+    @classmethod
+    def from_gml_file(cls, gml_file):
+        """ Add some neighbours from a GML file.
+        """
+        from gml import read_gml
+        graph = read_gml(gml_file)
+
+        return graph
+    
     # Add node
     def add_node(self, s):
         if self.contains_node(s):
@@ -114,16 +130,22 @@ class Graph:
             self.graph.append(None)
 
     # Contains node
-    def contains_node(self, s):
+    def contains_node(self, val):
         # s can be int or value
-        if type(s) == int:
-            s = self.labels[s]
-
-
-        if s in self.labels:
-            return True
+        if type(val) == int:
+            # it's an int -- check size
+            return val < self.V
         else:
-            return False
+            return val in self.labels
+
+        # if type(s) == int:
+        #     s = self.labels[s]
+
+
+        # if s in self.labels:
+        #     return True
+        # else:
+        #     return False
         
     # Add edges
     def add_edge(self, s, d, weight=1):
@@ -286,11 +308,17 @@ class Graph:
     def adjacency(self, val):
         if type(val) == int:
             node = self.graph[val]
-            return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
+            if node == None:
+                return []
+            else:
+                return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
         else:
             index = self.labels.index(val)
             node = self.graph[index]
-            return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
+            if node == None:
+                return []
+            else:
+                return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
 
     # neighbours of s
     def neighbours(self, s):
@@ -308,12 +336,34 @@ class Graph:
 
         return connections
     
+    # weigth of an edge
     def weight(self, node1, node2):
         "Returns the weight of an edge between two nodes."
         edge = self.edge(node1, node2)
 
         return edge[2]
 
+    # Update meta data
+    def update_meta_data(self, d):
+        # fold the dict d into meta_data
+        self.meta_data.update(d)
+        
+    # Get meta data
+    def get_meta_data(self):
+        return self.meta_data
+        
+    # Update meta data
+    def update_node_meta_data(self, node, d):
+        # fold the dict d into meta_data
+        if node in self.node_meta_data:
+            self.node_meta_data[node].update(d)
+        else:
+            self.node_meta_data[node] = d
+        
+    # Get meta data
+    def get_node_meta_data(self):
+        return self.node_meta_data
+        
     # Print the graph
     def print_agraph(self):
         for i in range(self.V):
