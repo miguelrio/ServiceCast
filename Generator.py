@@ -1,5 +1,6 @@
 from SimComponents import EventGenerator, Event
 import numpy as np
+import random as random
 
 
 class ServerEventGenerator(EventGenerator):
@@ -82,6 +83,8 @@ class MultiClientEventGenerator(EventGenerator):
     def __init__(self, env, id, adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
         super().__init__(env, id,  adist, sdist, destinations_dist, initial_delay, finish, flow_id)
         self.network = None
+        # a function to call if the network does not contain a specific node
+        self.elsefn = print
 
     # Prepare a ClientEvent
     def create_event(self):
@@ -94,10 +97,15 @@ class MultiClientEventGenerator(EventGenerator):
     # Having a separate method makes it easier to do subclasses
     def process_event(self, ev):
         """Process an event"""
-        # Put the event in the out channel of the selected client
-        out = self.network[ev.src]
-        out.put(ev)
 
+        # Put the event in the out channel of the selected client
+        # if that client exists
+        if self.network.contains_node(ev.src):
+            out = self.network[ev.src]
+            out.put(ev)
+        else:
+            # there is no client, so call the elsefn()
+            self.elsefn(ev)
 
 
 class ClientEvent(Event):
@@ -118,6 +126,7 @@ class Generator(object):
     def __init__(self, network, generator):
         self.generator = generator
         self.network = network
+
 
     #  A event generator for a server
     @classmethod
@@ -191,23 +200,29 @@ class Generator(object):
 
         gen2 = np.random.RandomState(seed=int(idstr[1]))
 
+        genA = iter([0, np.inf])
+
         # The interarrival time is the same
         def arrival_dist():
-            ##next_time = gen.exponential(exponential_lambda)
-            next_time = 10
+            ##next_time = gen.exponential(exponential_lambda)            
+
+            next_time = next(genA)
+
             return next_time
 
         # No of flows is poisson
         def no_of_flows_dist():
-            next_val = gen2.poisson(1.0)
+            # WAS next_val = gen2.poisson(1.0)
+            next_val = 0
             return next_val
 
         def load_dist():
             # normal 0 - 100,  mu = 50 +/- 20 stddevs
-            next_val = gen2.normal(loc=10, scale=4, size=None)
+            # next_val = gen2.normal(loc=10, scale=4, size=None)
             # next_val = gen2.exponential(10)
             # next_val = gen.choice([0, 1, 2, 3, 4])
-            return next_val if next_val > 0 else 0
+            # return next_val if next_val > 0 else 0
+            return 0
         
         # Select one service
         def service_name():
@@ -300,14 +315,17 @@ class Generator(object):
         # We first define our random number generator so that we can reproduce results
         gen = np.random.RandomState(seed=seed)
 
+        gen2 = np.random.RandomState(seed=None)
+
         # The interarrival times of a poisson process follow an exponential
         def arrival_dist():
-            next_time = gen.exponential(exponential_lambda)
+            next_time = gen.poisson(exponential_lambda)
             return next_time
 
         # Assume all packets have the same size given by packet_size
         def size_dist():
-            return packet_size
+            next_size = gen2.exponential(5)
+            return int(next_size*10)
 
         # Send to sources
         def sources_dist():

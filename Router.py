@@ -241,7 +241,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         servicename = packet.service
         replica = packet.replica
         msgID = packet.id
-        creationTime = packet.time
+        creationTime = round(packet.time, 6)
         metrics = packet.payload
 
         # a list of entries to forcibly announce
@@ -324,7 +324,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             val = self.service_RIB.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
 
             if Verbose.level >= 1:
-                print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
+                print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
 
             # clear out sent_table entries for this doc_id
             self.clear_sent_table(val[0])
@@ -635,22 +635,28 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # Destination is likely to be a service name: e.g. §a
         service_name = packet.dst
 
-        # First we look up the service name
-        neighbour = self.service_forwarding_table[service_name]
-
-        if Verbose.level >= 2:
-            print ("{:.3f}: ClientRequest neighbour =  {}".format(self.env.now, neighbour))
-
-        if neighbour == None:
+        # Check if we know that service name
+        if not service_name in self.service_forwarding_table:
             # service_name isn't in service_forwarding_table
-            print("{:.3f}: NO SERVICE_FORWARDING_TABLE ENTRY ClientRequest '{}' for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
-        else:
-            # value is link_end
-            # so forwarding the packet
-            if Verbose.level >= 1:
-                print("{:.3f}: FORWARD PACKET ClientRequest '{}' for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
+            print("{:.3f}: NO SERVICE_FORWARDING_TABLE ENTRY ClientRequest '{}' for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.id))
 
-            self.outgoing_ports[neighbour].put(packet)                
+        else:
+            # First we look up the service name
+            neighbour = self.service_forwarding_table[service_name]
+
+            if Verbose.level >= 2:
+                print ("{:.3f}: ClientRequest neighbour =  {}".format(self.env.now, neighbour))
+
+            if neighbour == None:
+                # service_name is in service_forwarding_table, but has no value
+                print("{:.3f}: NO VALUE FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest '{}' for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+            else:
+                # value is link_end
+                # so forwarding the packet
+                if Verbose.level >= 1:
+                    print("{:.3f}: FORWARD PACKET ClientRequest '{}' for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
+
+                self.outgoing_ports[neighbour].put(packet)                
 
     # Do normal forwarding
     def normal_forwarding_packet(self, link_end, packet):
