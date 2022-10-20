@@ -297,12 +297,11 @@ class Generator(object):
     # Drops Events on clients in 'possible_sources' list
     @classmethod
     def multi_client_event_generator(cls, network, possible_sources, target_name,
-                         exponential_lambda=1,
-                         packet_size=100,
-                         seed=None):
+                                     arrival_lambda=1, size_lambda=5,
+                                     seed=None):
         """ Generates events from nodes from 'possible_sources'.
-            'exponential_lambda' is passed to the arrival distribution.
-            'packet_size' is used for the size distribution.
+            'arrival_lambda' is passed to the arrival distribution.
+            'size_lambda' is passed to the size distribution.
         """
 
         env = network.env
@@ -319,12 +318,12 @@ class Generator(object):
 
         # The interarrival times of a poisson process follow an exponential
         def arrival_dist():
-            next_time = gen.poisson(exponential_lambda)
+            next_time = gen.poisson(arrival_lambda)
             return next_time
 
-        # Assume all packets have the same size given by packet_size
+        # The size / length of the jobs in each request
         def size_dist():
-            next_size = gen2.exponential(5)
+            next_size = gen2.exponential(size_lambda)
             return int(next_size*10)
 
         # Send to sources

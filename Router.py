@@ -50,6 +50,8 @@ class Router(object):
 
     def __init__(self, routerid, env=None):
         self._routerid = routerid
+        self.pkt_no = 1
+
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
@@ -198,7 +200,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             else:
                 # packet for me, but not a ServerLoad
                 if Verbose.level >= 1:
-                    print("{:.3f}: PACKET {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self._routerid, (self.env.now - packet.time)))
+                    print("{:.3f}: PACKET {}.{}  ({:.3f}) [{}.{}] consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, packet.replica, packet.id, self._routerid, (self.env.now - packet.time)))
 
 
 
@@ -312,8 +314,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             # double check the update_val and found_in_sent_table
             if update_val != None and found_in_sent_table > 0:
-                # add it to the forcibly announce list
-                forcibly.append(self.service_RIB.get(doc_id=update_val))
+                # add the doc_id to the forcibly announce list
+                forcibly.append(update_val)
 
                 print("{:.3f}: FORCE_ANNOUNCE '{}' with {}".format(self.env.now, self.id(), update_val))
 
@@ -321,7 +323,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             # replica stay the same
             # update other values
-            val = self.service_RIB.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
+            val = self.service_RIB.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
 
             if Verbose.level >= 1:
                 print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
@@ -353,7 +355,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # create a unique list from the forcibly announced
         # and the decided announcements
-        announce = decide_announce + [f for f in forcibly if f.doc_id not in  [ r.doc_id for r in decide_announce ]]
+        announce = decide_announce + [self.service_RIB.get(doc_id=f) for f in forcibly if f not in  [ r.doc_id for r in decide_announce ]]
 
             
 
@@ -395,7 +397,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             new_packet.type = "ServerLoad"
                             new_packet.service =  metric_to_send['servicename']
                             new_packet.replica = metric_to_send['replica']
+                            new_packet.pkt_no =  self.pkt_no
                             new_packet.payload = { 'load': metric_to_send['load'], 'no_of_flows': metric_to_send['no_of_flows'], 'delay': metric_to_send['delay'], 'slots': metric_to_send['slots'] }
+
+                            self.pkt_no += 1
 
                             # forward the packet
                             if Verbose.level >= 1:
@@ -630,7 +635,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """A Client has sent a request"""
 
         if Verbose.level >= 1:
-            print("{:.3f}: RECV PACKET ClientRequest '{}' for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+            print("{:.3f}: RECV PACKET '{}' ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
 
         # Destination is likely to be a service name: e.g. §a
         service_name = packet.dst

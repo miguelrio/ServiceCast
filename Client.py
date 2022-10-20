@@ -6,6 +6,7 @@ class Client(Host):
     def __init__(self, clientid, env=None):
         super().__init__(clientid, env)
         self.type = "Client"
+        self.pkt_no = 1
 
     def process_event(self, event):
         # check the type of event we got
@@ -26,6 +27,7 @@ class Client(Host):
         # Destination is likely to be a service name: e.g. §a
         packet = Packet(event.time, event.size, self.pkt_no, event.src, event.dst, event.flow_id)
         packet.type = "ClientRequest"
+        packet.pkt_no = self.pkt_no
         
         print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))

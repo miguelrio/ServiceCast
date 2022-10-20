@@ -25,6 +25,7 @@ class Server(Host):
     def __init__(self, serverid, env=None):
         super().__init__(serverid, env)
         self.type = "Server"
+        self.pkt_no = 1
         self.saved_event = None
 
         # values from last LoadEvent
@@ -35,7 +36,7 @@ class Server(Host):
         # current values from requests
         self.load = 0
         self.no_of_flows = 0
-        self.capacity = 10
+        self.slots = 10
 
 
     # The event handler
@@ -76,6 +77,7 @@ class Server(Host):
     def process_packet_event(self, event):
         # convert an event into a packet
         packet = Packet(event.time, event.size, self.pkt_no, event.src, event.dst, event.flow_id)
+        packet.pkt_no = self.pkt_no
 
         print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
                 packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
@@ -141,20 +143,9 @@ class Server(Host):
         # convert packet data into a Request
         request = Request(packet.src, packet.dst, packet.id, packet.size)
 
-
-        # MR: STEP 9 update load (add or subtract)
-        # MR: STEP 10 If threshold passes send update
-
+        # increase_load will trigger a callback to decrease_load
         new_load = self.increase_load(request)
 
-        if Verbose.level >= 1:
-            print("{:.3f}: REQUEST_FLOWS at {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), self.load, self.no_of_flows, self.capacity))
-        
-        
-        # Destination is likely to be a service name: e.g. §a
-        service_name = request.dst
-
-        self.send_load_packet(self.env.now, service_name)
 
     # Send a ServerLoad packet
     def send_load_packet(self, time, service_name):
@@ -165,6 +156,7 @@ class Server(Host):
         packet.type = "ServerLoad"
         packet.service =  service_name
         packet.replica = self.hostid
+        packet.pkt_no = self.pkt_no
         packet.payload = { 'load': self.calculate_load(),
                            'no_of_flows': self.calculate_flows(),
                            'delay': 0,
@@ -180,6 +172,10 @@ class Server(Host):
 
     # increase load based on request size
     def increase_load(self, request):
+
+        # MR: STEP 9 update load (add or subtract)
+        # MR: STEP 10 If threshold passes send update
+
         # dig out size of request
         size = request.size
 
@@ -187,19 +183,40 @@ class Server(Host):
         new_load = load_up_fn(self.load)
         new_flows =  flows_up_fn(self.no_of_flows)
 
-        # TODO: now we need to check the capacity to see if we can accept this request
+        # now we need to check the capacity to see if we can accept this request
+        if (self.calculate_slots() == 0):
+            # there is no more capacity to take a job
+            print("{:.3f}: NO_MORE CAPACITY {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
+            return
 
-        self.load = new_load
-        self.no_of_flows = new_flows
+        else:
+            # process extra load
 
-        print("{:.3f}: INCREASE_LOAD {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
-    
-        # process event for future decrease
-        self.env.process(self.decrease_load(request))
+            self.load = new_load
+            self.no_of_flows = new_flows
 
-    
+            if Verbose.level >= 1:
+                print("{:.3f}: INCREASE_LOAD {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
+
+
+            # Destination is likely to be a service name: e.g. §a
+            service_name = request.dst
+
+            self.send_load_packet(self.env.now, service_name)
+
+            if Verbose.level >= 1:
+                print("{:.3f}: REQUEST_FLOWS at {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), self.load, self.no_of_flows, self.calculate_slots()))
+
+            # process callback event for future decrease
+            self.env.process(self.decrease_load(request))
+
+
     # decrease load based once request times out
     def decrease_load(self, request):
+
+        # MR: STEP 9 update load (add or subtract)
+        # MR: STEP 10 If threshold passes send update
+
         yield self.env.timeout(size_to_time(request.size))
 
         new_load = load_down_fn(self.load)
@@ -209,7 +226,14 @@ class Server(Host):
         self.no_of_flows = new_flows
         
 
-        print("{:.3f}: DECREASE_LOAD {} after {} for {}.{}".format(self.env.now, self.id(), size_to_time(request.size), request.src, request.id))
+        if Verbose.level >= 1:
+            print("{:.3f}: DECREASE_LOAD {} after {} for {}.{}".format(self.env.now, self.id(), size_to_time(request.size), request.src, request.id))
+
+        # Destination is likely to be a service name: e.g. §a
+        service_name = request.dst
+
+        self.send_load_packet(self.env.now, service_name)
+
 
 
 
@@ -229,9 +253,9 @@ class Server(Host):
 
     # Calculate the slots available
     def calculate_slots(self):
-        # this is currently:  fn(100 - load)
-        raw = 100 - self.calculate_load()
-        return int(raw / 4)
+        # this is currently:  slots - calculate_flows()
+        raw = self.slots - self.calculate_flows()
+        return raw
 
     
 class Request(object):
