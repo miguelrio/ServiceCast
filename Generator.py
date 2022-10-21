@@ -1,6 +1,7 @@
 from SimComponents import EventGenerator, Event
 import numpy as np
 import random as random
+import itertools
 
 
 class ServerEventGenerator(EventGenerator):
@@ -182,6 +183,7 @@ class Generator(object):
     def server_load_event_generator(cls, network, idstr, possible_service_names,
                          exponential_lambda=1,
                          packet_size=100,
+                         background_load=False,
                          seed=None):
         """ Generates events from node with 'idstr', and sends to the immediate neighbour.
             'exponential_lambda' is passed to the arrival distribution.
@@ -200,29 +202,41 @@ class Generator(object):
 
         gen2 = np.random.RandomState(seed=int(idstr[1]))
 
+        # genA is an iterator 0 and infinity
         genA = iter([0, np.inf])
+
+        # genB is an iterator 0, then the same number
+        # used if background_load is True
+        genB = itertools.chain([0], itertools.repeat(10))
 
         # The interarrival time is the same
         def arrival_dist():
-            ##next_time = gen.exponential(exponential_lambda)            
-
-            next_time = next(genA)
+            if background_load:
+                ##next_time = gen.exponential(exponential_lambda)
+                next_time = next(genB)
+            else:
+                next_time = next(genA)
 
             return next_time
 
         # No of flows is poisson
         def no_of_flows_dist():
-            # WAS next_val = gen2.poisson(1.0)
-            next_val = 0
+            if background_load:
+                next_val = gen2.poisson(1.0)
+            else:
+                next_val = 0
+                
             return next_val
 
         def load_dist():
-            # normal 0 - 100,  mu = 50 +/- 20 stddevs
-            # next_val = gen2.normal(loc=10, scale=4, size=None)
-            # next_val = gen2.exponential(10)
-            # next_val = gen.choice([0, 1, 2, 3, 4])
-            # return next_val if next_val > 0 else 0
-            return 0
+            if background_load:
+                # normal 0 - 100,  mu = 50 +/- 20 stddevs
+                next_val = gen2.normal(loc=10, scale=4, size=None)
+                # next_val = gen2.exponential(10)
+                # next_val = gen.choice([0, 1, 2, 3, 4])
+                return next_val if next_val > 0 else 0
+            else:
+                return 0
         
         # Select one service
         def service_name():
@@ -247,11 +261,11 @@ class Generator(object):
     # Sends from a specific node with 'id', and sends to 'possible_destinations'
     @classmethod
     def client_event_generator(cls, network, id, possible_destinations,
-                         exponential_lambda=1,
+                         arrival_lambda=1,
                          packet_size=100,
                          seed=None):
         """ Generates events from a specific node with 'id', and sends to 'possible_destinations'.
-            'exponential_lambda' is passed to the arrival distribution.
+            'arrival_lambda' is passed to the arrival distribution.
             'packet_size' is used for the size distribution.
         """
 
@@ -267,7 +281,7 @@ class Generator(object):
 
         # The interarrival times of a poisson process follow an exponential
         def arrival_dist():
-            next_time = gen.exponential(exponential_lambda)
+            next_time = gen.exponential(arrival_lambda)
             return next_time
 
         # Assume all packets have the same size given by packet_size

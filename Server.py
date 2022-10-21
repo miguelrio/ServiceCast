@@ -196,16 +196,11 @@ class Server(Host):
             self.no_of_flows = new_flows
 
             if Verbose.level >= 1:
-                print("{:.3f}: INCREASE_LOAD {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
+                print("{:.3f}: INCREASE_LOAD '{}' request  {}.{} timeout {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size), self.load, self.no_of_flows, self.calculate_slots()))
 
 
             # Destination is likely to be a service name: e.g. §a
-            service_name = request.dst
-
-            self.send_load_packet(self.env.now, service_name)
-
-            if Verbose.level >= 1:
-                print("{:.3f}: REQUEST_FLOWS at {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), self.load, self.no_of_flows, self.calculate_slots()))
+            self.send_load_packet(self.env.now, request.dst)
 
             # process callback event for future decrease
             self.env.process(self.decrease_load(request))
@@ -227,7 +222,7 @@ class Server(Host):
         
 
         if Verbose.level >= 1:
-            print("{:.3f}: DECREASE_LOAD {} after {} for {}.{}".format(self.env.now, self.id(), size_to_time(request.size), request.src, request.id))
+            print("{:.3f}: DECREASE_LOAD '{}'  request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(request.size),  self.load, self.no_of_flows, self.calculate_slots()))
 
         # Destination is likely to be a service name: e.g. §a
         service_name = request.dst

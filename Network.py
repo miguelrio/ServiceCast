@@ -33,7 +33,7 @@ class Network:
             # print("name_of " + str(i) + " = " + name)
             
             # create a Router
-            router = Router(name, env)
+            router = Router(name, network)
             # now add it to the routers
             network.routers[name] = router
 
@@ -112,7 +112,7 @@ class Network:
     # add a node
     def add_node(self, name):
         # create a Router
-        router = Router(name, self.env)
+        router = Router(name, self)
         # now add it to the routers
         self.routers[name] = router
 
@@ -179,7 +179,7 @@ class Network:
                 if type(n1) == str:
                     # just got a name
                     # make a Router
-                    r1 = Router(n1, self.env)
+                    r1 = Router(n1, self)
                     self.routers[n1] = r1
 
                     if Verbose.level >= 2:
@@ -214,7 +214,7 @@ class Network:
                 if type(n2) == str:
                     # just got a name
                     # make a Router
-                    r2 = Router(n2, self.env)
+                    r2 = Router(n2, self)
                     self.routers[n2] = r2
 
                     if Verbose.level >= 2:

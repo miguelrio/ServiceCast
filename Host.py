@@ -9,28 +9,46 @@ class Host(object):
     """ A Host in the Simulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
-    def __init__(self, hostid, env=None):
+
+    # network can be a Network or an simpy.Environment()
+    # this gives flexibility in usage
+    def __init__(self, hostid, network=None):
+        self.network = network
         self.hostid = hostid
-        # create one SimComponent.SwitchPort for the neighbour
-        self.outgoing_port = None
-        self.type = "Host"
         self.pkt_no = 1
+        self.type = "Host"
+        
+        # need just one SimComponent.SwitchPort for the neighbour
+        self.outgoing_port = None
 
         # a forwarding table
         # each entry is (destination, next_hop, weight)
         self.unicast_forwarding_table = dict()
 
-        self.set_env(env)
+        # set the simulation environment
+        self.set_env(network)
 
-    def set_env(self,env):
+    def set_env(self, val):
         """ Set the env"""
-        self.env = env
+
+        from Network import Network
+        if isinstance(val, Network):
+            # it is a Network
+            self.env = val.env
+        elif isinstance(val, simpy.Environment):
+            # it is a Environment
+            self.env = val
+            self.network = None
+        else:
+            self.env = None
+
+
         # Create a structure to retrieve packet sent to this host - think consumer (this host) and producer (the one that sent the packet) pattern
         # e.g. https://simpy.readthedocs.io/en/latest/examples/process_communication.html
         self.packet_store = simpy.Store(self.env, capacity=1)
 
         # create packet sink
-        self.sink = PacketSink(env)
+        self.sink = PacketSink(self.env)
 
         
     def start(self):

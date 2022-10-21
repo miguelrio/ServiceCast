@@ -47,10 +47,13 @@ class Router(object):
     metric_list =  [{ 'name': 'load', 'better': less_than }, { 'name': 'delay', 'better': less_than} ]
     
 
-
-    def __init__(self, routerid, env=None):
+    # network can be a Network or an simpy.Environment()
+    # this gives flexibility in usage
+    def __init__(self, routerid, network=None):
+        self.network = network
         self._routerid = routerid
         self.pkt_no = 1
+        self.type = "Router"
 
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
@@ -60,7 +63,7 @@ class Router(object):
         self.unicast_forwarding_table = dict()
         
         # set the simulation environment
-        self.set_env(env)
+        self.set_env(network)
 
         # a database of metrics
         self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
@@ -84,16 +87,29 @@ class Router(object):
         # sets default value 'Key Not found' to absent keys
         defd = collections.defaultdict(lambda : None)
 
-
-    def set_env(self,env):
+    # sets env
+    # checks if network is a Network or an simpy.Environment()
+    def set_env(self, val):
         """ Set the env"""
-        self.env = env
+
+        from Network import Network
+        if isinstance(val, Network):
+            # it is a Network
+            self.env = val.env
+        elif isinstance(val, simpy.Environment):
+            # it is a Environment
+            self.env = val
+            self.network = None
+        else:
+            self.env = None
+
+
         # Create a structure to retrieve packet sent to this router - think consumer (this router) and producer (the one that sent the packet) pattern
         # e.g. https://simpy.readthedocs.io/en/latest/examples/process_communication.html
         self.packet_store = simpy.Store(self.env, capacity=1)
 
         # create packet sink
-        self.sink = PacketSink(env)
+        self.sink = PacketSink(self.env)
         
     def start(self):
         """Start the Router.
@@ -200,7 +216,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             else:
                 # packet for me, but not a ServerLoad
                 if Verbose.level >= 1:
-                    print("{:.3f}: PACKET {}.{}  ({:.3f}) [{}.{}] consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, packet.replica, packet.id, self._routerid, (self.env.now - packet.time)))
+                    print("{:.3f}: PACKET {}.{}  ({:.3f}) consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
 
 
 
@@ -424,14 +440,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def arrived_from_unicast_route(self, replica, link_end):
         # unicast_forwarding_table entries look like:  's1': ('s1', 'b', 3)
 
-        entry = self.unicast_forwarding_table[replica]
+        if replica in self.unicast_forwarding_table:
+            entry = self.unicast_forwarding_table[replica]
 
-        # get the Dijkstra link for the servicename
-        link = entry[1]
+            # get the Dijkstra link for the servicename
+            link = entry[1]
 
-        if link_end.src_node.id() == link:
-            return True
+            if link_end.src_node.id() == link:
+                return True
+            else:
+                return False
+
         else:
+            # not in unicast_forwarding_table
             return False
         
     # is the metric arg2 is better than arg1
@@ -684,6 +705,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                  # don't send to any connected Hosts
                  if Verbose.level >= 2:
                      print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
+
+             elif packet.dst == None:
+                 # dont forward to None
+                 if Verbose.level >= 2:
+                     print("{:.3f}: PACKET {}.{} for {} NO forward from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
 
              else:
                  # forward the packet
