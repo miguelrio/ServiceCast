@@ -2,6 +2,9 @@ from Router import Router
 from Verbose import Verbose
 import simpy
 
+# sclayman:
+# Evaluate Router.decide_announcements() against some entry sets
+
 Verbose.level = 2
 
 env = simpy.Environment()

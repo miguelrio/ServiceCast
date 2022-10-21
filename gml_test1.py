@@ -1,5 +1,8 @@
 from gml import read_gml, write_gml
 
+# sclayman:
+# First test of a topology loaded from a gml file
+
 
 print("- Bics")
 g = read_gml("gml/Bics.gml")

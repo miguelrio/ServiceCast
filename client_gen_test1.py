@@ -3,6 +3,10 @@ from Generator import Generator
 from Verbose import Verbose
 import simpy
 
+# sclayman:
+# Isolate the multi_client_event_generator and prinout out the event data
+
+
 def ev_print(ev):
     print("{:>8.3f}: {:5d} {:>6s} {:5d}".format(ev.time, ev.seq, ev.src, ev.size ))
         
@@ -16,7 +20,7 @@ def topology_setup():
     network = Network(env)
     
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", exponential_lambda=3, seed=30072022)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=3, seed=30072022)
     # bind in the ev_print function
     generator_m1.generator.elsefn = ev_print
 

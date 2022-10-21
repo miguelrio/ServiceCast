@@ -1,7 +1,3 @@
-# Simulation of the ServiceCast system
-# Uses simpy and grotto networking:
-# https://www.grotto-networking.com/DiscreteEventPython.html
-
 from AdjList import Graph
 from Network import Network
 from Server import Server
@@ -11,6 +7,12 @@ from Generator import Generator
 from Verbose import Verbose
 import simpy
 
+# sclayman:
+# Test of a topology with 2 servers and 2 clients,
+# using Generator.multi_client_event_generator and Generator.server_load_event_generator
+#
+# All Servers connected to node 'a'
+# All Clients connected to node 'b'
 
 
 # Setup a topology 
@@ -52,6 +54,10 @@ def topology_setup():
     network.add_client("c1", 'b')
     network.add_client("c2", 'b')
 
+    # now calculate all the forwarding tables
+    network.calculate_forwarding_tables()
+    
+
     # do some test prints
     print(network.nodes())
     print(network.edges())
@@ -70,12 +76,12 @@ def topology_setup():
 
 
     # Clients 'c1' ... 'c2' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2"], "§a", exponential_lambda=30, seed=30072022)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2"], "§a", arrival_lambda=2, size_lambda=6, seed=30072022)
 
     # run
     print("RUN ----------------------------------------------------------------")
 
-    network.start(until=400)
+    network.start(until=3600)
 
 
     

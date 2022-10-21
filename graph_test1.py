@@ -1,10 +1,8 @@
-# Simulation of the ServiceCast system
-# Uses simpy and grotto networking:
-# https://www.grotto-networking.com/DiscreteEventPython.html
-
 from AdjList import Graph
 
 
+# sclayman:
+# First test of a topology defined as a Graph object
 
 
 # Test the use of integers when doing add_edge()

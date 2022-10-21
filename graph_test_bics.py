@@ -7,6 +7,9 @@ from Network import Network
 from Verbose import Verbose
 import simpy
 
+# sclayman:
+# Test of a Graph handcrafted with same nodes as Bics.gml
+# then do Graph -> Network
 
 # Test the use of integers when doing add_edge()
 def square_topology_example_edges():

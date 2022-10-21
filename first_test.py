@@ -7,8 +7,9 @@ from Verbose import Verbose
 import numpy as np
 import simpy
 
-#def process_message():
-#    pass
+# sclayman:
+# First test of a simple topology and a simple packet generator
+
 
 # Lets define a packet generator
 def create_packet_generator(env,

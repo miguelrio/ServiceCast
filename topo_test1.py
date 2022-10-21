@@ -1,7 +1,3 @@
-# Simulation of the ServiceCast system
-# Uses simpy and grotto networking:
-# https://www.grotto-networking.com/DiscreteEventPython.html
-
 from AdjList import Graph
 from Network import Network
 from Server import Server
@@ -11,6 +7,8 @@ from Generator import Generator
 from Verbose import Verbose
 import simpy
 
+# sclayman:
+# Test of a topology with 1 server and 1 client
 
 
 # Use a topology from an adjacency list
@@ -68,7 +66,7 @@ def square_topology_example_adj():
     generator_s1 = Generator.server_event_generator(network, "s1", ["b", "c", "d","e"], exponential_lambda=25)
 
     # Client 'c1' generates packets from arriving events
-    generator_c1 = Generator.client_event_generator(network, "c1", ["e"], exponential_lambda=30)
+    generator_c1 = Generator.client_event_generator(network, "c1", ["e"], arrival_lambda=30)
 
     # run
     print("RUN ----------------------------------------------------------------")

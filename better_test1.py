@@ -1,6 +1,10 @@
 from Router import Router
 from Verbose import Verbose
 
+# sclayman:
+# Evaluate Router.decide_announcements() against some better entry sets
+# and with more verbose output
+
 def setup():
     Verbose.level = 3
 

@@ -1,7 +1,3 @@
-# Simulation of the ServiceCast system
-# Uses simpy and grotto networking:
-# https://www.grotto-networking.com/DiscreteEventPython.html
-
 from AdjList import Graph
 from Network import Network
 from Server import Server
@@ -10,6 +6,8 @@ from Router import Router
 from Generator import Generator
 import simpy
 
+# sclayman:
+# Test of a topology based on Bics.gml
 
 
 # Test the use of integers when doing add_edge()

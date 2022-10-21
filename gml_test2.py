@@ -1,8 +1,10 @@
-#from gml import read_gml, write_gml
 from AdjList import Graph
 from Network import Network
 import simpy
 
+# sclayman:
+# Second test of a topology loaded from a gml file
+# and using Graph.from_gml_file and Network.from_gml_file
 
 print("- Bics")
 g = Graph.from_gml_file("gml/Bics.gml")
