@@ -22,6 +22,10 @@ def size_to_time(size):
 class Server(Host):
     """ A Server in the Simulation.
     """
+
+    # capacity as no of slots
+    slots = 10
+    
     def __init__(self, serverid, env=None):
         super().__init__(serverid, env)
         self.type = "Server"
@@ -36,7 +40,6 @@ class Server(Host):
         # current values from requests
         self.load = 0
         self.no_of_flows = 0
-        self.slots = 10
 
 
     # The event handler

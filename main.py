@@ -24,6 +24,8 @@ def topology_setup():
     # Set alpha value
     Router.alpha = 0.50
 
+    # Set slots
+    Server.slots = 50
 
     
     # 1 - Define the topology
@@ -134,7 +136,7 @@ def topology_setup():
     generator_s5 = Generator.server_load_event_generator(network, "s5", ["§a"], exponential_lambda=55, seed=30072022, background_load=False)
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=2, size_lambda=6, seed=30072022)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=5, size_lambda=10, size_scale_factor=10, seed=30072022)
 
     # run
     print("RUN ----------------------------------------------------------------")

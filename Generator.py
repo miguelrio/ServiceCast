@@ -2,6 +2,7 @@ from SimComponents import EventGenerator, Event
 import numpy as np
 import random as random
 import itertools
+from Verbose import Verbose
 
 
 class ServerEventGenerator(EventGenerator):
@@ -271,6 +272,9 @@ class Generator(object):
 
         env = network.env
 
+        if Verbose.level >= 1:
+            print("Generator client_event_generator arrival_lambda = {}".format(arrival_lambda))
+
         # EventGenerator accepts three (zero arguments) functions as arguments,
         # - one that gives the inter arrival times,
         # - one that gives the event sizes, and
@@ -311,7 +315,7 @@ class Generator(object):
     # Drops Events on clients in 'possible_sources' list
     @classmethod
     def multi_client_event_generator(cls, network, possible_sources, target_name,
-                                     arrival_lambda=1, size_lambda=5,
+                                     arrival_lambda=1, size_lambda=5, size_scale_factor=10,
                                      seed=None):
         """ Generates events from nodes from 'possible_sources'.
             'arrival_lambda' is passed to the arrival distribution.
@@ -319,6 +323,9 @@ class Generator(object):
         """
 
         env = network.env
+
+        if Verbose.level >= 1:
+            print("Generator multi_client_event_generator arrival_lambda = {} size_lambda = {} size_scale_factor = {}".format(arrival_lambda, size_lambda, size_scale_factor))
 
         # EventGenerator accepts three (zero arguments) functions as arguments,
         # - one that gives the inter arrival times,
@@ -332,13 +339,14 @@ class Generator(object):
 
         # The interarrival times of a poisson process follow an exponential
         def arrival_dist():
-            next_time = gen.poisson(arrival_lambda)
+            next_time = gen.exponential(arrival_lambda)
+            # WAS next_time = gen.poisson(arrival_lambda)
             return next_time
 
         # The size / length of the jobs in each request
         def size_dist():
             next_size = gen2.exponential(size_lambda)
-            return int(next_size*10)
+            return int(next_size * size_scale_factor)
 
         # Send to sources
         def sources_dist():
