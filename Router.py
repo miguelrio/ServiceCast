@@ -17,6 +17,7 @@ def forwarding_utility(alpha, load, delay):
     
 
 
+forwarding_utility2 = lambda alpha, load, delay: alpha * load + (1-alpha) * delay 
 
 
 class Compare(Enum):

@@ -187,7 +187,7 @@ class Host(object):
 
     def neighbours(self):
         """Neighbours of Host"""
-        return list(self.neighbour)
+        return [self.neighbour]
 
     def degree(self):
         """Degree of Host"""

@@ -427,6 +427,10 @@ class Graph:
 
             # The code block below retrieves the current node's neighbors and updates their distances
             neighbors = graph.neighbours(current_min_node)
+
+            if Verbose.level >= 3:
+                print("dijkstra_algorithm: neighbours " + current_min_node + " = " + str(len(neighbors)) + " " + str(neighbors))
+
             for neighbor in neighbors:
 
                 if use_weights:
