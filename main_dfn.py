@@ -88,7 +88,9 @@ def topology_setup():
     network.calculate_forwarding_tables()
     
     print("Network = ")
-    network.print()
+
+    with open('/tmp/dfn.gv', mode='w') as file_object:
+        network.graphviz(file=file_object)
     # Services are not addresses -- they start with §
 
     # Server 's1' generates packets from arriving events

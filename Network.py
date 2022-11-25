@@ -7,6 +7,7 @@ from Client import Client
 from Verbose import Verbose
 from collections import OrderedDict
 from gml import read_gml, write_gml
+import sys
 
 class Network:
     def __init__(self, env = None):
@@ -449,3 +450,31 @@ class Network:
             portStr = [ str(port)  for port in ports.keys()]
             print("  '{}' : {},".format(self.routers[router].id(), portStr ), end="\n")
         print("}")
+
+    def graphviz(self, file=sys.stdout):
+        print("Graph G {", file=file)
+        print("  splines=polyline", file=file)
+        # collect router names
+        for router in self.routers:
+            node = self.node(router)
+            if isinstance(node, Client):
+                print(router + " [shape=egg, style=\"filled\", fillcolor=\"pink\"", end="", file=file)
+            elif isinstance(node, Server):
+                print(router + " [shape=parallelogram, style=\"filled\", fillcolor=\"yellow\"", end="", file=file)
+            else:
+                print(router + " [shape=circle, fixedsize=true, width=1", end="", file=file)
+
+            print("];", file=file)
+
+
+        # collect router names
+        for router in self.routers:
+            node = self.node(router)
+            for neighbour in node.neighbours():
+                if router < neighbour:
+                    print(router + " -- " + neighbour + ";", file=file)
+
+
+        print("}", file=file)
+
+        
