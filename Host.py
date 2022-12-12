@@ -28,6 +28,7 @@ class Host(object):
         # set the simulation environment
         self.set_env(network)
 
+
     def set_env(self, val):
         """ Set the env"""
 
@@ -35,13 +36,13 @@ class Host(object):
         if isinstance(val, Network):
             # it is a Network
             self.env = val.env
+            self.network = val
         elif isinstance(val, simpy.Environment):
             # it is a Environment
             self.env = val
             self.network = None
         else:
             self.env = None
-
 
         # Create a structure to retrieve packet sent to this host - think consumer (this host) and producer (the one that sent the packet) pattern
         # e.g. https://simpy.readthedocs.io/en/latest/examples/process_communication.html
@@ -176,7 +177,7 @@ class Host(object):
         """A packet is received from a LinkEnd of a neighbouring Router.
         """
         if Verbose.level >= 1:
-            print("{:.3f}: HOST_RECV Packet {}.{} consumed in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, link_end.src_node.id(), (self.env.now - packet.time)))
+            print("{:.3f}: HOST_RECV '{}' Packet {}.{} consumed from {} after {:.3f}".format(self.env.now,  self.hostid, packet.src, packet.id, link_end.src_node.id(), (self.env.now - packet.time)))
 
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))

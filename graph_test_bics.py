@@ -2,7 +2,7 @@
 # Uses simpy and grotto networking:
 # https://www.grotto-networking.com/DiscreteEventPython.html
 
-from AdjList import Graph
+from Graph import Graph
 from Network import Network
 from Verbose import Verbose
 import simpy

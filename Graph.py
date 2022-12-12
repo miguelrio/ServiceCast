@@ -1,32 +1,8 @@
-# Adjacency List representation in Python
-# Ideas from https://www.programiz.com/dsa/graph-adjacency-list
-
 from Verbose import Verbose
 
-# Adjacency nodes are linked together
-class AdjNode:
-    def __init__(self, value, weight=1):
-        self.vertex = value     # the value of this node
-        self.next = None        # a link to the next node
-        self.weight = weight    # a weight
-
-    def as_list(self):
-        node = self
-        result = []
-        
-        while node:
-            result.append((node.vertex, node.weight))
-            node = node.next
-
-        return result
-        
-
-    def __str__(self):
-        return "AdjNode value: " + str(self.vertex) + " weight: " + str(self.weight) + " next: (" + "None" if self.next == None else str(self.next.vertex) + ")"
-
-
-
+# A Graph
 class Graph:
+    """A representation of a Graph"""
     def __init__(self, num=0):
         self.V = num                    # the size of the graph
         self.graph = [None] * self.V    # an array of AdjNode lists
@@ -451,3 +427,32 @@ class Graph:
             unvisited_nodes.remove(current_min_node)
 
         return { 'source': start_node, 'shortest_path': shortest_path, 'previous_nodes': previous_nodes }
+
+
+
+
+# Adjacency List representation in Python
+# Ideas from https://www.programiz.com/dsa/graph-adjacency-list
+
+# Adjacency nodes are linked together
+class AdjNode:
+    def __init__(self, value, weight=1):
+        self.vertex = value     # the value of this node
+        self.next = None        # a link to the next node
+        self.weight = weight    # a weight
+
+    def as_list(self):
+        node = self
+        result = []
+        
+        while node:
+            result.append((node.vertex, node.weight))
+            node = node.next
+
+        return result
+        
+
+    def __str__(self):
+        return "AdjNode value: " + str(self.vertex) + " weight: " + str(self.weight) + " next: (" + "None" if self.next == None else str(self.next.vertex) + ")"
+
+

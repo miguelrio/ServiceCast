@@ -1,4 +1,4 @@
-from AdjList import Graph
+from Graph import Graph
 from Network import Network
 import simpy
 

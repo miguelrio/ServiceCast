@@ -1,10 +1,10 @@
-from AdjList import Graph
+from Graph import Graph
 from Network import Network
 from Server import Server
 from Client import Client
-from Router import Router
 from Generator import Generator
 from Verbose import Verbose
+from Utility import Utility
 import simpy
 
 # sclayman:
@@ -22,7 +22,9 @@ def topology_setup():
     Verbose.table = 1
 
     # Set alpha value
-    Router.alpha = 0.50
+    Utility.alpha = 0.50
+
+    Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: (alpha * load) + ((1-alpha) * delay) )
 
     # Set slots
     Server.slots = 50
@@ -123,6 +125,7 @@ def topology_setup():
     
     print("Network: route from s1 to c1  = " + str(network['s1'].route_to('c1')) +  "  distance: " + str(network['s1'].distance_to('c1')) )
     
+
     # 4 - Now we create the packet generator.
 
     # Services are not addresses -- they start with §

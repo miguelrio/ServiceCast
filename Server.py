@@ -133,10 +133,13 @@ class Server(Host):
         """A Client has sent a request"""
 
         if Verbose.level >= 1:
-            print("{:.3f}: SERVER_PROCESS ClientRequest at {} for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+            print("{:.3f}: SERVER_PROCESS '{}' ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.id))
+
+        # do some processing and logging to determine some ideal info
+        self.network.best_replica_utility(self, packet)
 
         # process the request packet
-        self. process_client_request_packet(packet)
+        self.process_client_request_packet(packet)
 
 
     # Process a ClientRequest packet

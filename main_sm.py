@@ -1,10 +1,10 @@
-from AdjList import Graph
+from Graph import Graph
 from Network import Network
 from Server import Server
 from Client import Client
-from Router import Router
 from Generator import Generator
 from Verbose import Verbose
+from Utility import Utility
 import simpy
 
 # sclayman:
@@ -22,7 +22,7 @@ def topology_setup():
     Verbose.table = 1
 
     # Set alpha value
-    Router.alpha = 0.50
+    Utility.alpha = 0.50
 
 
     
@@ -112,14 +112,18 @@ def topology_setup():
     print("Network neighbours c1: " + str(network.neighbours('c1')))
     print("Network degree c1: " + str(network.degree('c1')))
 
-    print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
-    print("Network: dijkstra from d = " + str(Graph.dijkstra_algorithm(network, 'd')))
+    dijkstra_a = Graph.dijkstra_algorithm(network, 'a')
+    print("Network: dijkstra from a = " + str(dijkstra_a))
+    print("Network: dijkstra routing from a = " + str(network.dijkstra_to_routing(dijkstra_a)))
+    dijkstra_c1 = Graph.dijkstra_algorithm(network, 'c1')
+    print("Network: dijkstra from c1 = " + str(dijkstra_c1))
+    print("Network: dijkstra routing from c1 = " + str(network.dijkstra_to_routing(dijkstra_c1)))
 
-    print("Network: unicast forwarding table at d = " + str(network['d'].get_unicast_forwarding_table()))
+    print("Network: unicast forwarding table at c1 = " + str(network['c1'].get_unicast_forwarding_table()))
 
-    print("Network: route from d to s1 = " + str(network['d'].route_to('s1')) +  "  distance: " + str(network['d'].distance_to('s1')) )
+    print("Network: route from c1 to s1 = " + str(network['c1'].route_to('s1')) +  "  distance: " + str(network['c1'].distance_to('s1')) )
     
-    print("Network: route from s1 to c1  = " + str(network['s1'].route_to('c1')) +  "  distance: " + str(network['s1'].distance_to('c1')) )
+    print("Network: route from s1 to c2  = " + str(network['s1'].route_to('c2')) +  "  distance: " + str(network.path_latency('s1','c2')) )
     
     # 4 - Now we create the packet generator.
 

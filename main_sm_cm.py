@@ -1,10 +1,10 @@
-from AdjList import Graph
+from Graph import Graph
 from Network import Network
 from Server import Server
 from Client import Client
-from Router import Router
 from Generator import Generator
 from Verbose import Verbose
+from Utility import Utility
 import simpy
 
 # sclayman:
@@ -23,10 +23,18 @@ def topology_setup():
     Verbose.table = 1
 
     # Set alpha value
-    Router.alpha = 0.50
+    Utility.alpha = 0.50
 
+    # load:  0 -> 1
+    utility_load = lambda load: (1-(0.12*load)) if load < 0.8  else (4.5-(4.5*load))
+    # delay: 0 -> 10
+    utility_delay = lambda delay: (1-(0.1*delay)) if delay <= 10 else 0
+
+    # actual utility fn
+    Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(1 - ((utility_load(load / (2 * Server.slots)) * utility_delay(delay))), 4))
 
     
+
     # 1 - Define the topology
     topo = {
         'a': { 'b', ('c', 4)},

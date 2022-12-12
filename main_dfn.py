@@ -1,9 +1,10 @@
+from Graph import Graph
 from Network import Network
 from Server import Server
 from Client import Client
-from Router import Router
 from Generator import Generator
 from Verbose import Verbose
+from Utility import Utility
 import simpy
 from gml import read_gml
 
@@ -16,7 +17,7 @@ def topology_setup():
     Verbose.table = 1
 
     # Set alpha value
-    Router.alpha = 0.50
+    Utility.alpha = 0.50
 
     # Set slots
     Server.slots = 50
@@ -87,6 +88,13 @@ def topology_setup():
     # now calculate all the forwarding tables
     network.calculate_forwarding_tables()
     
+    dijkstra_c1 = Graph.dijkstra_algorithm(network, 'c1')
+    print("Network: dijkstra from c1 = " + str(dijkstra_c1))
+    print("Network: dijkstra routing from c1 = " + str(network.dijkstra_to_routing(dijkstra_c1)))
+    dijkstra_c4 = Graph.dijkstra_algorithm(network, 'c4')
+    print("Network: dijkstra from c4 = " + str(dijkstra_c4))
+    print("Network: dijkstra routing from c4 = " + str(network.dijkstra_to_routing(dijkstra_c4)))
+
     print("Network = ")
 
     with open('/tmp/dfn.gv', mode='w') as file_object:

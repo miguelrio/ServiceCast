@@ -3,21 +3,12 @@ from SimComponents import SwitchPort, PacketSink, Packet
 from Link import LinkEnd
 from Host import Host
 from Verbose import Verbose
+from Utility import Utility
 from tinydb import TinyDB, Query
 from enum import Enum
 # importing "collections" for defaultdict
 import collections
 
-
-# the forwarding utility function
-def forwarding_utility(alpha, load, delay):
-    """ the utility function U=alpha * load + (1-alpha)*delay """
-    # we define the utility function U=alpha * load + (1-alpha)*delay
-    return alpha * load + (1-alpha) * delay 
-    
-
-
-forwarding_utility2 = lambda alpha, load, delay: alpha * load + (1-alpha) * delay 
 
 
 class Compare(Enum):
@@ -31,18 +22,21 @@ class Compare(Enum):
 
 LINKRATE = 10000000
 
-# < as a passable fn
-less_than = lambda x,y: x < y
-# > as a passable fn
-greater_than = lambda x,y: x > y
 
 class Router(object):
     """ A Router in the Simulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
 
-    # alpha
-    alpha = 0
+    # The following staticmethods can be reset from the outside
+    # to change the behaviour of the algorithms
+
+    # < as a passable fn
+    less_than = staticmethod(lambda x,y: x < y)
+    # > as a passable fn
+    greater_than = staticmethod(lambda x,y: x > y)
+
+    # Internal
 
     # relevant metrics
     metric_list =  [{ 'name': 'load', 'better': less_than }, { 'name': 'delay', 'better': less_than} ]
@@ -603,7 +597,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def displayMetrics2(self, label, metric):
         return "{} replica: {} load: {} delay: {}".format(label, metric['replica'], metric['load'], metric['delay'])
 
-
+    # Call the forwarding_utility_fn
+    # which is usually set as a lambda in forwarding_utility_fn
+    def call_forwarding_utility(self, alpha, load, delay):
+        return Utility.forwarding_utility_fn(alpha, load, delay)
 
     #  Check if fw table needs changing
     def choose_best_forwarding_replica(self, entries):
@@ -625,7 +622,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         utility = [-1 for e in entries]
 
         for entry_no, entry in enumerate(entries):
-            utility_i = forwarding_utility(self.alpha, entry['load'], entry['delay'])
+            utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'])
             utility[entry_no] = utility_i
 
             #print ("entry_no " + str(entry_no) + " neighbour " + entry['neighbour'] + " utility_i = " + str(utility_i))
@@ -802,7 +799,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         else:
             print ("{:.3f}: UTILITY '{}'".format(self.env.now, self.id()))
             for entry_no, entry in enumerate(entries):
-                print("       {:2d}  ({})  {}".format(entry.doc_id, utility[entry_no], entry))
+                print("       {:2d}  ({:.3f})  {}".format(entry.doc_id, utility[entry_no], entry))
 
 
     # Print announce info

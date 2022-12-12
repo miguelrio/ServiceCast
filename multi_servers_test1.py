@@ -1,10 +1,10 @@
-from AdjList import Graph
+from Graph import Graph
 from Network import Network
 from Server import Server
 from Client import Client
-from Router import Router
 from Generator import Generator
 from Verbose import Verbose
+from Utility import Utility
 import simpy
 
 # sclayman:
@@ -17,7 +17,7 @@ def square_topology_example_adj():
     Verbose.level = 2
     
     # Set alpha value
-    Router.alpha = 0.50
+    Utility.alpha = 0.50
 
     # 1 - Define the topology
     topo = {

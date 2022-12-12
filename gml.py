@@ -36,7 +36,7 @@ from enum import Enum
 from io import StringIO
 from typing import Any, NamedTuple
 from pathlib import Path
-from AdjList import Graph
+from Graph import Graph
 import sys
 
 
