@@ -496,7 +496,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 print("{:.3f}: NEIGHBOUR_HAS_BETTER_UTILITY METRIC_UTILITY '{}' utility  ({:.3f})  {}".format(self.env.now, self.id(), metric_utility, metric_to_send))
 
             for entry in results:
-                utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'])
+                # get delay to neighbour
+                link =  self.outgoing_ports[entry['neighbour']].out
+                neighbour_delay = link.propagation_delay
+                utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'] - neighbour_delay)
 
                 if utility_i < metric_utility:
                     # this entry in the RIB has a better utility than
@@ -858,9 +861,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Print utility info
     def print_utility_info(self, entries, utility):
         if Verbose.table == 0:
-            print ("{:.3f}: UTILITY '{}' = {} ".format(self.env.now, self.id(), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  doc['load'], doc['delay'], doc['replica'], doc['neighbour']), entries)))))
+            print ("{:.3f}: UTILITY '{}' {} = {} ".format(self.env.now, self.id(), len(entries), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  doc['load'], doc['delay'], doc['replica'], doc['neighbour']), entries)))))
         else:
-            print ("{:.3f}: UTILITY '{}'".format(self.env.now, self.id()))
+            print ("{:.3f}: UTILITY '{}' {}".format(self.env.now, self.id(), len(entries)))
             for entry_no, entry in enumerate(entries):
                 print("       {:2d}  ({:.3f})  {}".format(entry.doc_id, utility[entry_no], entry))
 
