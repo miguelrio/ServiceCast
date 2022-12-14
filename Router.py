@@ -488,20 +488,24 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         else:
             # something found in service_RIB
 
-            # now compare all the utility values
-            # first do utility of the metric_to_send
-            metric_utility = self.call_forwarding_utility(Utility.alpha, metric_to_send['load'], metric_to_send['delay'])
-
             if Verbose.level >= 3:
                 print("{:.3f}: NEIGHBOUR_HAS_BETTER_UTILITY METRIC_UTILITY '{}' utility  ({:.3f})  {}".format(self.env.now, self.id(), metric_utility, metric_to_send))
 
+            # now compare all the utility values
             for entry in results:
                 # get delay to neighbour
                 link =  self.outgoing_ports[entry['neighbour']].out
                 neighbour_delay = link.propagation_delay
-                utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'] - neighbour_delay)
 
-                if utility_i < metric_utility:
+
+                # utility as neighbour sees it
+                utility_n = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'] - neighbour_delay)
+
+                # utility of the metric_to_send as the neighbour would see it
+                metric_utility = self.call_forwarding_utility(Utility.alpha, metric_to_send['load'], metric_to_send['delay'] + neighbour_delay)
+
+
+                if utility_n < metric_utility:
                     # this entry in the RIB has a better utility than
                     # the metric_to_send
                     if Verbose.level >= 3:
