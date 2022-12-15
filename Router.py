@@ -8,7 +8,7 @@ from tinydb import TinyDB, Query
 from enum import Enum
 # importing "collections" for defaultdict
 import collections
-
+import itertools
 
 
 class Compare(Enum):
@@ -362,14 +362,22 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if Verbose.level >= 1:
             self.print_announce_info(decide_announce)
 
-        # create a unique list from the forcibly announced
-        # and the decided announcements
-        announce = decide_announce + [self.service_RIB.get(doc_id=f) for f in forcibly if f not in  [ r.doc_id for r in decide_announce ]]
+        # Work out what to send from the decided announcements and the forcibly announcements
+        if forcibly:
+            print(">>> decide_announce " + str(len(decide_announce)) + " " + str(decide_announce))
+        announce = [r for r in decide_announce if r.doc_id not in forcibly]
+        if forcibly:
+            print(">>> announce " + str(len(announce)) + " " + str(announce))
 
+        # forcibly (a list of doc_ids) - but eliminate entries from decide_announce
+        forcible =  [self.service_RIB.get(doc_id=f) for f in forcibly]
+        if forcibly:
+            print(">>> forcible " + str(len(forcible)) + " " + str(forcible))
             
-        #  announce the entries
-        if announce:
-            self.announce_metrics(announce)
+        #  announce the entries if one or other has entries
+        if announce or forcibly:
+            self.announce_metrics(announce, forcible)
+
 
 
         # STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
@@ -380,9 +388,17 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Announce the entries
     # Consider some specific limits and caveats
     # e.g. announce on all the links that it wasn't received from
-    def announce_metrics(self, announce):
+    def announce_metrics(self, announce, forcible):
+        # label announce entries so they can be forcibly sent
+        announce_list = list(zip(announce, itertools.repeat(False)))
+        # label forcibly entries so they cannot be forcibly sent
+        forcible_list = list(zip(forcible, itertools.repeat(True)))
+                
         # skip through all the announcements
-        for metric_no, metric_to_send in enumerate(announce):
+        for metric_no, metric_to_send_tuple in enumerate(announce_list + forcible_list):
+
+            # unpick metric and force from the tuple
+            metric_to_send, force_send = metric_to_send_tuple
 
             # send to neighbours
             for neighbour in self.outgoing_ports:
@@ -408,7 +424,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         print ("{:.3f}: ALREADY IN SENT_TABLE {} neighbour {} - metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
                     pass
 
-                elif self.neighbour_has_better_utility(metric_to_send, neighbour):
+                elif not force_send and self.neighbour_has_better_utility(metric_to_send, neighbour):
                     if Verbose.level >= 1:
                         print("{:.3f}: NEIGHBOUR HAS BETTER UTILITY  {} neighbour {} - metric no {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id) )
                     pass
