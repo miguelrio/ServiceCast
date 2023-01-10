@@ -468,48 +468,50 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 # so no withdrawals sent on
                 print("{:.3f}: NOTHING in sent_table: '{}' for {}".format(self.env.now, self.id(), candidate.doc_id))
                 pass
+            
             else:
                 # this metric is in the sent table
                 if Verbose.level >= 2:
                     print("{:.3f}: {} in sent_table: '{}' metric [{}] need to withdraw".format(self.env.now, no_found_in_sent_table, self.id(), candidate.doc_id))
 
             
-            # do we need any withdrawal announcements
-            for sent_entry in sent_results:
-                #print("link_end = " + str(link_end) + " sent_entry = " + str(sent_entry))
-                
-                neighbour = sent_entry['neighbour']
+                # do we need any withdrawal announcements
+                for sent_entry in sent_results:
+                    #print("link_end = " + str(link_end) + " sent_entry = " + str(sent_entry))
 
-                # check link_end
-                if link_end.src_node.id() == neighbour:
-                    # don't send to where it came from
-                    if Verbose.level >= 2:
-                        print("{:.3f}: WITHDRAW PACKET {}.{} dont send back from {} to {} ".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id()))
-                    pass
+                    neighbour = sent_entry['neighbour']
 
-                else:
-                    # create a new packet
-                    new_packet = self.metric_to_packet(candidate, ServerLoadMessageType.Withdraw, neighbour)
+                    # check link_end
+                    if link_end.src_node.id() == neighbour:
+                        # don't send to where it came from
+                        if Verbose.level >= 2:
+                            print("{:.3f}: WITHDRAW PACKET {}.{} dont send back from {} to {} ".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id()))
+                        pass
 
-                    self.pkt_no += 1
+                    else:
+                        # create a new packet
+                        new_packet = self.metric_to_packet(candidate, ServerLoadMessageType.Withdraw, neighbour)
 
-                    # forward the packet
-                    if Verbose.level >= 1:
-                        print("{:.3f}: WITHDRAW FORWARD {} from {} to {}".format(self.env.now, candidate['replica'], self.id(), neighbour))
+                        self.pkt_no += 1
 
-                    # send to relevant SwitchPort
-                    self.outgoing_ports[neighbour].put(new_packet)
+                        # forward the packet
+                        if Verbose.level >= 1:
+                            print("{:.3f}: WITHDRAW FORWARD {} from {} to {}".format(self.env.now, candidate['replica'], self.id(), neighbour))
+
+                        # send to relevant SwitchPort
+                        self.outgoing_ports[neighbour].put(new_packet)
+
 
                 # whatever the previous decision
                 # clear sent_table for this metric
                 self.clear_sent_table(candidate.doc_id)
-            
-            #self.print_sent_table()
 
-            # now delete the candidate metric from the RIB
-            self.delete_rib_entry(candidate)
+                #self.print_sent_table()
 
-            self.print_metric_table()
+                # now delete the candidate metric from the RIB
+                self.delete_rib_entry(candidate)
+
+                self.print_metric_table()
 
             print("WITHDRAW END")
         
