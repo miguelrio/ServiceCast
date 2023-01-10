@@ -1,6 +1,7 @@
 from Host import Host
 from SimComponents import Packet
 from Verbose import Verbose
+from enum import Enum
 
 def load_up_fn(val):
     return val + 2
@@ -17,6 +18,30 @@ def flows_down_fn(val):
 # Convert a request size into a timeout
 def size_to_time(size):
     return size
+
+class ServerLoadMessageType(Enum):
+    Announce = 0
+    Withdraw = 1
+
+    # convert a ServerLoadMessageType enum to a string
+    def to_val(self):
+        match self:
+            case ServerLoadMessageType.Announce:
+                return 'A'
+            case ServerLoadMessageType.Withdraw:
+                return 'W'
+
+    # convert a string to a ServerLoadMessageType enum 
+    @classmethod    
+    def from_val(cls, val):
+        match val:
+            case 'A':
+                return ServerLoadMessageType.Announce
+            case 'W':
+                return ServerLoadMessageType.Withdraw
+
+    def __repr__(self):
+        return "ServerLoadMessageType." + self.name
 
 
 class Server(Host):
@@ -160,6 +185,7 @@ class Server(Host):
         # set size to 3, to represent 3 values
         packet = Packet(time, 3, self.pkt_no, self.id(), dst=self.neighbour)
         packet.type = "ServerLoad"
+        packet.operation = ServerLoadMessageType.Announce.to_val()
         packet.service =  service_name
         packet.replica = self.hostid
         packet.pkt_no = self.pkt_no
