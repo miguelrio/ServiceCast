@@ -267,6 +267,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # add the delay of the last hop to the metrics
         metrics['delay'] +=  link_end.propagation_delay
 
+
+        # If the announcement has arrived on a link that is not the one
+        # in the forwarding table, for the replica then Drop the message
+        valid_route = self.arrived_from_unicast_route(replica, link_end)
+
+        if Verbose.level >= 1:
+            print("{:.3f}: UNICAST_ROUTE '{}' for {} from {} --> {} ".format(self.env.now, self.id(), replica, link_end.src_node.id(), 'VALID' if valid_route else 'INVALID'))
+
+        if not valid_route:
+            return
+        
+
         # process the incoming packet
         if (operation == ServerLoadMessageType.Announce):
             # it's an announcement
@@ -294,17 +306,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # store important data (including metrics) for later use in table
         # 'replica' is key for decision for deleting old data
-
-        # If the announcement has arrived on a link that is not the one
-        # in the forwarding table, for the replica then Drop the message
-        valid_route = self.arrived_from_unicast_route(replica, link_end)
-
-        if Verbose.level >= 1:
-            print("{:.3f}: UNICAST_ROUTE '{}' for {} from {} --> {} ".format(self.env.now, self.id(), replica, link_end.src_node.id(), 'VALID' if valid_route else 'INVALID'))
-
-        if not valid_route:
-            return
-
 
         # a list of entries to forcibly announce
         forcibly = []
@@ -414,9 +415,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         for withdraw_metric in forcible:
             # delete from sent_table
             self.clear_sent_table(withdraw_metric.doc_id)
-            # now delete the metric from the RIB
-            self.delete_rib_entry(withdraw_metric)
+            # do NOT delete the metric from the RIB
+            # self.delete_rib_entry(withdraw_metric)
             
+        if Verbose.level >= 1:
+            self.print_sent_table()
+
 
         # STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
 
@@ -513,7 +517,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 self.print_metric_table()
 
-            print("WITHDRAW END")
+            print("{:.3f}: WITHDRAW END".format(self.env.now))
         
 
 
@@ -573,9 +577,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     # update sent_table
                     self.update_sent_table(metric_to_send, neighbour)
 
-        if Verbose.level >= 1:
-            self.print_sent_table()
-            
         print("{:.3f}: ANNOUNCE_END '{}'".format(self.env.now, self.id()))
 
         
