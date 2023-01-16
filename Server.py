@@ -43,7 +43,9 @@ class ServerLoadMessageType(Enum):
     def __repr__(self):
         return "ServerLoadMessageType." + self.name
 
-
+    def __str__(self):
+        return self.name
+    
 class Server(Host):
     """ A Server in the Simulation.
     """

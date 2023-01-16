@@ -119,6 +119,9 @@ def square_topology_example_edges():
     
     network.print()
     
+    # now calculate all the forwarding tables
+    network.calculate_forwarding_tables()
+    
     # 4 - Now we create the packet generator.
 
     # Server 's1' generates packets from arriving events

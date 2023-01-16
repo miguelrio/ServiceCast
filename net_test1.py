@@ -54,6 +54,11 @@ def square_topology_example_edges():
     network.add_host(c1, network['e'])
     
     network.print()
+
+    # now calculate all the forwarding tables
+    network.calculate_forwarding_tables()
+    
+
     
     # 4 - Now we create the packet generator.
 

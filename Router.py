@@ -291,6 +291,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             pass    
 
 
+
     # We received a packet of type ServerLoad Announcement
     def server_load_packet_announce(self, link_end, packet):
         # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
@@ -301,14 +302,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         metrics = packet.payload
         operation = ServerLoadMessageType.from_val(packet.operation)
 
+        # marked for later use
+        marked  = None
+        
         #
         # never have more than 1 entry for each replica
 
         # store important data (including metrics) for later use in table
         # 'replica' is key for decision for deleting old data
-
-        # a list of entries to forcibly announce
-        forcibly = []
 
         # If there is an existing entry in the service RIB 
         # so find entry from database for replica
@@ -322,7 +323,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # If there is NO existing entry in the service RIB
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.service_RIB.insert({'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'replica': replica, 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots']  })
+            val = self.service_RIB.insert({ 'replica': replica, 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots']  })
 
             if Verbose.level >= 1:
                 print ("{:.3f}: ADD METRIC '{}' metric no {}".format(self.env.now, self.id(), val) )
@@ -343,18 +344,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 return
             
 
-
-            # check if the new metrics are worse than the found result
-            # needs to be done early
-            (update_val, found_in_sent_table) = self.check_metrics_worse(metrics, results[0])
-
-            # double check the update_val and found_in_sent_table
-            if update_val != None and found_in_sent_table > 0:
-                # add the doc_id to the forcibly announce list
-                forcibly.append(update_val)
-
-                print("{:.3f}: FORCE_ANNOUNCE '{}' with {}".format(self.env.now, self.id(), update_val))
-
             # Update the metrics in the existing RIB entry
 
             # replica stay the same
@@ -364,8 +353,16 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if Verbose.level >= 1:
                 print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
 
-            # clear out sent_table entries for this doc_id
-            self.clear_sent_table(val[0])
+            # mark this doc_id, if in sent_table
+            # val[0] is a doc_id
+            sent_query = Query()
+            sent_results = self.sent_table.search(sent_query.metric_doc_id == val[0])
+
+            if sent_results != []:
+                # it is in the sent_table
+                metric = self.service_RIB.get(doc_id=val[0])
+                marked = metric
+                print("{:.3f}: MARK METRIC '{}' {}".format(self.env.now, self.id(), metric['replica']))
 
                 
         # STEP 5,11 forward to appropriate links based on routing information base (fix code below)
@@ -379,45 +376,72 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if Verbose.level >= 1:
             self.print_metric_table()
 
-        # Announcement decision phase 
-            
-        #  decide the entries to announce        
-        decide_announce = self.decide_announcements(self.service_RIB.all())
+        # ---- Announcement Decision Phase ----
+
+        #  decide the PBR entries to announce        
+        decide_pbr = self.decide_announcements(self.service_RIB.all())
 
         if Verbose.level >= 1:
-            self.print_announce_info(decide_announce)
+            self.print_announce_info(decide_pbr)
 
-        # Work out what to send from the decided announcements and the forcibly announcements
+        # Work out what to send from the PBR and the sent_table
 
-        # the decided announcements
+        # First evaluate the metrics from the sent_table
+        
+        # get unique list of sent doc_ids
+        sent_doc_ids = list(set([s['metric_doc_id'] for s in self.sent_table]))
+        # sent is list of metrics
+        sent_set = [self.service_RIB.get(doc_id=d) for d in sent_doc_ids]
+
+        if sent_set:
+            if Verbose.level >= 2:
+                print("    >>> sent_set " + str(len(sent_set)) + " " + str(sent_set))
+
+        # announce set are those in decide_pbr and not in sent
+        # plus the marked one, if it is in the decide_pbr
+
+        marked_set = [marked] if marked in decide_pbr else []
+
+        if marked_set:
+            if Verbose.level >= 2:
+                print("    >>> marked_set " + str(len(marked_set)) + " " + str(marked_set))
+                
+        announce_set = [m for m in decide_pbr if m.doc_id not in [ s.doc_id for s in sent_set ]] + marked_set
+
+
         # use all of them and label announce entries to have message type Announce
-        announce = list(zip(decide_announce, itertools.repeat(ServerLoadMessageType.Announce)))
+        announce = list(zip(announce_set, itertools.repeat(ServerLoadMessageType.Announce)))
 
-        if decide_announce:
-            print(">>> announce " + str(len(announce)) + " " + str(announce))
+        if announce:
+            if Verbose.level >= 2:
+                print("    >>> announce_set " + str(len(announce)) + " " + str(announce))
 
-        # forcibly (a list of doc_ids)
-        # eliminate those entries from decide_announce
-        # forcible (a list of metrics)
-        forcible =  [self.service_RIB.get(doc_id=f) for f in forcibly if f not in  [ r.doc_id for r in decide_announce ]]
 
-        # label forcibly entries to have message type Withdraw
-        withdraw = list(zip(forcible, itertools.repeat(ServerLoadMessageType.Withdraw)))
+        # withdraw set are those in sent_table minus those in decide_pbr
+        withdraw_set = [s for s in sent_set if s.doc_id not in [ d.doc_id for d in decide_pbr ]]
+        
+        # label withdraw_set entries to have message type Withdraw
+        withdraw = list(zip(withdraw_set, itertools.repeat(ServerLoadMessageType.Withdraw)))
                      
-        if forcibly:
-            print(">>> withdraw " + str(len(withdraw)) + " " + str(withdraw))
+        if withdraw:
+            if Verbose.level >= 2:
+                print("    >>> withdraw_set " + str(len(withdraw)) + " " + str(withdraw))
             
-        #  announce the entries if one or other has entries
+
+        # if there is a metric in the marked_set
+        # we need to clear it from the sent_table
+        if marked_set != []:
+            # delete from sent_table for marked
+            self.clear_sent_table(marked_set[0].doc_id)
+
+
+        #  announce the metrics if announce or withdraw has entries
+            
+
         if announce or withdraw:
             self.announce_metrics(announce + withdraw)
 
-        # process the withdrawals
-        for withdraw_metric in forcible:
-            # delete from sent_table
-            self.clear_sent_table(withdraw_metric.doc_id)
-            # do NOT delete the metric from the RIB
-            # self.delete_rib_entry(withdraw_metric)
-            
+
         if Verbose.level >= 1:
             self.print_sent_table()
 
@@ -426,6 +450,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         self.choose_best_forwarding_replica(self.service_RIB.all())
 
+        
 
     # We received a packet of type ServerLoad Withdraw
     def server_load_packet_withdraw(self, link_end, packet):
@@ -533,11 +558,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # unpick metric and force from the tuple
             metric_to_send, msg_type = metric_to_send_tuple
 
+            # print("{:.3f}: Check {} - metric no {} {} announcement {} withdraw {}".format(self.env.now, self.id(),  metric_to_send.doc_id, msg_type, msg_type == ServerLoadMessageType.Announce, msg_type == ServerLoadMessageType.Withdraw))
+
             # send to neighbours
             for neighbour in self.outgoing_ports:
 
-                if Verbose.level >= 3:
-                    print("Check " +  metric_to_send['link_end'] +  " <--> " + str(neighbour))
+                # print("Check " +  metric_to_send['link_end'] +  " <--> " + str(neighbour))
 
                 if metric_to_send['neighbour'] == str(neighbour):
                     # don't send to where it came from
@@ -551,31 +577,74 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         print("{:.3f}: NOT TO HOST from {} to {} - metric no {}".format(self.env.now, self.id(), self.outgoing_ports[neighbour].out.dst_node, metric_to_send.doc_id))
                     pass
 
-                elif self.check_sent_table(metric_to_send, neighbour):
-                    # this is in the sent table, so no need to send
-                    if Verbose.level >= 1:
-                        print ("{:.3f}: ALREADY IN SENT_TABLE {} neighbour {} - metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
-                    pass
 
                 else:
                     # a candidate for forwarding
 
-                    # send a new packet
+                    # check if it is an Announcement or a Withdraw
 
-                    # create a new packet
-                    new_packet = self.metric_to_packet(metric_to_send, msg_type, neighbour)
+                    if msg_type == ServerLoadMessageType.Announce:
+                        # Announce
 
-                    self.pkt_no += 1
+                        if self.check_sent_table(metric_to_send, neighbour):
+                            # this is in the sent table, so no need to send
+                            if Verbose.level >= 1:
+                                print ("{:.3f}: ALREADY IN SENT_TABLE {} neighbour {} - metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
+                                pass
 
-                    # forward the packet
-                    if Verbose.level >= 1:
-                        print("{:.3f}: FORWARD METRIC {} from {} to {}".format(self.env.now, metric_to_send.doc_id, self.id(), neighbour))
 
-                    # send to relevant SwitchPort
-                    self.outgoing_ports[neighbour].put(new_packet)
+                        else:
+                            # send a new packet
 
-                    # update sent_table
-                    self.update_sent_table(metric_to_send, neighbour)
+                            # create a new packet
+                            new_packet = self.metric_to_packet(metric_to_send, msg_type, neighbour)
+
+                            self.pkt_no += 1
+
+                            # forward the packet
+                            if Verbose.level >= 1:
+                                print("{:.3f}: FORWARD METRIC {} from {} to {}".format(self.env.now, metric_to_send.doc_id, self.id(), neighbour))
+
+                            # send to relevant SwitchPort
+                            self.outgoing_ports[neighbour].put(new_packet)
+
+                            # update sent_table
+                            self.update_sent_table(metric_to_send, neighbour)
+
+                    elif msg_type == ServerLoadMessageType.Withdraw:
+                        # Withdraw
+                        
+                        if self.check_sent_table(metric_to_send, neighbour):
+                            # this is in the sent table, so send withdraw
+
+                            # send a new packet
+
+                            # create a new packet
+                            new_packet = self.metric_to_packet(metric_to_send, msg_type, neighbour)
+
+                            self.pkt_no += 1
+
+                            # forward the packet
+                            if Verbose.level >= 1:
+                                print("{:.3f}: FORWARD WITHDRAW {} from {} to {}".format(self.env.now, metric_to_send.doc_id, self.id(), neighbour))
+
+                            # send to relevant SwitchPort
+                            self.outgoing_ports[neighbour].put(new_packet)
+
+                        else:
+                            # not in sent_table, so no need to send Withdraw
+                            if Verbose.level >= 1:
+                                print ("{:.3f}: NOT IN SENT_TABLE {} neighbour {} - metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
+
+                            pass
+                    else:
+                        print("UNKNOWN ServerLoadMessageType " + msg_type)
+                
+            # if the msg_type is Withdraw, clear sent_table
+            if msg_type == ServerLoadMessageType.Withdraw:
+                # delete from sent_table
+                self.clear_sent_table(metric_to_send.doc_id)
+
 
         print("{:.3f}: ANNOUNCE_END '{}'".format(self.env.now, self.id()))
 
@@ -612,58 +681,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         else:
             # not in unicast_forwarding_table
             return False
-
-    # OLD FUNCTION
-    # Does the neighbour have a better utility than the current metric
-    # def neighbour_has_better_utility(self, metric_to_send, neighbour):
-    #     # find metrics in RIB which are from the neighbour
-        
-    #     # If there is an existing entry in the service RIB 
-    #     # so find entry from database for neighbour
-    #     searchR = Query()
-    #     results = self.service_RIB.search((searchR.neighbour == neighbour))
-
-    #     if Verbose.level >= 3:
-    #         print("{:.3f}: NEIGHBOUR_HAS_BETTER_UTILITY FOUND '{}' neighbour: {}  ==> {}".format(self.env.now, self.id(), neighbour, list(zip (map(lambda doc: doc.doc_id, results), results))))
-        
-    #     # check results
-    #     # If there is NO existing entry in the service RIB
-    #     if results == []:
-    #         # nothing found - so metric_to_send must be better
-    #         return False
-    #     else:
-    #         # something found in service_RIB
-
-    #         if Verbose.level >= 3:
-    #             print("{:.3f}: NEIGHBOUR_HAS_BETTER_UTILITY METRIC_UTILITY '{}' utility  ({:.3f})  {}".format(self.env.now, self.id(), metric_utility, metric_to_send))
-
-    #         # now compare all the utility values
-    #         for entry in results:
-    #             # get delay to neighbour
-    #             link =  self.outgoing_ports[entry['neighbour']].out
-    #             neighbour_delay = link.propagation_delay
-
-
-    #             # utility as neighbour sees it
-    #             utility_n = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'] - neighbour_delay)
-
-    #             # utility of the metric_to_send as the neighbour would see it
-    #             metric_utility = self.call_forwarding_utility(Utility.alpha, metric_to_send['load'], metric_to_send['delay'] + neighbour_delay)
-
-
-    #             if utility_n < metric_utility:
-    #                 # this entry in the RIB has a better utility than
-    #                 # the metric_to_send
-    #                 if Verbose.level >= 3:
-    #                     print("{:.3f}: NEIGHBOUR_HAS_BETTER_UTILITY YES '{}' utility  ({:.3f})  {}".format(self.env.now, self.id(), utility_i, entry))
-
-    #                 return True
-    #             else:
-    #                 if Verbose.level >= 3:
-    #                     print("{:.3f}: NEIGHBOUR_HAS_BETTER_UTILITY NO '{}' utility  ({:.3f})  {}".format(self.env.now, self.id(), utility_i, entry))
-    #         # end of for loop
-
-    #         return False
 
 
     # is the metric arg2 is better than arg1
@@ -708,18 +725,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         else:
             return Compare.Worse
 
-    # OLD FUNCTION
-    # better in all metrics
-    # didn't work
-    # def  is_better_in_all_metrics_orig(self, j,i):
-    #     for m in metrics:
-    #         # skip through each metric by selecting metric m of i and metric m of j
-    #         print("metric = " + m)
-    #         # we want j[m] to be better than i[m]
-    #         if self.metric_is_better(i[m], j[m]) == Compare.Worse:
-    #             return False
-            
-    #     return True
 
     # decide the entries to announce, given a set of entries
     def decide_announcements(self, entries):
@@ -903,38 +908,49 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
     # Do normal forwarding
     def normal_forwarding_packet(self, link_end, packet):
-         for neighbour in self.outgoing_ports:
+        
+        if packet.dst == None:
+            # dont forward to None
+            if Verbose.level >= 2:
+                print("{:.3f}: PACKET {}.{} for {} NO forward from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, packet.dst, (self.env.now - packet.time)))
 
-             # print("neighbour " + str(self.outgoing_ports[neighbour].out))
+        else:
+            # forward the packet using unicast_forwarding_table
+             
+            # unicast_forwarding_table entries look like:  's1': ('s1', 'b', 3)
 
-             if link_end == None:
-                 # looks like it is a locally generated packet
-                 # try and forward it
-                 self.outgoing_ports[neighbour].put(packet)
+            # get the Dijkstra link for the destination
+            if packet.dst in self.unicast_forwarding_table:
 
-             elif link_end.src_node.id() == neighbour:
-                 # don't send to where it came from
-                 if Verbose.level >= 2:
-                     print("{:.3f}: PACKET {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
-                 pass
+                neighbour = self.route_to(packet.dst)
+                
+                if link_end.src_node.id() == neighbour:
+                    # don't send to where it came from
+                    if Verbose.level >= 2:
+                        print("{:.3f}: PACKET {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
 
-             elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
-                 # don't send to any connected Hosts
-                 if Verbose.level >= 2:
-                     print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
 
-             elif packet.dst == None:
-                 # dont forward to None
-                 if Verbose.level >= 2:
-                     print("{:.3f}: PACKET {}.{} for {} NO forward from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
+                elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                    # don't send to any connected Hosts
+                    if Verbose.level >= 2:
+                        print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
 
-             else:
-                 # forward the packet
-                 # send to SwitchPort
-                 self.outgoing_ports[neighbour].put(packet)
+                else:
+                    # forward the packet
+                    # send to SwitchPort
+                    self.outgoing_ports[neighbour].put(packet)
 
-                 if Verbose.level >= 1:
-                     print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
+                    if Verbose.level >= 1:
+                        print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
+
+
+            else:
+                # not in unicast_forwarding_table
+                if Verbose.level >= 1:
+                    print("{:.3f}: PACKET {}.{} for {} FAILURE at {} ".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid))
+
+                    print(str(self.unicast_forwarding_table))
+        
 
 
     def put(self, packet):
@@ -1027,8 +1043,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print("{:.3f}: SENT_TABLE '{}' {}".format(self.env.now, self.id(), str(self.sent_table.all())))
         else:
             print("{:.3f}: SENT_TABLE '{}'".format(self.env.now, self.id()))
-            for metric_no, metric in enumerate(self.sent_table.all()):
-                print("       {:2d}.  {}".format(metric_no+1, metric))
+            for entry_no, entry in enumerate(self.sent_table.all()):
+                metric = self.service_RIB.get(doc_id=entry['metric_doc_id'])
+                print("       {:2d}. replica: {} {}".format(entry_no+1, metric['replica'], entry))
 
 
     # Print utility info
