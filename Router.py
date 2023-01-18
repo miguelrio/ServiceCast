@@ -496,7 +496,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 # nothing in sent_table
                 # so no withdrawals sent on
                 print("{:.3f}: NOTHING in sent_table: '{}' for {}".format(self.env.now, self.id(), candidate.doc_id))
-                pass
+
+                # now delete the candidate metric from the RIB
+                self.delete_rib_entry(candidate)
+
+                self.print_metric_table()
             
             else:
                 # this metric is in the sent table
