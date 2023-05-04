@@ -213,7 +213,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             else:
                 # packet for me, but not a ServerLoad
                 if Verbose.level >= 1:
-                    print("{:.3f}: PACKET {}.{}  ({:.3f}) consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
+                    print("{:.3f}: PACKET {}.{}  ({:.3f}) consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.time, self._routerid, (self.env.now - packet.time)))
 
 
 
@@ -250,7 +250,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """The process for a packet with type ServerLoad"""
 
         if Verbose.level >= 1:
-            print("{:.3f}: RECV PACKET '{}' ServerLoad {} {}.{} ({:.3f}) [{}.{}] managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.id, packet.time, packet.replica, packet.id, self._routerid, (self.env.now - packet.time)))
+            print("{:.3f}: RECV PACKET '{}' ServerLoad {} {}.{} ({:.3f}) [{}.{}] managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.pkt_no, packet.time, packet.replica, packet.id, self._routerid, (self.env.now - packet.time)))
 
         # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
         servicename = packet.service
@@ -518,7 +518,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     if link_end.src_node.id() == neighbour:
                         # don't send to where it came from
                         if Verbose.level >= 2:
-                            print("{:.3f}: WITHDRAW PACKET {}.{} dont send back from {} to {} ".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id()))
+                            print("{:.3f}: WITHDRAW PACKET {}.{} dont send back from {} to {} ".format(self.env.now, packet.src, packet.pkt_no, self.id(), link_end.src_node.id()))
                         pass
 
                     else:
@@ -882,7 +882,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """A Client has sent a request"""
 
         if Verbose.level >= 1:
-            print("{:.3f}: RECV PACKET '{}' ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
+            print("{:.3f}: RECV PACKET '{}' ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
 
         # Destination is likely to be a service name: e.g. §a
         service_name = packet.dst
@@ -890,7 +890,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # Check if we know that service name
         if not service_name in self.service_forwarding_table:
             # service_name isn't in service_forwarding_table
-            print("{:.3f}: NO SERVICE_FORWARDING_TABLE ENTRY ClientRequest '{}' for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.id))
+            print("{:.3f}: NO SERVICE_FORWARDING_TABLE ENTRY ClientRequest '{}' for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
 
         else:
             # First we look up the service name
@@ -916,7 +916,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if packet.dst == None:
             # dont forward to None
             if Verbose.level >= 2:
-                print("{:.3f}: PACKET {}.{} for {} NO forward from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, packet.dst, (self.env.now - packet.time)))
+                print("{:.3f}: PACKET {}.{} for {} NO forward from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self._routerid, packet.dst, (self.env.now - packet.time)))
 
         else:
             # forward the packet using unicast_forwarding_table
@@ -931,13 +931,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if link_end.src_node.id() == neighbour:
                     # don't send to where it came from
                     if Verbose.level >= 2:
-                        print("{:.3f}: PACKET {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
+                        print("{:.3f}: PACKET {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
 
 
                 elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
                     # don't send to any connected Hosts
                     if Verbose.level >= 2:
-                        print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
+                        print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
 
                 else:
                     # forward the packet
@@ -945,13 +945,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     self.outgoing_ports[neighbour].put(packet)
 
                     if Verbose.level >= 1:
-                        print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
+                        print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
 
 
             else:
                 # not in unicast_forwarding_table
                 if Verbose.level >= 1:
-                    print("{:.3f}: PACKET {}.{} for {} FAILURE at {} ".format(self.env.now, packet.src, packet.id, packet.dst, self._routerid))
+                    print("{:.3f}: PACKET {}.{} for {} FAILURE at {} ".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self._routerid))
 
                     print(str(self.unicast_forwarding_table))
         
@@ -1112,10 +1112,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if packet.src == self._routerid:
             if Verbose.level >= 1:
                 print("{:.3f}: PACKET {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self._routerid, (self.env.now - packet.time)))
+                packet.src, packet.pkt_no, packet.time, self._routerid, (self.env.now - packet.time)))
         else:
             if Verbose.level >= 1:
-                print("{:.3f}: PACKET {}.{} ({:.3f}) arrived in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.time, self._routerid, link_end.src_node.id(), (self.env.now - packet.time)))
+                print("{:.3f}: PACKET {}.{} ({:.3f}) arrived in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.time, self._routerid, link_end.src_node.id(), (self.env.now - packet.time)))
 
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))

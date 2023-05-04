@@ -135,7 +135,7 @@ class Server(Host):
             self.sink.put(packet)
 
             if Verbose.level >= 1:
-                print("{:.3f}: HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
+                print("{:.3f}: HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.hostid, (self.env.now - packet.time)))
 
         else:
             # MR: if packet is data packet (ClientRequest)
@@ -230,7 +230,7 @@ class Server(Host):
             self.no_of_flows = new_flows
 
             if Verbose.level >= 1:
-                print("{:.3f}: INCREASE_LOAD '{}' request  {}.{} timeout {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size), self.load, self.no_of_flows, self.calculate_slots()))
+                print("{:.3f}: INCREASE_LOAD '{}' request {}.{} timeout {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size), self.load, self.no_of_flows, self.calculate_slots()))
 
 
             # Destination is likely to be a service name: e.g. §a
@@ -256,7 +256,7 @@ class Server(Host):
         
 
         if Verbose.level >= 1:
-            print("{:.3f}: DECREASE_LOAD '{}'  request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(request.size),  self.load, self.no_of_flows, self.calculate_slots()))
+            print("{:.3f}: DECREASE_LOAD '{}' request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(request.size),  self.load, self.no_of_flows, self.calculate_slots()))
 
         # Destination is likely to be a service name: e.g. §a
         service_name = request.dst
