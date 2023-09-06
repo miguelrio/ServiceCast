@@ -25,24 +25,34 @@ class Compare(Enum):
 LINKRATE = 10000000
 
 
+def less_than1(x,y):
+    return x < y
+
+def greater_than1(x,y):
+    return x > y
+
+
 class Router(object):
     """ A Router in the Simulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
 
+    # forwarding utility change factor  10% -> 0.1
+    forwarding_utility_change_factor = 0.1
+
     # The following staticmethods can be reset from the outside
     # to change the behaviour of the algorithms
 
-    # < as a passable fn
-    less_than = staticmethod(lambda x,y: x < y)
-    # > as a passable fn
-    greater_than = staticmethod(lambda x,y: x > y)
-
-    # Internal
-
-    # relevant metrics
-    metric_list =  [{ 'name': 'load', 'better': less_than }, { 'name': 'delay', 'better': less_than} ]
+    # default better than fn
     
+    # dict of better than fns
+    better_than_fn_dict = {}
+    better_than_fn_dict['load'] = staticmethod(less_than1)
+    better_than_fn_dict['delay'] = staticmethod(less_than1)
+
+    better_than_fn = staticmethod(less_than1)
+
+
 
     # network can be a Network or an simpy.Environment()
     # this gives flexibility in usage
@@ -75,7 +85,7 @@ class Router(object):
 
         # best replica info
         self.best_replica = None
-        self.best_utility = -1
+        self.best_utility = -float('inf')
 
         # service forwarding table
         self.service_forwarding_table = dict()
@@ -83,6 +93,14 @@ class Router(object):
         # declaring defaultdict
         # sets default value 'Key Not found' to absent keys
         defd = collections.defaultdict(lambda : None)
+
+        # setup metrics list
+        # name and better function
+        self.metric_list =  [
+            { 'name': 'load',  'better': Router.better_than_fn },
+            { 'name': 'delay', 'better': Router.better_than_fn }   ]
+    
+
 
     # sets env
     # checks if network is a Network or an simpy.Environment()
@@ -277,8 +295,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         if not valid_route:
             return
-        
 
+        # did the ServerLoad come from a direct neighbour
+        if self.is_neighbour(packet.replica):
+            print("IS_NEIGHBOUR: " + packet.replica)
+        else:
+            print("NOT_NEIGHBOUR: " + packet.replica)
+            
         # process the incoming packet
         if (operation == ServerLoadMessageType.Announce):
             # it's an announcement
@@ -342,7 +365,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     print("{:.3f}: METRIC_TOO_OLD '{}' link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsT))))
                     
                 return
-            
 
             # Update the metrics in the existing RIB entry
 
@@ -688,7 +710,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
     # is the metric arg2 is better than arg1
-    def metric_is_better(self, arg1, arg2, better_fn=less_than):
+    def metric_is_better(self, arg1, arg2, better_fn):
         if arg2 == arg1:
             # arg2 is same
             return Compare.Same
@@ -841,10 +863,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         #     best_utility=utility(i)
         # point fw entry to best replica's announced link end
 
-        self.best_replica = None
-        self.best_neighbour = None
-        self.best_utility = float('inf')
-        self.servicename = None
+        print ("choose_best_forwarding_replica: '" + self.id() + "' best " + str(self.best_replica) + " utility " + str(self.best_utility) )
+
+        old_best_replica = self.best_replica
+        old_best_utility = self.best_utility
+
+        this_best_replica = None
+        this_best_neighbour = None
+        this_best_utility = float('inf')
+        this_servicename = None
 
         # create a list of utility values
         utility = [-1 for e in entries]
@@ -853,29 +880,96 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'])
             utility[entry_no] = utility_i
 
-            #print ("entry_no " + str(entry_no) + " neighbour " + entry['neighbour'] + " utility_i = " + str(utility_i))
+            print ("choose_best_forwarding_replica: '" + self.id() + "' entry_no " + str(entry_no) + " neighbour " + entry['neighbour'] + " utility_i = " + str(utility_i))
 
-            if (utility_i < self.best_utility):
-                self.best_replica = entry['replica']
-                self.best_neighbour = entry['neighbour']
-                self.servicename = entry['servicename']
-                self.best_utility = utility_i
+            # is utility of this entry < current best utility 
+            if (utility_i < this_best_utility):
+                # update best replica data
+                this_best_replica = entry['replica']
+                this_best_neighbour = entry['neighbour']
+                this_servicename = entry['servicename']
+                this_best_utility = utility_i
 
         if Verbose.level >= 1:
             self.print_utility_info(entries, utility)
+
+
+
+        # 5. Choose best replica for the forwarding plane/
+        #
+        # Currently send to the one target held in Service Forwarding Table.
+        # We may want to dampen the changes in the Service Forwarding Table
+        # so that we don't scatter requests to multiple servers.
+        # Avoids flapping.  The damping may be based on a value threshold or a time window.
+        
+        # we check if the difference to make sure it is big enough
+        diff = self.calculate_utility_difference(this_best_utility, old_best_utility)
+
+                
+        # check how much of a change in there is
+        if (old_best_replica != this_best_replica):
+            # different replicas
             
+            if (diff == 0):
+                # no change, do nothing
+
+                print("{:.3f}: CHOOSE_BEST_REPLICA: '{}' U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not change ", old_best_replica, this_best_replica ))
+
+            elif (diff < Router.forwarding_utility_change_factor):
+                # change is too small, do nothing
+
+                print("{:.3f}: CHOOSE_BEST_REPLICA: '{}' U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.forwarding_utility_change_factor, " do not change ", old_best_replica, this_best_replica ))
+
+            else:
+                # change replica
+
+                print("{:.3f}: CHOOSE_BEST_REPLICA: '{}' U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.forwarding_utility_change_factor, " change ", old_best_replica, this_best_replica ))
+
+                self.best_replica = this_best_replica
+                self.best_neighbour = this_best_neighbour
+                self.servicename = this_servicename 
+                self.best_utility = this_best_utility
+        else:
+            # same replica - maype update values for this replica
+
+            if (diff == 0):
+                # no change, do nothing
+
+                print("{:.3f}: CHOOSE_BEST_REPLICA: '{}' U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not update ", old_best_replica ))
+
+            elif (diff < Router.forwarding_utility_change_factor):
+                # change is too small, do nothing
+
+                print("{:.3f}: CHOOSE_BEST_REPLICA: '{}' U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.forwarding_utility_change_factor, " do not update ", old_best_replica ))
+
+
+            else:
+                # update utility for this replica
+                
+                print("{:.3f}: CHOOSE_BEST_REPLICA: '{}' U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.forwarding_utility_change_factor, " update ", old_best_replica ))
+
+
+                self.best_utility = this_best_utility
+
+
 
         if Verbose.level >= 1:
             if self.best_replica == self.best_neighbour:
-                print("{:.3f}: BEST_REPLICA '{}' {} direct ".format(self.env.now, self.id(), self.best_replica))
+                print("{:.3f}: {}BEST_REPLICA '{}' {} direct ".format(self.env.now, ("CHANGED " if old_best_replica != self.best_replica else ""), self.id(), self.best_replica))
             else:
-                print("{:.3f}: BEST_REPLICA '{}' {} -> {} ".format(self.env.now, self.id(), self.best_replica, self.best_neighbour))
+                print("{:.3f}: {}BEST_REPLICA '{}' {} -> {} ".format(self.env.now, ("CHANGED " if old_best_replica != self.best_replica else ""), self.id(), self.best_replica, self.best_neighbour))
 
         self.service_forwarding_table[self.servicename] =  self.best_neighbour
 
         if Verbose.level >= 1:
             print("{:.3f}: SERVICE_FORWARDING_TABLE '{}' {}".format(self.env.now, self.id(), self.service_forwarding_table))
 
+
+    # Work out utility difference from self.best_utility
+    def calculate_utility_difference(self, utility, best_utility):
+        diff = utility - best_utility 
+
+        return round(abs(diff), 4)
 
     # Handle a ClientRequest
     def client_request_packet(self, link_end, packet):
@@ -1123,6 +1217,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def neighbours(self):
         """Neighbours of Router"""
         return list(self.outgoing_ports.keys())
+
+    def is_neighbour(self, node):
+        """Is neighbour of a Router"""
+        keys = self.outgoing_ports.keys()
+        print("is_neighbour keys = " + str(keys) + " node " + str(node))
+        return node in keys
 
     def weight_edge(self, dest):
         """What is the weight of the edge from this router to dest"""

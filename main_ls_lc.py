@@ -1,6 +1,7 @@
 from Graph import Graph
 from Network import Network
 from Server import Server
+from Router import Router
 from Client import Client
 from Generator import Generator
 from Verbose import Verbose
@@ -25,6 +26,9 @@ def topology_setup():
     # Set alpha value
     Utility.alpha = 0.50
 
+    # Server slots
+    Server.slots = 20
+
     # load:  0 -> 1
     utility_load = lambda load: (1-(0.12*load)) if load < 0.8  else (4.5-(4.5*load))
     # delay: 0 -> 10
@@ -33,8 +37,16 @@ def topology_setup():
     # actual utility fn
     Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(1 - ((utility_load(load / (2 * Server.slots)) * utility_delay(delay))), 4))
 
-    
+    # more load per flow
+    Server.load_up_fn = staticmethod(lambda val: val + 1)
+    Server.load_down_fn = staticmethod(lambda val: val - 1)
 
+    # dict approach
+    # Router.better_than_fn['load'] = staticmethod(lambda x, y: x < y)
+    Router.better_than_fn = staticmethod(lambda x, y: x < y)
+
+    Router.forwarding_utility_change_factor = 0.001
+    
     # 1 - Define the topology
     topo = {
         'a': { 'b', ('c', 4)},
