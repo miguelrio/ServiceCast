@@ -89,6 +89,13 @@ class Router(object):
 
         # service forwarding table
         self.service_forwarding_table = dict()
+
+        # are we aggregating directly connected replicas
+        self.aggregating_connected = False
+        # aggregate of connected capacity
+        self.connected_capacity = dict()
+        # connected capacity initial total
+        self.connected_capacity_total = { 'load': 0, 'no_of_flows': 0, 'slots': 0 }
  
         # declaring defaultdict
         # sets default value 'Key Not found' to absent keys
@@ -163,13 +170,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # no need to add a link
 
             if Verbose.level >= 2:
-                print("LinkEnd Exists "  + str(self._routerid) + " --> " + str(neighbour) + " Cancel " +  str(self._routerid) + " --> " + str(neighbour) )
+                print("LinkEnd Exists "  + str(self.id()) + " --> " + str(neighbour) + " Cancel " +  str(self.id()) + " --> " + str(neighbour) )
 
             return ("exists", self.outgoing_ports[neighbour_obj.id()])
 
         else:
             if Verbose.level >= 1:
-                print("LinkEnd Add " + self._routerid + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
+                print("LinkEnd Add " + self.id() + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
 
             self.outgoing_ports[neighbour] = SwitchPort(self.env, rate=rate, limit_bytes=False)
 
@@ -231,7 +238,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             else:
                 # packet for me, but not a ServerLoad
                 if Verbose.level >= 1:
-                    print("{:.3f}: PACKET {}.{}  ({:.3f}) consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.time, self._routerid, (self.env.now - packet.time)))
+                    print("{:.3f}: PACKET {}.{}  ({:.3f}) consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.time, self.id(), (self.env.now - packet.time)))
 
 
 
@@ -268,7 +275,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """The process for a packet with type ServerLoad"""
 
         if Verbose.level >= 1:
-            print("{:.3f}: RECV PACKET '{}' ServerLoad {} {}.{} ({:.3f}) [{}.{}] managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.pkt_no, packet.time, packet.replica, packet.id, self._routerid, (self.env.now - packet.time)))
+            print("{:.3f}: RECV PACKET '{}' ServerLoad {} {}.{} ({:.3f}) [{}.{}] managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.pkt_no, packet.time, packet.replica, packet.id, self.id(), (self.env.now - packet.time)))
 
         # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
         servicename = packet.service
@@ -280,6 +287,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         if Verbose.level >= 1:
+            #print("{:.3f}: INCOMING VALUES '{}' link_end: {} msgID: {} replica: {} time: {}  service: {} op: {} aggregate: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, operation, hasattr(packet,'aggregate'), metrics))
             print("{:.3f}: INCOMING VALUES '{}' link_end: {} msgID: {} replica: {} time: {}  service: {} op: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, operation, metrics))
 
         # add the delay of the last hop to the metrics
@@ -296,12 +304,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if not valid_route:
             return
 
-        # did the ServerLoad come from a direct neighbour
-        if self.is_neighbour(packet.replica):
-            print("IS_NEIGHBOUR: " + packet.replica)
-        else:
-            print("NOT_NEIGHBOUR: " + packet.replica)
-            
         # process the incoming packet
         if (operation == ServerLoadMessageType.Announce):
             # it's an announcement
@@ -324,12 +326,39 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         creationTime = round(packet.time, 6)
         metrics = packet.payload
         operation = ServerLoadMessageType.from_val(packet.operation)
+        neighbour = link_end.src_node.id()
 
         # marked for later use
         marked  = None
-        
+
+
+        # check if we are aggregating directly connected replicas
+        if self.aggregating_connected:
+            # did the ServerLoad come from a direct neighbour Host
+            if self.is_neighbour(replica):
+                if self.is_neighbour_host(replica):
+                    print("server_load_packet_announce: IS_NEIGHBOUR_HOST: " + replica + " " + str(operation))
+
+                    # for directly connected neighbours we keep an aggregate of the connected capacity
+                    # and also announce it to the Network
+                    self.announce_connected_capacity(packet)
+
+                    # now we patch up the local values so the RIB has an aggregated entry
+                    # in particular the replica is not the connected server
+                    # but this router
+                    aggReplica = self.aggregate_name()
+
+                else:
+                    print("server_load_packet_announce: IS_NEIGHBOUR: " + replica + " " + str(operation))
+                    
+            else:
+                print("server_load_packet_announce: NOT_NEIGHBOUR: " + replica + " " + str(operation))
+
+                
+            
+
         #
-        # never have more than 1 entry for each replica
+        ### never have more than 1 entry for each replica
 
         # store important data (including metrics) for later use in table
         # 'replica' is key for decision for deleting old data
@@ -346,7 +375,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # If there is NO existing entry in the service RIB
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.service_RIB.insert({ 'replica': replica, 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots']  })
+            val = self.service_RIB.insert({ 'replica': replica, 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots']  })
 
             if Verbose.level >= 1:
                 print ("{:.3f}: ADD METRIC '{}' metric no {}".format(self.env.now, self.id(), val) )
@@ -370,7 +399,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             # replica stay the same
             # update other values
-            val = self.service_RIB.update({ 'neighbour': link_end.src_node.id(), 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
+            val = self.service_RIB.update({ 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
 
             if Verbose.level >= 1:
                 print("{:.3f}: UPDATE METRIC '{}' metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
@@ -484,6 +513,16 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         metrics = packet.payload
         operation = ServerLoadMessageType.from_val(packet.operation)
 
+        # did the ServerLoad come from a direct neighbour
+        if self.is_neighbour(replica):
+            print("server_load_packet_withdraw: IS_NEIGHBOUR: " + replica)
+
+            # for neighbours we keep an aggregate of the connected capacity
+            self.withdraw_connected_capacity(packet)
+        else:
+            print("server_load_packet_withdraw: NOT_NEIGHBOUR: " + replica)
+            
+
         # withdrawal might have to go to neighbours too
         # should be in sent_table
 
@@ -571,7 +610,34 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print("{:.3f}: WITHDRAW END".format(self.env.now))
         
 
+    # aggregate the connected capacity on an announcement
+    def announce_connected_capacity(self, packet):
+        replica = packet.replica
+        creationTime = round(packet.time, 6)
+        metrics = packet.payload
+        
+        self.connected_capacity[replica] = {'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'slots': int(metrics['slots']), 'capacity': (int(metrics['load']) + int(metrics['slots']))}
 
+        # calculate total
+        self.connected_capacity_total = { 'load': 0, 'no_of_flows': 0, 'slots': 0, 'capacity': 0 }
+
+        for key in self.connected_capacity:
+            entry = self.connected_capacity[key]
+
+            print("announce_connected_capacity: server " + key + " entry " + str(entry))
+            
+            self.connected_capacity_total["load"] += entry["load"]
+            self.connected_capacity_total["no_of_flows"] += entry["no_of_flows"]
+            self.connected_capacity_total["slots"] += entry["slots"]
+            self.connected_capacity_total["capacity"] += entry["capacity"]
+
+        print ("{:.3f}: CONNECTED_CAPACITY {} 'load': {}, 'no_of_flows': {}, 'slots': {}, 'capacity': {}".format(self.env.now, self.id(),  self.connected_capacity_total["load"],  self.connected_capacity_total["no_of_flows"],  self.connected_capacity_total["slots"], self.connected_capacity_total["capacity"]   ))
+
+        self.network.update_replica_capacity(self.id(), self.connected_capacity_total)
+                                            
+    # aggregate the connected capacity on an announcement
+    def withdraw_connected_capacity(self, packet):
+        pass
 
     # Announce the entries
     # Consider some specific limits and caveats
@@ -586,23 +652,39 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             # print("{:.3f}: Check {} - metric no {} {} announcement {} withdraw {}".format(self.env.now, self.id(),  metric_to_send.doc_id, msg_type, msg_type == ServerLoadMessageType.Announce, msg_type == ServerLoadMessageType.Withdraw))
 
+            # 12/9/2023
+            # is the metric_to_send in the connected_capacity table
+            if self.is_neighbour_host(metric_to_send['replica']):
+                print("ANNOUNCE " + self.id() + " directly connected  " + metric_to_send['replica'])
+
+                # we adapt the metric to send to have the connected total
+                metric_to_send['replica'] = self.id()
+                metric_to_send['aggregate'] = True
+                metric_to_send['load'] = self.connected_capacity_total['load']
+                metric_to_send['no_of_flows'] = self.connected_capacity_total['no_of_flows']
+                metric_to_send['slots'] = self.connected_capacity_total['slots']
+                
+
+            else:
+                print("ANNOUNCE " + self.id() + " NOT directly connected  " + metric_to_send['replica'])
+
             # send to neighbours
             for neighbour in self.outgoing_ports:
 
                 # print("Check " +  metric_to_send['link_end'] +  " <--> " + str(neighbour))
 
-                if metric_to_send['neighbour'] == str(neighbour):
-                    # don't send to where it came from
-                    if Verbose.level >= 2:
-                        print("{:.3f}: NO RETURN from {} to {} - metric no {}".format(self.env.now, self.id(), neighbour,  metric_to_send.doc_id))
-                    pass
-
-                elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                if isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
                     # don't send to any connected Hosts
                     if Verbose.level >= 2:
                         print("{:.3f}: NOT TO HOST from {} to {} - metric no {}".format(self.env.now, self.id(), self.outgoing_ports[neighbour].out.dst_node, metric_to_send.doc_id))
                     pass
 
+
+                elif metric_to_send['neighbour'] == str(neighbour):
+                    # don't send to where it came from
+                    if Verbose.level >= 2:
+                        print("{:.3f}: NO RETURN from {} to {} - metric no {}".format(self.env.now, self.id(), neighbour,  metric_to_send.doc_id))
+                    pass
 
                 else:
                     # a candidate for forwarding
@@ -683,6 +765,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         new_packet.service =  metric_to_send['servicename']
         new_packet.replica = metric_to_send['replica']
         new_packet.pkt_no =  self.pkt_no
+        
+        if metric_to_send.get('aggregate', None):
+            new_packet.aggregate = True
+
         new_packet.payload = { 'load': metric_to_send['load'], 'no_of_flows': metric_to_send['no_of_flows'], 'delay': metric_to_send['delay'], 'slots': metric_to_send['slots'] }
 
         return new_packet
@@ -880,7 +966,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'])
             utility[entry_no] = utility_i
 
-            print ("choose_best_forwarding_replica: '" + self.id() + "' entry_no " + str(entry_no) + " neighbour " + entry['neighbour'] + " utility_i = " + str(utility_i))
+            print ("choose_best_forwarding_replica: '" + self.id() + "' entry_no " + str(entry_no) + " neighbour " + str(entry['neighbour']) + " utility_i = " + str(utility_i))
 
             # is utility of this entry < current best utility 
             if (utility_i < this_best_utility):
@@ -1010,7 +1096,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if packet.dst == None:
             # dont forward to None
             if Verbose.level >= 2:
-                print("{:.3f}: PACKET {}.{} for {} NO forward from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self._routerid, packet.dst, (self.env.now - packet.time)))
+                print("{:.3f}: PACKET {}.{} for {} NO forward from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self.id(), packet.dst, (self.env.now - packet.time)))
 
         else:
             # forward the packet using unicast_forwarding_table
@@ -1039,13 +1125,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     self.outgoing_ports[neighbour].put(packet)
 
                     if Verbose.level >= 1:
-                        print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self._routerid, neighbour, (self.env.now - packet.time)))
+                        print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self.id(), neighbour, (self.env.now - packet.time)))
 
 
             else:
                 # not in unicast_forwarding_table
                 if Verbose.level >= 1:
-                    print("{:.3f}: PACKET {}.{} for {} FAILURE at {} ".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self._routerid))
+                    print("{:.3f}: PACKET {}.{} for {} FAILURE at {} ".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self.id()))
 
                     print(str(self.unicast_forwarding_table))
         
@@ -1209,7 +1295,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 packet.src, packet.pkt_no, packet.time, self._routerid, (self.env.now - packet.time)))
         else:
             if Verbose.level >= 1:
-                print("{:.3f}: PACKET {}.{} ({:.3f}) arrived in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.time, self._routerid, link_end.src_node.id(), (self.env.now - packet.time)))
+                print("{:.3f}: PACKET {}.{} ({:.3f}) arrived in {} from {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.time, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
 
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))
@@ -1221,8 +1307,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def is_neighbour(self, node):
         """Is neighbour of a Router"""
         keys = self.outgoing_ports.keys()
-        print("is_neighbour keys = " + str(keys) + " node " + str(node))
         return node in keys
+
+    def is_neighbour_host(self, node):
+        """Is neighbour of a Router a Host"""
+        keys = self.outgoing_ports.keys()
+        if node in keys:
+            return isinstance(self.outgoing_ports[node].out.dst_node,  Host)
+        else:
+            False
 
     def weight_edge(self, dest):
         """What is the weight of the edge from this router to dest"""
@@ -1243,6 +1336,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def id(self):
         """The id of this node"""
         return self._routerid
+
+    def aggregate_name(self):
+        """The id of this node"""
+        return "!" + self._routerid
 
     def __str__(self):
         return "Router " + str(self._routerid) 

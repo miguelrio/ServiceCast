@@ -18,6 +18,14 @@ class Network:
         self.links = []           # a list of links
         self.env = env            # an Environment
         self.latency_table = {}
+
+        # aggregate of replica capacity
+        # gives a total view over the network
+        self.replica_capacity = dict()
+        # replica_capacity initial total
+        self.replica_capacity_total = { 'load': 0, 'no_of_flows': 0, 'slots': 0 }
+ 
+        
         
     @classmethod
     def from_graph(cls, graph, env):
@@ -559,7 +567,8 @@ class Network:
 
         return self.latency_table[dst][src]   # self[dst].distance_to(src)
         
-    # Get the utility for best server / replica
+    # Get the utility for best server / replica.
+    # This is called by individual Servers
     def best_replica_utility(self, requesting_server, packet):
 
         client_name = packet.src
@@ -646,8 +655,24 @@ class Network:
         # Log utility of true best replica and utility of selected replica: timestamp, selected server id, client id, client request id,  selected server id,  selected server load, selected server latency, selected server utility, best server id, best server load, best server latency
         print("{:.3f}: BEST_REPLICA_UTILITY '{}' pkt: {}.{} selected: {} load({}) latency({}) utility({}) best: {} load({}) latency({}) utility({}) {}".format(self.env.now, requesting_server.id(),  packet.src, packet.id, requesting_server.id(), selected_server_load, selected_server_latency, selected_server_utility,  best_server_id, best_server_load, best_server_latency, best_server_utility, "SAME" if requesting_server_id == best_server_id else "DIFFERENT"))
 
-        
-    
+
+    # An update for replica_capacity
+    def update_replica_capacity(self, replica, aDict):
+        self.replica_capacity[replica] = aDict
+
+        # calculate total
+        self.replica_capacity_total = { 'load': 0, 'no_of_flows': 0, 'slots': 0,  'capacity': 0  }
+
+        for key in self.replica_capacity:
+            entry = self.replica_capacity[key]
+            
+            self.replica_capacity_total["load"] += entry["load"]
+            self.replica_capacity_total["no_of_flows"] += entry["no_of_flows"]
+            self.replica_capacity_total["slots"] += entry["slots"]
+            self.replica_capacity_total["capacity"] += entry["capacity"]
+
+        print ("{:.3f}: REPLICA_CAPACITY_NETWORK 'load': {}, 'no_of_flows': {}, 'slots': {},  'capacity': {}".format(self.env.now,  self.replica_capacity_total["load"],  self.replica_capacity_total["no_of_flows"],  self.replica_capacity_total["slots"] ,  self.replica_capacity_total["capacity"]   ))
+
 
     def print(self):
         print("{", end="\n")

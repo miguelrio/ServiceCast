@@ -226,7 +226,7 @@ class Server(Host):
                 # work out next second boundary
                 timeout = int(now) + 1 - now
                 # process callback for a delayed announce
-                self.env.process(self.delay_announce(timeout, service_name))
+                self.env.process(self.delay_announce(timeout, time, service_name))
 
     # Work out load difference
     def calculate_load_difference(self):
@@ -237,11 +237,11 @@ class Server(Host):
 
 
     # Delay an announcement
-    def delay_announce(self, val, service_name):
+    def delay_announce(self, val, time, service_name):
         yield self.env.timeout(val)
 
         # send a ServerLoad packet
-        self.send_load_packet(val, service_name)
+        self.send_load_packet(time+val, service_name)
 
 
     # Send a ServerLoad packet
