@@ -129,6 +129,9 @@ def topology_setup():
     print("Network: route from d to s1 = " + str(network['d'].route_to('s1')) +  "  distance: " + str(network['d'].distance_to('s1')) )
     
     print("Network: route from s1 to c1  = " + str(network['s1'].route_to('c1')) +  "  distance: " + str(network['s1'].distance_to('c1')) )
+
+
+    print("diameter = " + str(network.network_diameter()))
     
     # 4 - Now we create the packet generator.
 

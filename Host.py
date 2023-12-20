@@ -113,14 +113,14 @@ class Host(object):
             self.sink.put(packet)
 
             if Verbose.level >= 1:
-                print("{:.3f}: HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
+                print("{:.3f}: {:5s} HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
         else:
             # If the packet is not for us, forward to the neighbour
             # This is where the main servicecast algorithm will be implemented.
             self.outgoing_port.put(packet)
 
             if Verbose.level >= 2:
-                print("{:.3f}: HOST Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.id, packet.dst, self.hostid, self.neighbour, (self.env.now - packet.time)))
+                print("{:.3f}: {:5s} HOST Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.dst, self.hostid, self.neighbour, (self.env.now - packet.time)))
            
     # Is the destination address a service name:  e.g. §a
     def is_service(self, name):
@@ -177,7 +177,7 @@ class Host(object):
         """A packet is received from a LinkEnd of a neighbouring Router.
         """
         if Verbose.level >= 1:
-            print("{:.3f}: HOST_RECV '{}' Packet {}.{} consumed from {} after {:.3f}".format(self.env.now,  self.hostid, packet.src, packet.pkt_no, link_end.src_node.id(), (self.env.now - packet.time)))
+            print("{:.3f}: {:5s} HOST_RECV Packet {}.{} consumed from {} after {:.3f}".format(self.env.now,  self.hostid, packet.src, packet.pkt_no, link_end.src_node.id(), (self.env.now - packet.time)))
 
         # add a tuple of (link_end, packet) to the packet store
         self.packet_store.put((link_end, packet))

@@ -1,6 +1,7 @@
 from Host import Host
 from SimComponents import Packet
 from Verbose import Verbose
+from Utility import Utility
 from enum import Enum
 
 # some default values for the load and flows functions
@@ -20,29 +21,29 @@ def flows_down_by1(val):
 def size_to_time(size):
     return size
 
-class ServerLoadMessageType(Enum):
+class ServerMetricMessageType(Enum):
     Announce = 0
     Withdraw = 1
 
-    # convert a ServerLoadMessageType enum to a string
+    # convert a ServerMetricMessageType enum to a string
     def to_val(self):
         match self:
-            case ServerLoadMessageType.Announce:
+            case ServerMetricMessageType.Announce:
                 return 'A'
-            case ServerLoadMessageType.Withdraw:
+            case ServerMetricMessageType.Withdraw:
                 return 'W'
 
-    # convert a string to a ServerLoadMessageType enum 
+    # convert a string to a ServerMetricMessageType enum 
     @classmethod    
     def from_val(cls, val):
         match val:
             case 'A':
-                return ServerLoadMessageType.Announce
+                return ServerMetricMessageType.Announce
             case 'W':
-                return ServerLoadMessageType.Withdraw
+                return ServerMetricMessageType.Withdraw
 
     def __repr__(self):
-        return "ServerLoadMessageType." + self.name
+        return "ServerMetricMessageType." + self.name
 
     def __str__(self):
         return self.name
@@ -63,8 +64,8 @@ class Server(Host):
     flows_up_fn = staticmethod(flows_up_by1)
     flows_down_fn = staticmethod(flows_down_by1)
     
-    def __init__(self, serverid, env=None):
-        super().__init__(serverid, env)
+    def __init__(self, serverid, network=None):
+        super().__init__(serverid, network)
         self.type = "Server"
         self.pkt_no = 1
         self.saved_event = None
@@ -74,13 +75,14 @@ class Server(Host):
         # values from client requests
         self.request_info =  { 'load': 0, 'no_of_flows': 0 }
 
-        # last payload of a ServerLoad msg
+        # last payload of a ServerMetric msg
         self.last_payload = { 'load': 0, 'no_of_flows': 0,
                               'delay': 0, 'slots': self.slots }
 
         # current values from requests
         self.load = 0
         self.no_of_flows = 0
+
 
 
     # The event handler
@@ -97,7 +99,7 @@ class Server(Host):
     # Process a LoadEvent which generates background load
     def process_load_event(self, event):
         # we got a load event
-        print("{:.3f}: {}".format(self.env.now, event))
+        print("{:.3f}: {:5s} {}".format(self.env.now, self.id(), event))
         
         # it should have: seqno, time, no_of_flows, load
         # more events
@@ -149,7 +151,7 @@ class Server(Host):
             self.sink.put(packet)
 
             if Verbose.level >= 1:
-                print("{:.3f}: HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.hostid, (self.env.now - packet.time)))
+                print("{:.3f}: {:5s} HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, self.hostid, (self.env.now - packet.time)))
 
         else:
             # MR: if packet is data packet (ClientRequest)
@@ -166,7 +168,7 @@ class Server(Host):
                 self.outgoing_port.put(packet)
 
                 if Verbose.level >= 2:
-                    print("{:.3f}: HOST Packet {}.{} for {} deliver to {}".format(self.env.now, packet.src, packet.id, packet.dst,  self.neighbour))
+                    print("{:.3f}: {:5s} HOST Packet {}.{} for {} deliver to {}".format(self.env.now, self.id(), packet.src, packet.id, packet.dst,  self.neighbour))
            
 
     # Handle a ClientRequest
@@ -174,7 +176,7 @@ class Server(Host):
         """A Client has sent a request"""
 
         if Verbose.level >= 1:
-            print("{:.3f}: SERVER_PROCESS '{}' ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.id))
+            print("{:.3f}: {:5s} SERVER_PROCESS ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.id))
 
         # Do some processing and logging to determine some ideal info.
         # Calls into the Network to get a global view
@@ -207,24 +209,38 @@ class Server(Host):
 
 
         diff = self.calculate_load_difference()
+        
+        # now tell the network about the 'load_utility'
+        # alpha * load (in current simulator)
 
-        print("CALCULATE_LOAD_DIFFERENCE: '" +  self.id() +  " change = " + str(diff))
+        load_utility = Utility.alpha * self.last_payload['load']
+
+        self.network.update_load_utility(self.id(), load_utility)
+
+        #print("Average Load Utility = " + str(self.network.average_load_utility()))
+
         
         # check how much of a change in slots there is
         if (diff != 0 and diff < Server.change_factor):
             # change is too small, do nothing
-            print("do nothing")
+            if Verbose.level >= 2:
+                print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- do nothing".format(self.env.now, self.id(),diff))
             return
         else:
             # a big enough change
             if (now == int(now)):
                 # are on second boundary
-                # send a ServerLoad packet
+                # send a ServerMetric packet
+                print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric".format(self.env.now, self.id(),diff))
+
                 self.send_load_packet(time, service_name)
 
             else:
                 # work out next second boundary
                 timeout = int(now) + 1 - now
+
+                print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric in {}".format(self.env.now, self.id(),diff, timeout))
+                
                 # process callback for a delayed announce
                 self.env.process(self.delay_announce(timeout, time, service_name))
 
@@ -240,26 +256,27 @@ class Server(Host):
     def delay_announce(self, val, time, service_name):
         yield self.env.timeout(val)
 
-        # send a ServerLoad packet
+        # send a ServerMetric packet
         self.send_load_packet(time+val, service_name)
 
 
-    # Send a ServerLoad packet
+    # Send a ServerMetric packet
     def send_load_packet(self, time, service_name):
-        """Send a ServerLoad packet"""
+        """Send a ServerMetric packet"""
         # convert an event into a packet
         # set size to 3, to represent 3 values
         packet = Packet(time, 3, self.pkt_no, self.id(), dst=self.neighbour)
-        packet.type = "ServerLoad"
-        packet.operation = ServerLoadMessageType.Announce.to_val()
+        packet.type = "ServerMetric"
+        packet.operation = ServerMetricMessageType.Announce.to_val()
         packet.service =  service_name
         packet.replica = self.hostid
         packet.pkt_no = self.pkt_no
+        packet.msg_time = time
 
         # save last_payload
         self.last_payload = self.calculate_payload()
 
-        print("CALCULATE_PAYLOAD: '" +  self.id() + "' slots = " + str(self.last_payload['slots']) + " flows = " + str(self.last_payload['no_of_flows']) + " load = " + str(self.last_payload['load']))
+        print("{:.3f}: {:5s} CALCULATE_PAYLOAD: slots: {} flows: {} load: {}".format(self.env.now, self.id(), self.last_payload['slots'], self.last_payload['no_of_flows'], self.last_payload['load']))
         
         packet.payload = self.last_payload
 
@@ -302,7 +319,7 @@ class Server(Host):
             self.no_of_flows = new_flows
 
             if Verbose.level >= 1:
-                print("{:.3f}: INCREASE_LOAD '{}' request {}.{} timeout {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size), self.load, self.no_of_flows, self.calculate_slots()))
+                print("{:.3f}: {:5s} INCREASE_LOAD request {}.{} timeout {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size), self.load, self.no_of_flows, self.calculate_slots()))
 
 
             # Destination is likely to be a service name: e.g. §a
@@ -328,7 +345,7 @@ class Server(Host):
         
 
         if Verbose.level >= 1:
-            print("{:.3f}: DECREASE_LOAD '{}' request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(request.size),  self.load, self.no_of_flows, self.calculate_slots()))
+            print("{:.3f}: {:5s} DECREASE_LOAD request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(request.size),  self.load, self.no_of_flows, self.calculate_slots()))
 
         # Destination is likely to be a service name: e.g. §a
         service_name = request.dst

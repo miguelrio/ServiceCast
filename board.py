@@ -112,11 +112,12 @@ def topology_setup():
     #print("Network degree c1: " + str(network.degree('c1')))
 
     #print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
-    print("Network: dijkstra from f = " + str(Graph.dijkstra_algorithm(network, 'f')))
+    #print("Network: dijkstra from f = " + str(Graph.dijkstra_algorithm(network, 'f')))
 
-    print("Network: unicast forwarding table at f = " + str(network['f'].get_unicast_forwarding_table()))
+    #print("Network: unicast forwarding table at f = " + str(network['f'].get_unicast_forwarding_table()))
 
     print("Network: route from f to r1 = " + str(network['f'].route_to('r1')) +  "  distance: " + str(network['f'].distance_to('r1')) )
+    print("Network: route from f to r2 = " + str(network['f'].route_to('r2')) +  "  distance: " + str(network['f'].distance_to('r2')) )
     
     #print("Network: route from r1 to c1  = " + str(network['r1'].route_to('c1')) +  "  distance: " + str(network['r1'].distance_to('c1')) )
     

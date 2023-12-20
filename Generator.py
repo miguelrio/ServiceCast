@@ -18,7 +18,7 @@ class ServerEventGenerator(EventGenerator):
         e = ServerEvent(self.env.now, self.sdist(), self.event_count, src=self.id, dst=self.destinations_dist(), flow_id=self.flow_id)
         return e
 
-class ServerLoadEventGenerator(EventGenerator):
+class ServerMetricEventGenerator(EventGenerator):
     """ An Event Generator for a Server."""
     def __init__(self, env, id,  adist, flowdist, loaddist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
         # we dont use sdist here, so set to None
@@ -31,7 +31,7 @@ class ServerLoadEventGenerator(EventGenerator):
     # Prepare a ServerEvent 
     def create_event(self):
         """Create an Event"""
-        e = ServerLoadEvent(self.env.now, self.id, self.event_count, self.destinations_dist(), self.flowdist(), self.loaddist(), self)
+        e = ServerMetricEvent(self.env.now, self.id, self.event_count, self.destinations_dist(), self.flowdist(), self.loaddist(), self)
         return e
 
 class ServerEvent(Event):
@@ -46,8 +46,8 @@ class ServerEvent(Event):
         self.dst = dst
         self.flow_id = flow_id
 
-class ServerLoadEvent(Event):
-    """A ServerEvent is an Event that holds some load info
+class ServerMetricEvent(Event):
+    """A ServerMetricEvent is an Event that holds some load info
     """
     def __init__(self, time, id, seq, service_name, flows, load, generator):
         self.type = "LoadEvent"
@@ -243,10 +243,10 @@ class Generator(object):
         def service_name():
             return gen.choice(possible_service_names)
 
-        event_generator = ServerLoadEventGenerator(env, id=idstr,
-                                                   adist=arrival_dist, flowdist=no_of_flows_dist,
-                                                   loaddist=load_dist,
-                                                   destinations_dist=service_name)
+        event_generator = ServerMetricEventGenerator(env, id=idstr,
+                                                     adist=arrival_dist, flowdist=no_of_flows_dist,
+                                                     loaddist=load_dist,
+                                                     destinations_dist=service_name)
 
 
         # This line makes event generator member out pointing to node 'idstr'.

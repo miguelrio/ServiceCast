@@ -21,11 +21,21 @@ class Network:
 
         # aggregate of replica capacity
         # gives a total view over the network
+        # replica name -> dict of values like replica_capacity_total 
         self.replica_capacity = dict()
         # replica_capacity initial total
-        self.replica_capacity_total = { 'load': 0, 'no_of_flows': 0, 'slots': 0 }
+        # need 1 for slots and capacity 
+        self.replica_capacity_total = { 'load': 0, 'no_of_flows': 0, 'slots': 1, 'capacity' : 1 }
  
-        
+        # aggregate of replica load utility
+        # gives a total view over the network
+        # replica name -> load value
+        self.replica_load_utility = dict()
+
+        # the network diameter
+        self.network_diameter_val = 0
+
+
         
     @classmethod
     def from_graph(cls, graph, env):
@@ -186,7 +196,7 @@ class Network:
         if isinstance(n1, int):
             # we got a number
             r1 = self[n1]
-            print("add_edge int " + r1.id() + " " + str(r1))
+            print("Net: add_edge int " + r1.id() + " " + str(r1))
         else:
             if not self.contains_router(n1):
                 # new node
@@ -197,13 +207,13 @@ class Network:
                     self.routers[n1] = r1
 
                     if Verbose.level >= 2:
-                        print(type(r1).__name__ + " add " + n1)
+                        print("Net: " + type(r1).__name__ + " add " + n1)
                 else:
                     r1 = n1
                     self.routers[n1.id()] = r1
 
                     if Verbose.level >= 2:
-                        print(type(r1).__name__ + " add " + n1.id())
+                        print("Net: " + type(r1).__name__ + " add " + n1.id())
             else:
                 # existing node
                 if type(n1) == str:
@@ -221,7 +231,7 @@ class Network:
         if isinstance(n2, int):
             # we got a number
             r2 = self[n2]
-            print("add_edge int " + r2.id() + " " + str(r2))
+            print("Net: add_edge int " + r2.id() + " " + str(r2))
         else:
             if not self.contains_router(n2):
                 # new node
@@ -232,13 +242,13 @@ class Network:
                     self.routers[n2] = r2
 
                     if Verbose.level >= 2:
-                        print(type(r2).__name__ + " add " + n2)
+                        print("Net: " + type(r2).__name__ + " add " + n2)
                 else:
                     r2 = n2
                     self.routers[n2.id()] = r2
 
                     if Verbose.level >= 2:
-                        print(type(r2).__name__ + " add " + n2.id())
+                        print("Net: " + type(r2).__name__ + " add " + n2.id())
             else:
                 # existing node
                 if type(n2) == str:
@@ -430,7 +440,7 @@ class Network:
         self.latency_table.update(latency_table_r)
 
         if Verbose.level >= 2:
-            print("latency_table: " + router + " = " + str(latency_table_r[router]))
+            print("Net: latency_table: " + router + " = " + str(latency_table_r[router]))
 
         return table
 
@@ -527,7 +537,7 @@ class Network:
                     path_latency += link_weight
 
                     if Verbose.level >= 5:
-                        print("dijkstra_to_latency_fn: link_weight: " + connected + " -> " + lookup + " = " + str(link_weight))
+                        print("Net: dijkstra_to_latency_fn: link_weight: " + connected + " -> " + lookup + " = " + str(link_weight))
 
                     if connected == router:
                         # next we have reached router
@@ -537,10 +547,14 @@ class Network:
                         lookup = connected
 
                 if Verbose.level >= 4:
-                    print("dijkstra_to_latency_fn: latency " + router + " --> " + node + " = " + str(path_latency))
+                    print("Net: dijkstra_to_latency_fn: latency " + router + " --> " + node + " = " + str(path_latency))
                     
                 latency_table[router][node] = path_latency
 
+        # before we return, calculate the network diameter
+        # it uses the latency_table values
+        self.network_diameter_val = self.network_diameter_fn()
+        
         return latency_table
 
 
@@ -566,6 +580,34 @@ class Network:
         
 
         return self.latency_table[dst][src]   # self[dst].distance_to(src)
+
+    # Network diameter
+    #
+    # It is the shortest distance between the two most distant nodes
+    # in the network. In other words, once the shortest path length
+    # from every node to all other nodes is calculated, the diameter
+    # is the longest of all the calculated path lengths
+    def network_diameter(self):
+        return self.network_diameter_val
+
+    # calculate the network diameter
+    def network_diameter_fn(self):
+        diameter = 1
+
+        # visit the keys -- nodes names
+        for node in self.latency_table:
+            latency_from_node = self.latency_table[node]
+
+
+            for dst in latency_from_node:
+                distance = latency_from_node[dst]
+
+                if distance > diameter:
+                    diameter = distance
+            
+                # print(str(dst) + " -> " + str(distance) + " diameter: " + str(diameter))
+
+        return diameter
         
     # Get the utility for best server / replica.
     # This is called by individual Servers
@@ -605,25 +647,28 @@ class Network:
 
             utility_values[server.id()] = utility
 
-
-        print("best_replica_utility: '" + requesting_server_id + "' load = " + str(load_values))
-        print("best_replica_utility: '" + requesting_server_id + "' latency = " + str(self.latency_table[requesting_server_id]))
-        print("best_replica_utility: '" + requesting_server_id + "' utility from " + str(client_name) + " = " + str(utility_values))
+        if Verbose.level >= 3:
+            print("best_replica_utility: '" + requesting_server_id + "' load = " + str(load_values))
+            print("best_replica_utility: '" + requesting_server_id + "' latency = " + str(self.latency_table[requesting_server_id]))
+            print("best_replica_utility: '" + requesting_server_id + "' utility from " + str(client_name) + " = " + str(utility_values))
 
 
         # now we sort them by value, so the minimum value is the first item
         ordered = {k: v for k, v in sorted(utility_values.items(), key=lambda item: item[1])}
         
-        print("best_replica_utility: '" + requesting_server_id + "' ordered_utility = " + str(ordered))
+        if Verbose.level >= 3:
+            print("best_replica_utility: '" + requesting_server_id + "' ordered_utility = " + str(ordered))
 
         # and select all the keys which match the minimum value
         minimum_pair = list(ordered.items())[0]
 
-        print("best_replica_utility: '" + requesting_server_id + "' minimum_pair = " + str(minimum_pair))
+        if Verbose.level >= 3:
+            print("best_replica_utility: '" + requesting_server_id + "' minimum_pair = " + str(minimum_pair))
         
         minimum_replicas = [k for k, v in ordered.items() if v == minimum_pair[1]]
         
-        print("best_replica_utility: '" + requesting_server_id + "' minimum_replicas = " + str(minimum_replicas))
+        if Verbose.level >= 3:
+            print("best_replica_utility: '" + requesting_server_id + "' minimum_replicas = " + str(minimum_replicas))
 
         # need to keep:
         # selected server load, selected server latency, selected server utility
@@ -653,8 +698,23 @@ class Network:
         best_server_utility = utility_values[best_server_id]
 
         # Log utility of true best replica and utility of selected replica: timestamp, selected server id, client id, client request id,  selected server id,  selected server load, selected server latency, selected server utility, best server id, best server load, best server latency
-        print("{:.3f}: BEST_REPLICA_UTILITY '{}' pkt: {}.{} selected: {} load({}) latency({}) utility({}) best: {} load({}) latency({}) utility({}) {}".format(self.env.now, requesting_server.id(),  packet.src, packet.id, requesting_server.id(), selected_server_load, selected_server_latency, selected_server_utility,  best_server_id, best_server_load, best_server_latency, best_server_utility, "SAME" if requesting_server_id == best_server_id else "DIFFERENT"))
+        print("{:.3f}: {:5s} BEST_REPLICA_UTILITY '{}' pkt: {}.{} selected: {} load({}) latency({}) utility({}) best: {} load({}) latency({}) utility({}) {}".format(self.env.now, "Net ", requesting_server.id(),  packet.src, packet.id, requesting_server.id(), selected_server_load, selected_server_latency, selected_server_utility,  best_server_id, best_server_load, best_server_latency, best_server_utility, "SAME" if requesting_server_id == best_server_id else "DIFFERENT"))
 
+    # Get replica capacity
+    def get_replica_capacity(self, replica, entry):
+        if replica in self.replica_capacity:
+            return self.replica_capacity[replica][entry]
+        else:
+            return 1
+
+    # Get total replica capacity
+    def get_total_replica_capacity(self, entry):
+        #print("Network: total_replica_capacity = " + str(self.replica_capacity_total))
+        
+        if entry in self.replica_capacity_total:
+            return self.replica_capacity_total[entry]
+        else:
+            return 1
 
     # An update for replica_capacity
     def update_replica_capacity(self, replica, aDict):
@@ -671,7 +731,39 @@ class Network:
             self.replica_capacity_total["slots"] += entry["slots"]
             self.replica_capacity_total["capacity"] += entry["capacity"]
 
-        print ("{:.3f}: REPLICA_CAPACITY_NETWORK 'load': {}, 'no_of_flows': {}, 'slots': {},  'capacity': {}".format(self.env.now,  self.replica_capacity_total["load"],  self.replica_capacity_total["no_of_flows"],  self.replica_capacity_total["slots"] ,  self.replica_capacity_total["capacity"]   ))
+        print ("{:.3f}: {:5s} REPLICA_CAPACITY_NETWORK 'load': {}, 'no_of_flows': {}, 'slots': {},  'capacity': {}".format(self.env.now, "Net ", self.replica_capacity_total["load"],  self.replica_capacity_total["no_of_flows"],  self.replica_capacity_total["slots"] ,  self.replica_capacity_total["capacity"]   ))
+
+    # Get the load_utility for a replica
+    def get_load_utility(self, replica):
+        return self.replica_load_utility[replica]
+    
+
+    # An update for load_utility
+    def update_load_utility(self, replica, load_val):
+        self.replica_load_utility[replica] = load_val
+        
+    # current average load_utility
+    # average load_utilty = Network object collects all load_utility, returns average
+    def average_load_utility(self):
+        count = 0
+        total = 0
+        
+        for key in self.replica_load_utility:
+
+            load_val = self.replica_load_utility[key]
+
+            # print("Network: average_load_utility: load at " + str(key) + " = " + str(load_val))
+
+            count += 1
+            total += load_val
+
+
+        avg =  total / count
+
+        # print("Network: average_load_utility: average = " + str(avg))
+        
+        return avg
+        
 
 
     def print(self):

@@ -55,8 +55,8 @@ def topology_setup():
     # filter out local nodes -  degree <= 3
     local = [ r  for r in network.network_nodes() if r.degree() <= 3 ]
 
-    print("core = " + str([(r.id(), r.degree()) for r in core]))
-    print("local = " + str([(r.id(), r.degree()) for r in local]))
+    print("core  (degree > 3)  = " + str([(r.id(), r.degree()) for r in core]))
+    print("local (degree <= 3) = " + str([(r.id(), r.degree()) for r in local]))
 
     print("--- Add Servers and Clients to Network ---")
 
@@ -96,6 +96,7 @@ def topology_setup():
     print("Network: dijkstra routing from c4 = " + str(network.dijkstra_to_routing(dijkstra_c4)))
 
     print("Network = ")
+    network.print()
 
     with open('/tmp/dfn.gv', mode='w') as file_object:
         network.graphviz(file=file_object)

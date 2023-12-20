@@ -3,8 +3,8 @@ from SimComponents import Packet
 
 class Client(Host):
     """ A Client in the Simulation."""
-    def __init__(self, clientid, env=None):
-        super().__init__(clientid, env)
+    def __init__(self, clientid, network=None):
+        super().__init__(clientid, network)
         self.type = "Client"
         self.pkt_no = 1
 
@@ -29,8 +29,7 @@ class Client(Host):
         packet.type = "ClientRequest"
         packet.pkt_no = self.pkt_no
         
-        print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
+        print("{:.3f}: {:5s} Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
         self.pkt_no += 1
 
