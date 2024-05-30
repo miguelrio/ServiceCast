@@ -328,7 +328,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             # avoid least loaded going everywhere
             # check the propagation_time
-            propagation_time = self.env.now - packet.msg_time
+
+            propagation_time = metrics['delay']
 
             network_diameter = self.network.network_diameter()
 
@@ -345,7 +346,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             announcement_distance =  (replica_available_capacity / system_available_capacity)  * (load_utility - average_load_utility + 1) * network_diameter 
 
 
-            # print(str(self.id()) + " msgID " + str(msgID) + " replica: " + str(replica) + " servicename: " + str(servicename) + " msg time: " + str(creationTime) + " propagation_time: " + str(round(propagation_time, 6)) + " load_utility(" + str(replica) + "): " + str(load_utility) + " average_load_utility: " + str(average_load_utility) + " system_available_capacity: " + str(system_available_capacity) + " announcement_distance: " + str(round(announcement_distance, 3)))
+            print(str(self.id()) + " msgID " + str(msgID) + " replica: " + str(replica) + " msg time: " + str(creationTime) + " propagation_time: " + str(round(propagation_time, 6)) + " load_utility(" + str(replica) + "): " + str(load_utility) + " average_load_utility: " + str(average_load_utility) + " replica capacity: " + str(replica_available_capacity) + " system_available_capacity: " + str(system_available_capacity) + " announcement_distance: " + str(round(announcement_distance, 3)))
 
 
             # do the announcement
