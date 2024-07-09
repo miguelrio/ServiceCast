@@ -1053,6 +1053,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 this_servicename = entry['servicename']
                 this_best_utility = utility_i
 
+                # patch up the utility of the old_best_replica
+                # with the current utility value
+                if  this_best_replica == old_best_replica:
+                    old_best_utility = this_best_utility
+
         if Verbose.level >= 1:
             self.print_utility_info(entries, utility)
 
@@ -1065,10 +1070,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # so that we don't scatter requests to multiple servers.
         # Avoids flapping.  The damping may be based on a value threshold or a time window.
         
-        # we check if the difference to make sure it is big enough
+        # we check if the difference the new best utility and
+        # the latest utility at the old best one
+        # to make sure it is big enough
         diff = self.calculate_utility_difference(this_best_utility, old_best_utility)
 
-                
         # check how much of a change in there is
         if (old_best_replica != this_best_replica):
             # different replicas
