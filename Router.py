@@ -342,11 +342,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             system_available_capacity = self.network.get_total_replica_capacity('slots')
 
             
+            if system_available_capacity == 0:
+                print("SYSTEM_AVAILABLE_CAPACITY " + "'" + str(self.id()) + "'" + " == 0 announcement_distance 0")
+                announcement_distance = 0
+            else:
+                announcement_distance =  (replica_available_capacity / system_available_capacity)  * (load_utility - average_load_utility + 1) * network_diameter 
 
-            announcement_distance =  (replica_available_capacity / system_available_capacity)  * (load_utility - average_load_utility + 1) * network_diameter 
 
-
-            print(str(self.id()) + " msgID " + str(msgID) + " replica: " + str(replica) + " msg time: " + str(creationTime) + " propagation_time: " + str(round(propagation_time, 6)) + " load_utility(" + str(replica) + "): " + str(load_utility) + " average_load_utility: " + str(average_load_utility) + " replica capacity: " + str(replica_available_capacity) + " system_available_capacity: " + str(system_available_capacity) + " announcement_distance: " + str(round(announcement_distance, 3)))
+            print("ANNOUNCEMENT_DISTANCE " + "'" + str(self.id()) + "'" + " msgID " + str(msgID) + " replica: " + str(replica) + " msg time: " + str(creationTime) + " propagation_time: " + str(round(propagation_time, 6)) + " load_utility(" + str(replica) + "): " + str(load_utility) + " average_load_utility: " + str(average_load_utility) + " replica capacity: " + str(replica_available_capacity) + " system_available_capacity: " + str(system_available_capacity) + " announcement_distance: " + str(round(announcement_distance, 3)))
 
 
             # do the announcement
