@@ -1,6 +1,18 @@
 # Bugs
 
+Fixed issue when there are no more slots in the whole system.
+
+
 # Issues
+
+#### Utility function value
+
+Currently the Utility function is set in an inverse way.
+That means 0 is the best value, and 1 is the worst.
+
+We need to change this so 1 is the best, and 0 is the worst.
+This may involve a few changes in the code, and a change in functions
+that decide what is *better*.
 
 # TODO
 

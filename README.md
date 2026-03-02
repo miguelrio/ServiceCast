@@ -10,60 +10,15 @@ The clients send requests for work to be done.
 
 The routers in the network keep a table for the *metrics* sent from the servers.  They also keep a forwarding table for the best server replica to send a request.
 
+## Topology
+
+Information about building a topology are [here](Topology.md)
 
 
-### System variables
+## System variables
 
-### Utility class
+The system variables are outlined [here](Variables.md)
 
-Set alpha value for Utility function  
-```Utility.alpha = 0.50```
+## Starting
 
-Set utility forwarding function
-
-```
-# load:  0 -> 1
-utility_load = lambda load: (1-(0.12*load)) if load <  else (4.5-(4.5*load))
-# delay: 0 -> 10
-utility_delay = lambda delay: (1-(0.1*delay)) if delay <= 10 else 0
-
-# actual utility fn
-Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(1 - ((utility_load(load / (2 * Server.slots)) * utility_delay(delay))), 4))
-```
- 
-### Server class
-
-Default number of slots on a server  
-```Server.slots = 50```
- 
-Set load functions
-
-```
-Server.load_up_fn = staticmethod(lambda val: val + 4)    
-Server.load_down_fn = staticmethod(lambda val: val - 4)
-```
-
-Set flow functions  
-
-```
-Server.flows_up_fn = staticmethod(lambda val: val + 4)    
-Server.flows_down_fn = staticmethod(lambda val: val - 4)
-```
-
-### Router class
-
-Internal *better than* function, to determine if the metric arg2 is better than metric arg1
-
-```
-Router.better_than_fn = staticmethod(lambda x, y: x < y)
-```
-
-### Verbose class
-
-Set verbose level for system outputs  
-```Verbose.level = 2```
-
-Set table printout style.  
-- If table == 0, print tables simply on one line  
-- If table == 1, try and print tables one row per line  
-```Verbose.table = 0```
+This shows [how to start](Starting.md) the runs
