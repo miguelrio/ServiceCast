@@ -99,7 +99,8 @@ class Server(Host):
     # Process a LoadEvent which generates background load
     def process_load_event(self, event):
         # we got a load event
-        print("{:.3f}: {:5s} {}".format(self.env.now, self.id(), event))
+        if Verbose.level >= 0:
+            print("{:.3f}: {:5s} SERVER_LOAD {}".format(self.env.now, self.id(), event))
         
         # it should have: seqno, time, no_of_flows, load
         # more events
@@ -125,8 +126,8 @@ class Server(Host):
         packet = Packet(event.time, event.size, self.pkt_no, event.src, event.dst, event.flow_id)
         packet.pkt_no = self.pkt_no
 
-        print("{:.3f}: Packet {}.{} ({:.3f}) created in {} after {:.3f}".format(self.env.now,
-                packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
+        if Verbose.level >= 0:
+            print("{:.3f}: {:5s} PACKET_CREATED {}.{} ({:.3f}) EVENT in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
         self.pkt_no += 1
 
@@ -146,6 +147,9 @@ class Server(Host):
         """
         (link_end, packet) = packet_tuple
         
+        if Verbose.level >= 0:
+            print("{:.3f}: {:5s} PACKET_ARRIVED {}.{} ({:.3f}) in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
+
         if packet.dst == self.hostid:
             # consume the packet
             self.sink.put(packet)
@@ -231,7 +235,8 @@ class Server(Host):
             if (now == int(now)):
                 # are on second boundary
                 # send a ServerMetric packet
-                print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric".format(self.env.now, self.id(),diff))
+                if Verbose.level >= 2:
+                    print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric".format(self.env.now, self.id(),diff))
 
                 self.send_load_packet(time, service_name)
 
@@ -239,7 +244,8 @@ class Server(Host):
                 # work out next second boundary
                 timeout = int(now) + 1 - now
 
-                print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric in {}".format(self.env.now, self.id(),diff, timeout))
+                if Verbose.level >= 2:
+                    print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric in {}".format(self.env.now, self.id(),diff, timeout))
                 
                 # process callback for a delayed announce
                 self.env.process(self.delay_announce(timeout, time, service_name))
@@ -276,9 +282,13 @@ class Server(Host):
         # save last_payload
         self.last_payload = self.calculate_payload()
 
-        print("{:.3f}: {:5s} CALCULATE_PAYLOAD: slots: {} flows: {} load: {}".format(self.env.now, self.id(), self.last_payload['slots'], self.last_payload['no_of_flows'], self.last_payload['load']))
+        if Verbose.level >= 1:
+            print("{:.3f}: {:5s} CALCULATE_PAYLOAD: slots: {} flows: {} load: {}".format(self.env.now, self.id(), self.last_payload['slots'], self.last_payload['no_of_flows'], self.last_payload['load']))
         
         packet.payload = self.last_payload
+
+        if Verbose.level >= 0:
+            print("{:.3f}: {:5s} PACKET_CREATED {}.{} ({:.3f}) ServerMetric in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
         # update packet number for next time
         self.pkt_no += 1
@@ -309,7 +319,8 @@ class Server(Host):
         # now we need to check the capacity to see if we can accept this request
         if (self.calculate_slots() == 0):
             # there is no more capacity to take a job
-            print("{:.3f}: NO_MORE CAPACITY {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
+            if Verbose.level >= 0:
+                print("{:.3f}: NO_MORE CAPACITY {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
             return
 
         else:
