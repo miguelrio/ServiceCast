@@ -103,7 +103,7 @@ class Network:
         for router in self.routers.values():
             router.start()
             
-        # start the simulation run
+        # start the simpy environment run
         self.env.run(until)
 
     # contains router

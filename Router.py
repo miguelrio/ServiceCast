@@ -33,7 +33,7 @@ def greater_than1(x,y):
 
 
 class Router(object):
-    """ A Router in the Simulation.
+    """ A Router in the emulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
 
@@ -275,7 +275,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """The process for a packet with type ServerMetric"""
 
         if Verbose.level >= 0:
-            print("{:.3f}: {:5s} RECV PACKET  ServerMetric {} {}.{} ({:.3f}) [{}.{}] MT({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.pkt_no, packet.time, packet.replica, packet.id, packet.msg_time, self.id(), (self.env.now - packet.time)))
+            print("{:.3f}: {:5s} RECV_PACKET  ServerMetric {} {}.{} ({:.3f}) [{}.{}] MT({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.pkt_no, packet.time, packet.replica, packet.id, packet.msg_time, self.id(), (self.env.now - packet.time)))
 
         # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
         servicename = packet.service
@@ -287,8 +287,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         if Verbose.level >= 1:
-            #print("{:.3f}: INCOMING VALUES '{}' link_end: {} msgID: {} replica: {} time: {}  service: {} op: {} aggregate: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, operation, hasattr(packet,'aggregate'), metrics))
-            print("{:.3f}: {:5s} INCOMING VALUES link_end: {} msgID: {} replica: {} time: {}  service: {} op: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, operation, metrics))
+            #print("{:.3f}: INCOMING_VALUES '{}' link_end: {} msgID: {} replica: {} time: {}  service: {} op: {} aggregate: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, operation, hasattr(packet,'aggregate'), metrics))
+            print("{:.3f}: {:5s} INCOMING_VALUES link_end: {} msgID: {} replica: {} time: {}  service: {} op: {} metrics: {}".format(self.env.now, self.id(), str(link_end), msgID, replica, creationTime, servicename, operation, metrics))
 
         # add the delay of the last hop to the metrics
         metrics['delay'] +=  link_end.propagation_delay
@@ -427,7 +427,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         searchR = Query()
         results = self.service_RIB.search((searchR.replica == replica))
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print("{:.3f}: {:5s} METRIC_SEARCH_RESULTS link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), results))))
         
         # check results
@@ -437,7 +437,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             val = self.service_RIB.insert({ 'replica': replica, 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots']  })
 
             if Verbose.level >= 1:
-                print ("{:.3f}: {:5s} ADD METRIC metric no {}".format(self.env.now, self.id(), val) )
+                print ("{:.3f}: {:5s} ADD_METRIC metric from {} as no {}".format(self.env.now, self.id(), replica, val) )
 
         else:
             # something found in service_RIB
@@ -461,7 +461,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             val = self.service_RIB.update({ 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
 
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} UPDATE METRIC metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
+                print("{:.3f}: {:5s} UPDATE_METRIC metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
 
             # mark this doc_id, if in sent_table
             # val[0] is a doc_id
@@ -619,7 +619,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 # nothing in sent_table
                 # so no withdrawals sent on
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} NOTHING in sent_table: for {}".format(self.env.now, self.id(), candidate.doc_id))
+                    print("{:.3f}: {:5s} SENT_TABLE_NOTHING in sent_table: for {}".format(self.env.now, self.id(), candidate.doc_id))
 
                 # now delete the candidate metric from the RIB
                 self.delete_rib_entry(candidate)
@@ -630,7 +630,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             else:
                 # this metric is in the sent table
                 if Verbose.level >= 2:
-                    print("{:.3f}: {:5s} FOUND {} in sent_table:  metric [{}] need to withdraw".format(self.env.now,  self.id(), no_found_in_sent_table, candidate.doc_id))
+                    print("{:.3f}: {:5s} SENT_TABLE_FOUND {} in sent_table:  metric [{}] need to withdraw".format(self.env.now,  self.id(), no_found_in_sent_table, candidate.doc_id))
 
             
                 # do we need any withdrawal announcements
@@ -643,7 +643,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     if link_end.src_node.id() == neighbour:
                         # don't send to where it came from
                         if Verbose.level >= 2:
-                            print("{:.3f}: {:5s} WITHDRAW PACKET {}.{} dont send back to {} ".format(self.env.now, self.id(), packet.src, packet.pkt_no, link_end.src_node.id()))
+                            print("{:.3f}: {:5s} WITHDRAW_PACKET {}.{} dont send back to {} ".format(self.env.now, self.id(), packet.src, packet.pkt_no, link_end.src_node.id()))
                         pass
 
                     else:
@@ -654,7 +654,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                         # forward the packet
                         if Verbose.level >= 1:
-                            print("{:.3f}: {:5s} WITHDRAW FORWARD {} to {}".format(self.env.now, self.id(), candidate['replica'], neighbour))
+                            print("{:.3f}: {:5s} WITHDRAW_FORWARD {} to {}".format(self.env.now, self.id(), candidate['replica'], neighbour))
 
                         # send to relevant SwitchPort
                         self.outgoing_ports[neighbour].put(new_packet)
@@ -673,7 +673,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     self.print_metric_table()
 
             if Verbose.level >= 2:
-                print("{:.3f}: {:5s} WITHDRAW END".format(self.env.now, self.id()))
+                print("{:.3f}: {:5s} WITHDRAW_END".format(self.env.now, self.id()))
         
 
     # the replica capacity only and expose to Network
@@ -763,14 +763,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
                     # don't send to any connected Hosts
                     if Verbose.level >= 2:
-                        print("{:.3f}: {:5s} NOT TO HOST {} - metric no {}".format(self.env.now, self.id(), self.outgoing_ports[neighbour].out.dst_node, metric_to_send.doc_id))
+                        print("{:.3f}: {:5s} NOT_TO_HOST {} - metric no {}".format(self.env.now, self.id(), self.outgoing_ports[neighbour].out.dst_node, metric_to_send.doc_id))
                     pass
 
 
                 elif metric_to_send['neighbour'] == str(neighbour):
                     # don't send to where it came from
                     if Verbose.level >= 2:
-                        print("{:.3f}: {:5s} NO RETURN to {} - metric no {}".format(self.env.now, self.id(), neighbour,  metric_to_send.doc_id))
+                        print("{:.3f}: {:5s} NO_RETURN to {} - metric no {}".format(self.env.now, self.id(), neighbour,  metric_to_send.doc_id))
                     pass
 
                 else:
@@ -784,7 +784,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         if self.check_sent_table(metric_to_send, neighbour):
                             # this is in the sent table, so no need to send
                             if Verbose.level >= 1:
-                                print ("{:.3f}: {:5s} ALREADY IN SENT_TABLE neighbour {} metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
+                                print ("{:.3f}: {:5s} ALREADY_IN_SENT_TABLE neighbour {} metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
                                 pass
 
 
@@ -798,7 +798,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                             # forward the packet
                             if Verbose.level >= 1:
-                                print("{:.3f}: {:5s} FORWARD METRIC to {}".format(self.env.now,  self.id(), metric_to_send.doc_id,neighbour))
+                                print("{:.3f}: {:5s} FORWARD_METRIC {} to {}".format(self.env.now,  self.id(), metric_to_send.doc_id, neighbour))
 
                             # send to relevant SwitchPort
                             self.outgoing_ports[neighbour].put(new_packet)
@@ -821,7 +821,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                             # forward the packet
                             if Verbose.level >= 1:
-                                print("{:.3f}: {:5s} FORWARD WITHDRAW to {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour))
+                                print("{:.3f}: {:5s} FORWARD_WITHDRAW to {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour))
 
                             # send to relevant SwitchPort
                             self.outgoing_ports[neighbour].put(new_packet)
@@ -829,7 +829,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         else:
                             # not in sent_table, so no need to send Withdraw
                             if Verbose.level >= 1:
-                                print ("{:.3f}: {:5s} NOT IN SENT_TABLE neighbour {} metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
+                                print ("{:.3f}: {:5s} NOT_IN_SENT_TABLE neighbour {} metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
 
                             pass
                     else:
@@ -1169,7 +1169,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """A Client has sent a request"""
 
         if Verbose.level >= 0:
-            print("{:.3f}: {:5s} RECV PACKET ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
+            print("{:.3f}: {:5s} RECV_PACKET ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
 
         # Destination is likely to be a service name: e.g. §a
         service_name = packet.dst
@@ -1178,7 +1178,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if not service_name in self.service_forwarding_table:
             # service_name isn't in service_forwarding_table
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} NO SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+                print("{:.3f}: {:5s} NO_SERVICE_FORWARDING_TABLE_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
 
         else:
             # First we look up the service name
@@ -1190,12 +1190,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if neighbour == None:
                 # service_name is in service_forwarding_table, but has no value
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} NO VALUE FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+                    print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
             else:
                 # value is link_end
                 # so forwarding the packet
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} FORWARD PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
+                    print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
 
                 self.outgoing_ports[neighbour].put(packet)                
 
@@ -1273,7 +1273,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # and remove it
         self.service_RIB.remove((searchR.replica == metric['replica']))
         if Verbose.level >= 1:
-            print ("{:.3f}: {:5s} REMOVE METRIC metric no {}".format(self.env.now, self.id(), metric) )
+            print ("{:.3f}: {:5s} REMOVE_METRIC metric no {}".format(self.env.now, self.id(), metric) )
         
     # update the sent table
     def update_sent_table(self, metric_to_send, neighbour):
@@ -1291,12 +1291,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             val = self.sent_table.insert({'metric_doc_id': metric_to_send.doc_id, 'neighbour': neighbour })
 
             if Verbose.level >= 1:
-                print ("{:.3f}: {:5s} ADD SENT_TABLE metric no {} neighbour {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour) )
+                print ("{:.3f}: {:5s} ADD_SENT_TABLE metric no {} neighbour {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour) )
 
         else:
             # update the table
             if Verbose.level >= 1:
-                print ("{:.3f}: {:5s} UPDATE SENT_TABLE metric no {} neighbour {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour) )
+                print ("{:.3f}: {:5s} UPDATE_SENT_TABLE metric no {} neighbour {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour) )
 
 
 
@@ -1305,7 +1305,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         """Clear entries in sent table with 'metric_doc_id'"""
         
         if Verbose.level >= 1:
-            print ("{:.3f}: {:5s} CLEAR SENT_TABLE metric no {}".format(self.env.now, self.id(), metric_doc_id) )
+            print ("{:.3f}: {:5s} CLEAR_SENT_TABLE metric no {}".format(self.env.now, self.id(), metric_doc_id) )
 
         before = len(self.sent_table)
         # print("size before = " + str(before))
@@ -1324,6 +1324,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Print metric table
     def print_metric_table(self):
         if Verbose.table == 0:
+            pass
+        elif Verbose.table == 1:
             print("{:.3f}: {:5s} METRIC_TABLE {}".format(self.env.now, self.id(), str(self.service_RIB.all())))
         else:
             print("{:.3f}: {:5s} METRIC_TABLE".format(self.env.now, self.id()))
@@ -1333,6 +1335,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
     def print_sent_table(self):
         if Verbose.table == 0:
+            pass
+        elif Verbose.table == 1:
             print("{:.3f}: {:5s} SENT_TABLE {}".format(self.env.now, self.id(), str(self.sent_table.all())))
         else:
             print("{:.3f}: {:5s} SENT_TABLE".format(self.env.now, self.id()))
@@ -1344,6 +1348,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Print utility info
     def print_utility_info(self, entries, utility):
         if Verbose.table == 0:
+            pass
+        elif Verbose.table == 1:
             print ("{:.3f}: {:5s} UTILITY {} = {} ".format(self.env.now, self.id(), len(entries), list(zip (utility, map(lambda doc: "metric: {} load: {} delay: {} replica: {} neighbour: {}".format(doc.doc_id,  doc['load'], doc['delay'], doc['replica'], doc['neighbour']), entries)))))
         else:
             print ("{:.3f}: {:5s} UTILITY {}".format(self.env.now, self.id(), len(entries)))
@@ -1354,6 +1360,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Print announce info
     def print_announce_info(self, announce):
         if Verbose.table == 0:
+            pass
+        elif Verbose.table == 1:
             print("{:.3f}: {:5s} ANNOUNCE {} / {}".format(self.env.now, self.id(), len(announce), list(zip (map(lambda doc: doc.doc_id, announce), announce))))
         else:
             print("{:.3f}: {:5s} ANNOUNCE count {}".format(self.env.now, self.id(), len(announce)))

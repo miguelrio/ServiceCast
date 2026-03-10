@@ -6,7 +6,7 @@ from Verbose import Verbose
 LINKRATE = 10000000
 
 class Host(object):
-    """ A Host in the Simulation.
+    """ A Host in the emulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
 

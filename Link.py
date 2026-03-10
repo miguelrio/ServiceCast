@@ -35,7 +35,7 @@ class BidirectionalLink(object):
 
 
 class LinkEnd(object):
-    """A Link in the Simulation"""
+    """A Link in the emulation"""
     def __init__(self, env, propagation_delay, src_node, dst_node):
         self.env = env
         self.propagation_delay = propagation_delay

@@ -3,7 +3,7 @@ from SimComponents import Packet
 from Verbose import Verbose
 
 class Client(Host):
-    """ A Client in the Simulation."""
+    """ A Client in the emulation."""
     def __init__(self, clientid, network=None):
         super().__init__(clientid, network)
         self.type = "Client"

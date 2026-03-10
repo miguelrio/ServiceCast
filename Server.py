@@ -49,7 +49,7 @@ class ServerMetricMessageType(Enum):
         return self.name
     
 class Server(Host):
-    """ A Server in the Simulation.
+    """ A Server in the emulation.
     """
 
     # capacity as no of slots
@@ -215,7 +215,7 @@ class Server(Host):
         diff = self.calculate_load_difference()
         
         # now tell the network about the 'load_utility'
-        # alpha * load (in current simulator)
+        # alpha * load (in current emulator)
 
         load_utility = Utility.alpha * self.last_payload['load']
 
