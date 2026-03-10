@@ -1,9 +1,12 @@
 ## System variables
 
+The system variables which are used for configuring each experimental
+run are outlined here.
+
 
 ### Utility class
 
-The are values for the *utility* function, called when forwarding a
+The are values for the *utility function*, called when forwarding a
 notification.  It allows the function and the coefficients to be set
 for each run.
 
@@ -111,12 +114,26 @@ This is used to provide damping for the number of messages from the
 router, and avoid sending on each small change in the utility value.
 
 
-### Verbose class
+### Logging output
 
-Set verbose level for system outputs  
+We use the Verbose class to adjust the logging output.
+The higher the level, the more logging output is produced.
+
+
+
+Set verbose level for system [logging](Logging.md) outputs
+
 ```Verbose.level = 2```
 
+Current values for ```Verbose.level``` are [0, 1, 2, 3].
+
+
+
 Set table printout style.  
-- If table == 0, print tables simply on one line  
-- If table == 1, try and print tables one row per line  
+- If table == 0, print no table data  
+- If table == 1, print tables simply on one line  
+- If table == 2, print tables one line per entry  
+
 ```Verbose.table = 0```
+
+Current values for ```Verbose.table``` are [0, 1, 2].
