@@ -147,15 +147,15 @@ class Server(Host):
         """
         (link_end, packet) = packet_tuple
         
-        if Verbose.level >= 0:
-            print("{:.3f}: {:5s} PACKET_ARRIVED {}.{} ({:.3f}) in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
+        if Verbose.level >= 2:
+            print("{:.3f}: {:5s} PACKET_PROCESSING {}.{} ({:.3f}) in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
         if packet.dst == self.hostid:
             # consume the packet
             self.sink.put(packet)
 
-            if Verbose.level >= 1:
-                print("{:.3f}: {:5s} HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, self.hostid, (self.env.now - packet.time)))
+            if Verbose.level >= 2:
+                print("{:.3f}: {:5s} PACKET_CONSUMED {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, self.hostid, (self.env.now - packet.time)))
 
         else:
             # MR: if packet is data packet (ClientRequest)
@@ -172,7 +172,7 @@ class Server(Host):
                 self.outgoing_port.put(packet)
 
                 if Verbose.level >= 2:
-                    print("{:.3f}: {:5s} HOST Packet {}.{} for {} deliver to {}".format(self.env.now, self.id(), packet.src, packet.id, packet.dst,  self.neighbour))
+                    print("{:.3f}: {:5s} PACKET_DELIVER {}.{} for {} deliver to {}".format(self.env.now, self.id(), packet.src, packet.id, packet.dst,  self.neighbour))
            
 
     # Handle a ClientRequest

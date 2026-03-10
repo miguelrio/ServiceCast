@@ -113,14 +113,14 @@ class Host(object):
             self.sink.put(packet)
 
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} HOST Packet {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
+                print("{:.3f}: {:5s} PACKET_CONSUMED {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
         else:
             # If the packet is not for us, forward to the neighbour
             # This is where the main servicecast algorithm will be implemented.
             self.outgoing_port.put(packet)
 
             if Verbose.level >= 2:
-                print("{:.3f}: {:5s} HOST Packet {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.dst, self.hostid, self.neighbour, (self.env.now - packet.time)))
+                print("{:.3f}: {:5s} PACKET_DELIVER {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.dst, self.hostid, self.neighbour, (self.env.now - packet.time)))
            
     # Is the destination address a service name:  e.g. §a
     def is_service(self, name):

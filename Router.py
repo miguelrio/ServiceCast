@@ -1185,7 +1185,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             neighbour = self.service_forwarding_table[service_name]
 
             if Verbose.level >= 2:
-                print ("{:.3f}: {:5s} ClientRequest neighbour =  {}".format(self.env.now, self.id(), neighbour))
+                print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, neighbour))
 
             if neighbour == None:
                 # service_name is in service_forwarding_table, but has no value
