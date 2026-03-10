@@ -372,6 +372,7 @@ class Server(Host):
         # the load from the Client requests to
         # make the result
         return int(self.last_event_info['load']) + int(self.load)
+
     
     # Calculate the no of flows
     def calculate_flows(self):

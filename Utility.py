@@ -18,5 +18,5 @@ class Utility:
     # The following variables can be reassigned from the outside
 
     # alpha
-    alpha = 0
+    alpha = 0.5
 
