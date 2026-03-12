@@ -30,8 +30,8 @@ def topology_setup():
     # delay: 0 -> 10
     utility_delay = lambda delay: (1-(0.1*delay)) if delay <= 10 else 0
 
-    # actual utility fn
-    Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(1 - ((utility_load(load / (2 * Server.slots)) * utility_delay(delay))), 4))
+    # actual utility fn (lower = worse, higher = better)
+    Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(utility_load(load / (2 * Server.slots)) * utility_delay(delay), 4))
 
     
 

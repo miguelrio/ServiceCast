@@ -653,8 +653,8 @@ class Network:
             print("best_replica_utility: '" + requesting_server_id + "' utility from " + str(client_name) + " = " + str(utility_values))
 
 
-        # now we sort them by value, so the minimum value is the first item
-        ordered = {k: v for k, v in sorted(utility_values.items(), key=lambda item: item[1])}
+        # now we sort them by value (descending), so the maximum value is the first item
+        ordered = {k: v for k, v in sorted(utility_values.items(), key=lambda item: item[1], reverse=True)}
         
         if Verbose.level >= 3:
             print("best_replica_utility: '" + requesting_server_id + "' ordered_utility = " + str(ordered))
