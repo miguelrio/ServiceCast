@@ -353,8 +353,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
             if Verbose.level >= 1:
-                print("ANNOUNCEMENT_DISTANCE " + "'" + str(self.id()) + "'" + " msgID " + str(msgID) + " replica: " + str(replica) + " msg time: " + str(creationTime) + " propagation_time: " + str(round(propagation_time, 6)) + " load_utility(" + str(replica) + "): " + str(load_utility) + " average_load_utility: " + str(average_load_utility) + " replica capacity: " + str(replica_available_capacity) + " system_available_capacity: " + str(system_available_capacity) + " announcement_distance: " + str(round(announcement_distance, 3)))
-
+                # example:   381.000: POT   ANNOUNCEMENT_DISTANCE msgid: 24 replica: s4 msg time: 379.0  propagation_time: 2 load_utility(s4): 2.0 average_load_utility: 1.9 replica_capacity: 45 system_available_capacity: 232 announcement_distance: 1.494 
+                print("{:.3f}: {:5s} ANNOUNCEMENT_DISTANCE msgid: {} replica: {} msg time: {}  propagation_time: {} load_utility({}): {} average_load_utility: {} replica_capacity: {} system_available_capacity: {} announcement_distance: {} ".format(self.env.now, self.id(), msgID, replica, creationTime, round(propagation_time, 6), replica, load_utility, average_load_utility, replica_available_capacity, system_available_capacity,  round(announcement_distance, 3)))
 
             # do the announcement
             self.incoming_server_metrics_packet_announce(link_end, packet)
@@ -1104,12 +1104,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not change ", old_best_replica, this_best_replica ))
 
             elif (diff < Router.forwarding_utility_change_factor):
+                # Compare diff to Router.forwarding_utility_change_factor
                 # change is too small, do nothing
-
+                
                 if Verbose.level >= 1:
                     print("{:.3f}:{:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.forwarding_utility_change_factor, " do not change ", old_best_replica, this_best_replica ))
 
             else:
+                # diff > Router.forwarding_utility_change_factor
                 # change replica
 
                 if Verbose.level >= 1:
@@ -1148,15 +1150,22 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         if Verbose.level >= 1:
 
-            print ("old_best_replica " + str(old_best_replica) + " self.best_replica " + str(self.best_replica) + " self.best_neighbour " + str(self.best_neighbour))
+            # print ("old_best_replica " + str(old_best_replica) + " self.best_replica " + str(self.best_replica) + " self.best_neighbour " + str(self.best_neighbour))
             
             if self.best_replica == self.best_neighbour:
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} {}BEST_REPLICA {} direct ".format(self.env.now, self.id(), ("CHANGED_" if old_best_replica != self.best_replica else ""), self.best_replica))
+                    if old_best_replica == None:
+                        print("{:.3f}: {:5s} {}BEST_REPLICA {} direct ".format(self.env.now, self.id(), ("SET_" if old_best_replica != self.best_replica else ""), self.best_replica))
+                    else:
+                        print("{:.3f}: {:5s} {}BEST_REPLICA {} direct ".format(self.env.now, self.id(), ("CHANGED_" if old_best_replica != self.best_replica else "KEEP_"), self.best_replica))
             else:
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} {}BEST_REPLICA {} via best neighbour {} ".format(self.env.now, self.id(), ("CHANGED_" if old_best_replica != self.best_replica else ""), self.best_replica, self.best_neighbour))
+                    if old_best_replica == None:
+                        print("{:.3f}: {:5s} {}BEST_REPLICA {} via best neighbour {} ".format(self.env.now, self.id(), ("SET_" if old_best_replica != self.best_replica else ""), self.best_replica, self.best_neighbour))
+                    else:
+                        print("{:.3f}: {:5s} {}BEST_REPLICA {} via best neighbour {} ".format(self.env.now, self.id(), ("CHANGED_" if old_best_replica != self.best_replica else "KEEP_"), self.best_replica, self.best_neighbour))
 
+        # update best_neighbour for servicename
         self.service_forwarding_table[self.servicename] =  self.best_neighbour
 
         if Verbose.level >= 1:
