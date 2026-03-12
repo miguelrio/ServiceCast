@@ -85,7 +85,9 @@ class Router(object):
 
         # best replica info
         self.best_replica = None
-        self.best_utility = -float('inf')
+        self.best_neighbour = None
+        self.servicename = None
+        self.best_utility = -1
 
         # service forwarding table
         self.service_forwarding_table = dict()
@@ -1047,7 +1049,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         this_best_replica = None
         this_best_neighbour = None
-        this_best_utility = float('inf')
+        this_best_utility = -1
         this_servicename = None
 
         # create a list of utility values
@@ -1061,8 +1063,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 print ("\t\t{:2d}. neighbour: {} utility_i: {}".format(entry_no, entry['neighbour'], utility_i))
 
 
-            # is utility of this entry < current best utility 
-            if (utility_i < this_best_utility):
+            # is utility of this entry > current best utility 
+            if (utility_i > this_best_utility):
                 # update best replica data
                 this_best_replica = entry['replica']
                 this_best_neighbour = entry['neighbour']

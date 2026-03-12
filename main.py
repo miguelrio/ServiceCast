@@ -24,7 +24,7 @@ def topology_setup():
     # Set alpha value
     Utility.alpha = 0.50
 
-    Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: (alpha * load) + ((1-alpha) * delay) )
+    Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: 1 / (1 + (alpha * load) + ((1-alpha) * delay)) )
 
     # Set slots
     Server.slots = 50

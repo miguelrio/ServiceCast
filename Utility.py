@@ -2,9 +2,10 @@
 
 # the first forwarding utility function
 def forwarding_utility1(alpha, load, delay):
-    """ the utility function U=alpha * load + (1-alpha)*delay """
-    # we define the utility function U=alpha * load + (1-alpha)*delay
-    return alpha * load + (1-alpha) * delay 
+    """ the utility function U=1/(1 + alpha*load + (1-alpha)*delay) """
+    # we define the utility function U=1/(1 + alpha*load + (1-alpha)*delay)
+    # so that 0 is the worst and 1 is the best, always in range (0, 1]
+    return 1 / (1 + alpha * load + (1-alpha) * delay) 
     
 
 class Utility:

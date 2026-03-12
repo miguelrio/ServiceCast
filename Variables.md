@@ -17,7 +17,7 @@ We can set the utility forwarding function:
 
 ```
 # actual utility fn
-Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: alpha * load + (1-alpha) * delay)
+Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: 1 / (1 + alpha * load + (1-alpha) * delay))
 ```
 
 
@@ -32,7 +32,7 @@ utility_delay = lambda delay: (1-(0.1*delay)) if delay <= 10 else 0
 
 ```
 # actual utility fn
-Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(1 - ((utility_load(load / (2 * Server.slots)) * utility_delay(delay))), 4))
+Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(utility_load(load / (2 * Server.slots)) * utility_delay(delay), 4))
 ```
  
 ### Server class

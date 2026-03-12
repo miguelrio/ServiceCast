@@ -18,14 +18,19 @@ at the first Router.
 Load values are not in range 0 -> 1.
 Currently based on slot.
 
-#### Utility function value
+#### Utility function value DONE
 
-Currently the Utility function is set in an inverse way.
-That means 0 is the best value, and 1 is the worst.
+The Utility function has been changed so that:
+- 0 is the worst value
+- 1 is the best value
+- Output is always in range (0, 1]
 
-We need to change this so 1 is the best, and 0 is the worst.
-This may involve a few changes in the code, and a change in functions
-that decide what is *better*.
+Changes made:
+- `Utility.py`: Changed `forwarding_utility1` to return `1 / (1 + alpha * load + (1-alpha) * delay)`
+- `Router.py`: Changed comparison from `<` to `>`, initial `best_utility` from `-inf` to `-1`, and added initialization of `best_neighbour` and `servicename`
+- `Network.py`: Added `reverse=True` to sort for maximum utility
+- `main_ls_lc.py`, `main_sm_cm.py`, `main.py`: Updated custom utility functions
+- `Variables.md`: Updated documentation examples
 
 
 #### Announcement Radius
