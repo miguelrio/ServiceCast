@@ -1145,12 +1145,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         if Verbose.level >= 1:
+
+            print ("old_best_replica " + str(old_best_replica) + " self.best_replica " + str(self.best_replica) + " self.best_neighbour " + str(self.best_neighbour))
+            
             if self.best_replica == self.best_neighbour:
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} {}BEST_REPLICA {} direct ".format(self.env.now, self.id(), ("CHANGED " if old_best_replica != self.best_replica else ""), self.best_replica))
+                    print("{:.3f}: {:5s} {}BEST_REPLICA {} direct ".format(self.env.now, self.id(), ("CHANGED_" if old_best_replica != self.best_replica else ""), self.best_replica))
             else:
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} {}BEST_REPLICA {} -> {} ".format(self.env.now, self.id(), ("CHANGED " if old_best_replica != self.best_replica else ""), self.best_replica, self.best_neighbour))
+                    print("{:.3f}: {:5s} {}BEST_REPLICA {} via best neighbour {} ".format(self.env.now, self.id(), ("CHANGED_" if old_best_replica != self.best_replica else ""), self.best_replica, self.best_neighbour))
 
         self.service_forwarding_table[self.servicename] =  self.best_neighbour
 
