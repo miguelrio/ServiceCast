@@ -335,7 +335,8 @@ class Generator(object):
         # We first define our random number generator so that we can reproduce results
         gen = np.random.RandomState(seed=seed)
 
-        gen2 = np.random.RandomState(seed=None)
+        # gen2 = np.random.RandomState(seed=None)
+        gen2 = np.random.RandomState(seed=seed+1 if seed is not None else None)
 
         # The interarrival times of a poisson process follow an exponential
         def arrival_dist():
