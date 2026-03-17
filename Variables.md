@@ -42,18 +42,18 @@ Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(ut
 Default number of slots on a server  
 ```Server.slots = 50```
  
-##### Set load functions
+##### Set slots functions
 
 These are called when a new job comes, or a job finishes.
-They increase the load or decrease the load on the server.
-The default is to increase or decrease the load by 1 for each job.
+They increase the slots used or decrease the slots used on the server.
+The default is to increase or decrease the slots used by 1 for each job.
 
 We might change these as a job we are modelling may be more expensive
 that a standard job.
 
 ```
-Server.load_up_fn = staticmethod(lambda val: val + 2)    
-Server.load_down_fn = staticmethod(lambda val: val - 2)
+Server.slots_up_fn = staticmethod(lambda val: val + 2)    
+Server.slots_down_fn = staticmethod(lambda val: val - 2)
 ```
 
 

@@ -4,11 +4,11 @@ from Verbose import Verbose
 from Utility import Utility
 from enum import Enum
 
-# some default values for the load and flows functions
-def load_up_by1(val):
+# some default values for the slots and flows functions
+def slots_up_by1(val):
     return val + 1
 
-def load_down_by1(val):
+def slots_down_by1(val):
     return val - 1
 
 def flows_up_by1(val):
@@ -52,6 +52,8 @@ class Server(Host):
     """ A Server in the emulation.
     """
 
+    # class variables
+    
     # capacity as no of slots
     slots = 10
 
@@ -59,8 +61,8 @@ class Server(Host):
     change_factor = 0.1
 
     # load and flow functions
-    load_up_fn = staticmethod(load_up_by1)
-    load_down_fn = staticmethod(load_down_by1)
+    slots_up_fn = staticmethod(slots_up_by1)
+    slots_down_fn = staticmethod(slots_down_by1)
     flows_up_fn = staticmethod(flows_up_by1)
     flows_down_fn = staticmethod(flows_down_by1)
     
@@ -82,6 +84,10 @@ class Server(Host):
         # current values from requests
         self.load = 0
         self.no_of_flows = 0
+        # currenly used slots
+        self.slots = Server.slots
+        self.used_slots = 0
+
 
 
 
@@ -251,11 +257,12 @@ class Server(Host):
                 self.env.process(self.delay_announce(timeout, time, service_name))
 
     # Work out load difference
+    # since last announcement
     def calculate_load_difference(self):
-        last_flows = self.last_payload['no_of_flows']
-        flows = self.no_of_flows
+        last_load = self.last_payload['load']
+        current_load = self.calculate_load()
 
-        return round(abs((last_flows / self.slots) - (flows / self.slots)), 3)
+        return round(abs(last_load - current_load), 3)
 
 
     # Delay an announcement
@@ -279,7 +286,7 @@ class Server(Host):
         packet.pkt_no = self.pkt_no
         packet.msg_time = time
 
-        # save last_payload
+        # save last_payload announced
         self.last_payload = self.calculate_payload()
 
         if Verbose.level >= 1:
@@ -301,7 +308,7 @@ class Server(Host):
         return { 'load': self.calculate_load(),
                  'no_of_flows': self.calculate_flows(),
                  'delay': 0,
-                 'slots': self.calculate_slots() }
+                 'slots': self.used_slots }
 
     # increase load based on request size
     def increase_load(self, request):
@@ -312,12 +319,14 @@ class Server(Host):
         # dig out size of request
         size = request.size
 
-        # calculate new load
-        new_load = Server.load_up_fn(self.load)
+        # calculate new info
+        new_slots = Server.slots_up_fn(self.used_slots)
         new_flows =  Server.flows_up_fn(self.no_of_flows)
 
+        potential_slots = self.calculate_available_slots(new_slots)
+
         # now we need to check the capacity to see if we can accept this request
-        if (self.calculate_slots() == 0):
+        if (potential_slots <= 0):
             # there is no more capacity to take a job
             if Verbose.level >= 0:
                 print("{:.3f}: NO_MORE CAPACITY {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
@@ -326,11 +335,13 @@ class Server(Host):
         else:
             # process extra load
 
-            self.load = new_load
+            self.used_slots = new_slots
             self.no_of_flows = new_flows
+            
+            self.load = self.calculate_load()
 
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} INCREASE_LOAD request {}.{} timeout {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size), self.load, self.no_of_flows, self.calculate_slots()))
+                print("{:.3f}: {:5s} INCREASE_LOAD request {}.{} timeout: {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size), self.load, self.no_of_flows, potential_slots))
 
 
             # Destination is likely to be a service name: e.g. §a
@@ -348,15 +359,21 @@ class Server(Host):
 
         yield self.env.timeout(size_to_time(request.size))
 
-        new_load = Server.load_down_fn(self.load)
+        new_slots = Server.slots_down_fn(self.used_slots)
         new_flows =  Server.flows_down_fn(self.no_of_flows)
     
-        self.load = new_load
+        self.used_slots = new_slots
         self.no_of_flows = new_flows
         
+        potential_slots = self.calculate_available_slots(new_slots)
+
+
+        self.load = self.calculate_load()
+
+
 
         if Verbose.level >= 1:
-            print("{:.3f}: {:5s} DECREASE_LOAD request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(request.size),  self.load, self.no_of_flows, self.calculate_slots()))
+            print("{:.3f}: {:5s} DECREASE_LOAD request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(request.size),  self.load, self.no_of_flows, potential_slots))
 
         # Destination is likely to be a service name: e.g. §a
         service_name = request.dst
@@ -368,10 +385,9 @@ class Server(Host):
 
     # Calculate the load
     def calculate_load(self):
-        # we take the load from the last_event_info and
-        # the load from the Client requests to
-        # make the result
-        return int(self.last_event_info['load']) + int(self.load)
+        # the load is the used_slots / slot
+        # print(self.id() + " calculate_load: " + str(self.used_slots) + " / " + str(self.slots))
+        return self.used_slots / self.slots
 
     
     # Calculate the no of flows
@@ -382,9 +398,12 @@ class Server(Host):
         return int(self.last_event_info['no_of_flows']) + int(self.no_of_flows)
 
     # Calculate the slots available
-    def calculate_slots(self):
-        # this is currently:  slots - calculate_flows()
-        raw = self.slots - self.calculate_flows()
+    # Pass is new_val, which would be the potential slots used
+    # The return value is < 0 if there are not enough slots available
+    def calculate_available_slots(self, new_val):
+        # this is currently:  self.slots - new_val
+        raw = self.slots - new_val
+        # print(self.id() + " calculate_available_slots: " + str(raw) + " = " + str(self.slots) + " - " + str(new_val))
         return raw
 
     

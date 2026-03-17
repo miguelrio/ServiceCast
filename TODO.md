@@ -15,11 +15,13 @@ at the first Router.
 
 #### Load values
 
+**DONE**
 Load values are not in range 0 -> 1.
 Currently based on slot.
 
-#### Utility function value DONE
+#### Utility function value
 
+**DONE**
 The Utility function has been changed so that:
 - 0 is the worst value
 - 1 is the best value
@@ -40,14 +42,17 @@ Draft formula not correct.
 
 ####  Server metrics update
 
-Servers should have load_utilty in range 0 -> 1.
-We can divide load by total slots 
+**DONE**
+- Servers should have load_utilty in range 0 -> 1.
+- We can divide load by total slots 
 
-Adjust load_up_fn and load_down_fn to be slots_up_fn and slots_down_fn
+- Adjust load_up_fn and load_down_fn to be slots_up_fn and slots_down_fn 
+- Make load derived from slots.
 
-Make load derived from slots.
-
-
+Changes made:
+- Server keeps track of slots used in self.used_slots
+- The calculate load function = used_slots / slots
+- Changed calculate_load_difference()
 
 # TODO
 
