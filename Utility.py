@@ -21,3 +21,16 @@ class Utility:
     # alpha
     alpha = 0.5
 
+    # Ensure Utility value is in range 0 -> 1
+    @classmethod
+    def eval_forwarding_utility(cls, alpha, load, delay):
+        value = cls.forwarding_utility_fn(alpha, load, delay)
+
+        # print("eval_forwarding_utility = {} for alpha {} load {} delay_utility {}".format(value, alpha, load, delay))
+
+        if value < 0:
+            return 0
+        elif value > 1:
+            return 1
+        else:
+            return value

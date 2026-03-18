@@ -29,17 +29,22 @@ def topology_setup():
     # Server slots
     Server.slots = 20
 
+
+    # showing how to define sub functions for the forwarding_utility_fn
     # load:  0 -> 1
-    utility_load = lambda load: (1-(0.12*load)) if load < 0.8  else (4.5-(4.5*load))
-    # delay: 0 -> 10
+    utility_load = lambda load: (0.1 + (0.5*load)) if load < 0.8  else (1-(0.5*load))
+    # delay: 0 -> 1
     utility_delay = lambda delay: (1-(0.1*delay)) if delay <= 10 else 0
 
     # actual utility fn (lower = worse, higher = better)
-    Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(utility_load(load / (2 * Server.slots)) * utility_delay(delay), 4))
+    # Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(utility_load(load / (2 * Server.slots)) * utility_delay(delay), 4))
+    Utility.forwarding_utility_fn =  staticmethod(lambda alpha, load, delay: round(utility_load(load) * utility_delay(delay), 4))
 
-    # more load per flow
-    Server.load_up_fn = staticmethod(lambda val: val + 1)
-    Server.load_down_fn = staticmethod(lambda val: val - 1)
+    # more slots per flow
+    Server.slots_up_fn = staticmethod(lambda val: val + 1)
+    Server.slots_down_fn = staticmethod(lambda val: val - 1)
+
+    Server.change_factor = 0
 
     # dict approach
     # Router.better_than_fn['load'] = staticmethod(lambda x, y: x < y)

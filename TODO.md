@@ -3,7 +3,11 @@
 Fixed issue when there are no more slots in the whole system.
 
 
+
 # Issues
+
+
+
 
 #### Client Request Forwarding
 
@@ -16,12 +20,26 @@ at the first Router.
 #### Load values
 
 **DONE**
-Load values are not in range 0 -> 1.
-Currently based on slot.
+- Load values are not in range 0 -> 1.
+- Currently based on slot.
+
+#### Delay values
+
+**DONE**
+- Map delay from actual values into range 0 -> 1.
+
+- Added to `Network.py`  `get_delay_utility()` function
+  which calculates: delay / network_diameter()
+
 
 #### Utility function value
 
 **DONE**
+- Ensure Utility is in range 0 -> 1.
+- Check before returning from Utility.forwarding_utility_fn
+
+
+**DONE**  
 The Utility function has been changed so that:
 - 0 is the worst value
 - 1 is the best value

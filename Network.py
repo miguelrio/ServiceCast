@@ -637,16 +637,33 @@ class Network:
             # get latency from client to server
             latency = self.latency_table[server.id()][client_name]
 
+            # Now we map the actual latency / delay into a delay_utility
+            # which is a value between 0 and 1
+            delay_utility = self.get_delay_utility(latency)
+
+
             # calculate utility
             # we use
             # alpha --> same alpha
             # load --> load at chosen replica
             # delay --> length of path (sum of weigths) from client to chosen replica
 
-            utility = Utility.forwarding_utility_fn(Utility.alpha, load, latency)
+            utility = Utility.eval_forwarding_utility(Utility.alpha, load, delay_utility)
 
+            # save forwarding utility value for this server
             utility_values[server.id()] = utility
 
+            
+            # current values
+            if Verbose.level >= 3:
+                print("best_replica_utility: '" + server.id() + "' load = " + str(load))
+                print("best_replica_utility: '" + server.id() + "' delay = " + str(latency))
+                print("best_replica_utility: '" + server.id() + "' delay_utility = " + str(delay_utility))
+                print("best_replica_utility: '" + server.id() + "' forwarding_utility = " + str(utility))
+            
+            
+
+        # summary
         if Verbose.level >= 3:
             print("best_replica_utility: '" + requesting_server_id + "' load = " + str(load_values))
             print("best_replica_utility: '" + requesting_server_id + "' latency = " + str(self.latency_table[requesting_server_id]))
@@ -732,8 +749,13 @@ class Network:
             self.replica_capacity_total["slots"] += entry["slots"]
             self.replica_capacity_total["capacity"] += entry["capacity"]
 
+        # load is total load: self.replica_capacity_total["load"]
+        # divided by no of replicas:  len(self.replica_capacity)
+
+        load = self.replica_capacity_total["load"] / len(self.replica_capacity)
+
         if Verbose.level >= 0:
-            print ("{:.3f}: {:5s} REPLICA_CAPACITY_NETWORK 'load': {}, 'no_of_flows': {}, 'slots': {},  'capacity': {}".format(self.env.now, "Net ", self.replica_capacity_total["load"],  self.replica_capacity_total["no_of_flows"],  self.replica_capacity_total["slots"] ,  self.replica_capacity_total["capacity"]   ))
+            print ("{:.3f}: {:5s} REPLICA_CAPACITY_NETWORK 'load': {} 'no_of_flows': {}  'capacity': {}  'slots': {}  (Update from {})".format(self.env.now, "Net ", round(load, 6) ,  self.replica_capacity_total["no_of_flows"],  self.replica_capacity_total["capacity"],  self.replica_capacity_total["slots"], replica ))
 
     # Get the load_utility for a replica
     def get_load_utility(self, replica):
@@ -767,6 +789,11 @@ class Network:
         return avg
         
 
+    # Get the delay_utility for a delay
+    # This is the delay / network_diameter
+    def get_delay_utility(self, delay):
+        return delay / self.network_diameter()
+    
 
     def print(self):
         print("{", end="\n")

@@ -1,6 +1,7 @@
 from Graph import Graph
 from Network import Network
 from Server import Server
+from Router import Router
 from Client import Client
 from Generator import Generator
 from Verbose import Verbose
@@ -22,7 +23,12 @@ def topology_setup():
     # Set slots
     Server.slots = 50
 
+    # Server change factor damping
+    Server.change_factor = 0.05
 
+    # Router change factor damping
+    Router.forwarding_utility_change_factor = 0.05
+    
     # 1 - Define the topology
     print("- DFN")
     gml_file = "gml/Dfn.gml"

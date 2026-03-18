@@ -72,6 +72,14 @@ class Server(Host):
         self.pkt_no = 1
         self.saved_event = None
 
+        # current values from requests
+        self.load = 0
+        self.no_of_flows = 0
+        # currenly used slots
+        self.slots = Server.slots
+        self.used_slots = 0
+
+
         # values from last LoadEvent
         self.last_event_info =  { 'load': -1, 'no_of_flows': -1 }  # start condition
         # values from client requests
@@ -79,14 +87,8 @@ class Server(Host):
 
         # last payload of a ServerMetric msg
         self.last_payload = { 'load': 0, 'no_of_flows': 0,
-                              'delay': 0, 'slots': self.slots }
-
-        # current values from requests
-        self.load = 0
-        self.no_of_flows = 0
-        # currenly used slots
-        self.slots = Server.slots
-        self.used_slots = 0
+                              'delay': 0, 'slots': self.slots,
+                              'used_slots': self.used_slots }
 
 
 
@@ -308,7 +310,8 @@ class Server(Host):
         return { 'load': self.calculate_load(),
                  'no_of_flows': self.calculate_flows(),
                  'delay': 0,
-                 'slots': self.used_slots }
+                 'slots': self.slots,
+                 'used_slots': self.used_slots }
 
     # increase load based on request size
     def increase_load(self, request):

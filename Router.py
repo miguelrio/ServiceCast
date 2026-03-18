@@ -87,7 +87,7 @@ class Router(object):
         self.best_replica = None
         self.best_neighbour = None
         self.servicename = None
-        self.best_utility = -1
+        self.best_utility = -0.0000000001   # just a tiny bit < 0
 
         # service forwarding table
         self.service_forwarding_table = dict()
@@ -354,7 +354,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             if Verbose.level >= 1:
                 # example:   381.000: POT   ANNOUNCEMENT_DISTANCE msgid: 24 replica: s4 msg time: 379.0  propagation_time: 2 load_utility(s4): 2.0 average_load_utility: 1.9 replica_capacity: 45 system_available_capacity: 232 announcement_distance: 1.494 
-                print("{:.3f}: {:5s} ANNOUNCEMENT_DISTANCE msgid: {} replica: {} msg time: {}  propagation_time: {} load_utility({}): {} average_load_utility: {} replica_capacity: {} system_available_capacity: {} announcement_distance: {} ".format(self.env.now, self.id(), msgID, replica, creationTime, round(propagation_time, 6), replica, load_utility, average_load_utility, replica_available_capacity, system_available_capacity,  round(announcement_distance, 3)))
+                print("{:.3f}: {:5s} ANNOUNCEMENT_DISTANCE msgid: {} replica: {} msg time: {}  propagation_time: {} load_utility({}): {} average_load_utility: {} replica_capacity: {} system_available_capacity: {} announcement_distance: {} ".format(self.env.now, self.id(), msgID, replica, creationTime, round(propagation_time, 6), replica, load_utility, round(average_load_utility, 6), replica_available_capacity, system_available_capacity,  round(announcement_distance, 3)))
 
             # do the announcement
             self.incoming_server_metrics_packet_announce(link_end, packet)
@@ -683,8 +683,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         replica = packet.replica
         creationTime = round(packet.msg_time, 6)
         metrics = packet.payload
-        
-        value = {'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'slots': int(metrics['slots']), 'capacity': (int(metrics['load']) + int(metrics['slots']))}
+
+        value = {'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': int(metrics['no_of_flows']), 'slots': int(metrics['slots']), 'capacity': metrics['slots'] -  metrics['used_slots']}
 
         self.connected_capacity[replica] = value
 
@@ -696,7 +696,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         creationTime = round(packet.msg_time, 6)
         metrics = packet.payload
         
-        self.connected_capacity[replica] = {'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'slots': int(metrics['slots']), 'capacity': (int(metrics['load']) + int(metrics['slots']))}
+        self.connected_capacity[replica] = {'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': int(metrics['no_of_flows']), 'slots': int(metrics['slots']), 'capacity': metrics['slots'] -  metrics['used_slots']}
 
         # calculate total
         self.connected_capacity_total = { 'load': 0, 'no_of_flows': 0, 'slots': 0, 'capacity': 0 }
@@ -1028,7 +1028,21 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Call the forwarding_utility_fn
     # which is usually set as a lambda in forwarding_utility_fn
     def call_forwarding_utility(self, alpha, load, delay):
-        return Utility.forwarding_utility_fn(alpha, load, delay)
+
+        # First we map the actual delay into a delay_utility
+        # which is a value between 0 and 1
+        delay_utility = self.network.get_delay_utility(delay)
+
+        if Verbose.level >= 2:
+            print("{:.3f}: {:5s} delay_utility = {} for delay {}".format(self.env.now, self.id(), delay_utility, delay))
+        
+        # calculate the utility
+        forwarding_utility =  Utility.eval_forwarding_utility(alpha, load, delay_utility)
+
+        if Verbose.level >= 2:
+            print("{:.3f}: {:5s} forwarding_utility = {} for load {} delay_utility {}".format(self.env.now, self.id(), forwarding_utility, load, delay_utility))
+        
+        return forwarding_utility
 
     #  Check if fw table needs changing
     def choose_best_forwarding_replica(self, entries):
@@ -1060,7 +1074,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             utility[entry_no] = utility_i
 
             if Verbose.level >= 2:
-                print ("\t\t{:2d}. neighbour: {} utility_i: {}".format(entry_no, entry['neighbour'], utility_i))
+                print ("\t\t{:2d}. alpha: {} load: {} delay: {} neighbour: {} utility_i: {}".format(entry_no, Utility.alpha, entry['load'], entry['delay'], entry['neighbour'], utility_i))
+
+            #if Verbose.level >= 2:
+            #    print ("\t\t{:2d}. neighbour: {} utility_i: {}".format(entry_no, entry['neighbour'], utility_i))
 
 
             # is utility of this entry > current best utility 
@@ -1175,6 +1192,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Work out utility difference from self.best_utility
     def calculate_utility_difference(self, utility, best_utility):
         diff = utility - best_utility 
+
+        # print("calculate_utility_difference: diff = " + str(diff) + " utility = " + str(utility) + " best_utility = " + str(best_utility))
 
         return round(abs(diff), 4)
 
