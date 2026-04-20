@@ -73,7 +73,7 @@ class Server(Host):
         self.saved_event = None
 
         # current values from requests
-        self.load = 0
+        self.load = 0.0
         self.no_of_flows = 0
         # currenly used slots
         self.slots = Server.slots
@@ -81,12 +81,12 @@ class Server(Host):
 
 
         # values from last LoadEvent
-        self.last_event_info =  { 'load': -1, 'no_of_flows': -1 }  # start condition
+        self.last_event_info =  { 'load': -1.0, 'no_of_flows': -1 }  # start condition
         # values from client requests
-        self.request_info =  { 'load': 0, 'no_of_flows': 0 }
+        self.request_info =  { 'load': 0.0, 'no_of_flows': 0 }
 
         # last payload of a ServerMetric msg
-        self.last_payload = { 'load': 0, 'no_of_flows': 0,
+        self.last_payload = { 'load': 0.0, 'no_of_flows': 0,
                               'delay': 0, 'slots': self.slots,
                               'used_slots': self.used_slots }
 
