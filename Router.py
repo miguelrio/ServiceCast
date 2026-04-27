@@ -1198,32 +1198,46 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print("{:.3f}: {:5s} RECV_PACKET ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
 
         # Destination is likely to be a service name: e.g. §a
-        service_name = packet.dst
+        client_name = packet.src
 
-        # Check if we know that service name
-        if not service_name in self.service_forwarding_table:
-            # service_name isn't in service_forwarding_table
+        # Evaluate best replica for THIS client using RIB entries
+        entries = self.service_RIB.all()
+
+        if not entries:
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} NO_SERVICE_FORWARDING_TABLE_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+                print("{:.3f}: {:5s} NO_RIB_ENTRIES ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+            return
 
-        else:
-            # First we look up the service name
-            neighbour = self.service_forwarding_table[service_name]
+        best_neighbour = None
+        best_utility = -1
+        best_replica = None
+
+        for entry in entries:
+            replica = entry['replica']
+
+            # Estimate server->Client latency using only information available to this Router:
+            # entry['delay'] = server->Router (from RIB, accumulated metric propagation)
+            # latency_table[self.id()][client_name] = Router->Client (from local Dijkstra)
+            latency = entry['delay'] + self.network.latency_table[self.id()][client_name]
+
+            utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], latency)
 
             if Verbose.level >= 2:
-                print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, neighbour))
+                print("{:.3f}: {:5s} CLIENT_EVAL replica: {} load: {} latency: {} utility: {}".format(self.env.now, self.id(), replica, entry['load'], latency, utility_i))
 
-            if neighbour == None:
-                # service_name is in service_forwarding_table, but has no value
-                if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
-            else:
-                # value is link_end
-                # so forwarding the packet
-                if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
+            if utility_i > best_utility:
+                best_utility = utility_i
+                best_neighbour = entry['neighbour']
+                best_replica = replica
 
-                self.outgoing_ports[neighbour].put(packet)
+        if best_neighbour is None:
+            if Verbose.level >= 1:
+                print("{:.3f}: {:5s} NO_BEST_REPLICA ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+        else:
+            if Verbose.level >= 1:
+                print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {} (best replica: {})".format(self.env.now, self.id(), packet.dst, packet.id, best_neighbour, best_replica))
+
+            self.outgoing_ports[best_neighbour].put(packet)
 
     # Do normal forwarding
     def normal_forwarding_packet(self, link_end, packet):
