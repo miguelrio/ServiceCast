@@ -1,6 +1,5 @@
 # Bugs
 
-Fixed issue when there are no more slots in the whole system.
 
 
 
@@ -78,6 +77,9 @@ Changes made:
 - Server keeps track of slots used in self.used_slots
 - The calculate load function = used_slots / slots
 - Changed calculate_load_difference()
+
+**DONE**
+Fixed issue when there are no more slots in the whole system.
 
 # TODO
 
