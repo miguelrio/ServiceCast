@@ -1,8 +1,6 @@
 # Bugs
 
 
-
-
 # Issues
 
 Change utilty fn from:
@@ -13,6 +11,10 @@ to
 
     return 1 - (alpha * load + (1-alpha) * delay)
 
+#### Announcement Radius
+
+Still to be refined.
+Draft formula not correct.
 
 
 #### Client Request Forwarding
@@ -59,10 +61,6 @@ Changes made:
 - `Variables.md`: Updated documentation examples
 
 
-#### Announcement Radius
-
-Still to be refined.
-Draft formula not correct.
 
 ####  Server metrics update
 
