@@ -6,6 +6,13 @@ Fixed issue when there are no more slots in the whole system.
 
 # Issues
 
+Change utilty fn from:
+
+    return 1 / (1 + alpha * load + (1-alpha) * delay) 
+
+to
+
+    return 1 - (alpha * load + (1-alpha) * delay)
 
 
 
