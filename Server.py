@@ -225,7 +225,11 @@ class Server(Host):
         # now tell the network about the 'load_utility'
         # alpha * load (in current emulator)
 
-        load_utility = Utility.alpha * self.last_payload['load']
+        # WAS load_utility = Utility.alpha * self.last_payload['load']
+        load_utility = self.calculate_load()
+
+        if Verbose.level >= 2:
+            print("{:.3f}: {:5s} LOAD_UTILITY: = {} ".format(self.env.now, self.id(), load_utility))        
 
         self.network.update_load_utility(self.id(), load_utility)
 
@@ -253,7 +257,7 @@ class Server(Host):
                 timeout = int(now) + 1 - now
 
                 if Verbose.level >= 2:
-                    print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric in {}".format(self.env.now, self.id(),diff, timeout))
+                    print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric at next second boundary in {:.3f} secs".format(self.env.now, self.id(),diff, timeout))
                 
                 # process callback for a delayed announce
                 self.env.process(self.delay_announce(timeout, time, service_name))
