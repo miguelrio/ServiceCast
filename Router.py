@@ -436,7 +436,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # If there is NO existing entry in the service RIB
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.service_RIB.insert({ 'replica': replica, 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': int(metrics['no_of_flows']), 'delay': metrics['delay'], 'slots': metrics['slots']  })
+            val = self.service_RIB.insert({ 'replica': replica, 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots']  })
 
             if Verbose.level >= 1:
                 print ("{:.3f}: {:5s} ADD_METRIC metric from {} as no {}".format(self.env.now, self.id(), replica, val) )
@@ -460,10 +460,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             # replica stay the same
             # update other values
-            val = self.service_RIB.update({ 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': int(metrics['no_of_flows']), 'delay': metrics['delay'], 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
+            val = self.service_RIB.update({ 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
 
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} UPDATE_METRIC metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, metrics['load'], metrics['delay']))
+                print("{:.3f}: {:5s} UPDATE_METRIC metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
 
             # mark this doc_id, if in sent_table
             # val[0] is a doc_id
@@ -1080,7 +1080,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             #    print ("\t\t{:2d}. neighbour: {} utility_i: {}".format(entry_no, entry['neighbour'], utility_i))
 
 
-            # is utility of this entry > current best utility
+            # is utility of this entry > current best utility 
             if (utility_i > this_best_utility):
                 # update best replica data
                 this_best_replica = entry['replica']
@@ -1088,9 +1088,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 this_servicename = entry['servicename']
                 this_best_utility = utility_i
 
-            # always capture the current utility of the old best replica
-            if entry['replica'] == old_best_replica:
-                old_best_utility = utility_i
+                # patch up the utility of the old_best_replica
+                # with the current utility value
+                if  this_best_replica == old_best_replica:
+                    old_best_utility = this_best_utility
 
         if Verbose.level >= 1:
             self.print_utility_info(entries, utility)
@@ -1138,23 +1139,29 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 self.servicename = this_servicename 
                 self.best_utility = this_best_utility
         else:
-            # same replica - always update utility to current value
-            # Damping only prevents switching replicas, not recording the current utility
-
-            self.best_utility = this_best_utility
+            # same replica - maype update values for this replica
 
             if (diff == 0):
+                # no change, do nothing
+
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " keep ", old_best_replica ))
+                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not update ", old_best_replica ))
 
             elif (diff < Router.forwarding_utility_change_factor):
+                # change is too small, do nothing
+
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.forwarding_utility_change_factor, " update utility ", old_best_replica ))
+                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.forwarding_utility_change_factor, " do not update ", old_best_replica ))
 
 
             else:
+                # update utility for this replica
+                
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.forwarding_utility_change_factor, " update utility ", old_best_replica ))
+                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.forwarding_utility_change_factor, " update ", old_best_replica ))
+
+
+                self.best_utility = this_best_utility
 
 
 
@@ -1198,46 +1205,32 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print("{:.3f}: {:5s} RECV_PACKET ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
 
         # Destination is likely to be a service name: e.g. §a
-        client_name = packet.src
+        service_name = packet.dst
 
-        # Evaluate best replica for THIS client using RIB entries
-        entries = self.service_RIB.all()
-
-        if not entries:
+        # Check if we know that service name
+        if not service_name in self.service_forwarding_table:
+            # service_name isn't in service_forwarding_table
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} NO_RIB_ENTRIES ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
-            return
+                print("{:.3f}: {:5s} NO_SERVICE_FORWARDING_TABLE_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
 
-        best_neighbour = None
-        best_utility = -1
-        best_replica = None
-
-        for entry in entries:
-            replica = entry['replica']
-
-            # Estimate server->Client latency using only information available to this Router:
-            # entry['delay'] = server->Router (from RIB, accumulated metric propagation)
-            # latency_table[self.id()][client_name] = Router->Client (from local Dijkstra)
-            latency = entry['delay'] + self.network.latency_table[self.id()][client_name]
-
-            utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], latency)
+        else:
+            # First we look up the service name
+            neighbour = self.service_forwarding_table[service_name]
 
             if Verbose.level >= 2:
-                print("{:.3f}: {:5s} CLIENT_EVAL replica: {} load: {} latency: {} utility: {}".format(self.env.now, self.id(), replica, entry['load'], latency, utility_i))
+                print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, neighbour))
 
-            if utility_i > best_utility:
-                best_utility = utility_i
-                best_neighbour = entry['neighbour']
-                best_replica = replica
+            if neighbour == None:
+                # service_name is in service_forwarding_table, but has no value
+                if Verbose.level >= 1:
+                    print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+            else:
+                # value is link_end
+                # so forwarding the packet
+                if Verbose.level >= 1:
+                    print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
 
-        if best_neighbour is None:
-            if Verbose.level >= 1:
-                print("{:.3f}: {:5s} NO_BEST_REPLICA ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
-        else:
-            if Verbose.level >= 1:
-                print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {} (best replica: {})".format(self.env.now, self.id(), packet.dst, packet.id, best_neighbour, best_replica))
-
-            self.outgoing_ports[best_neighbour].put(packet)
+                self.outgoing_ports[neighbour].put(packet)                
 
     # Do normal forwarding
     def normal_forwarding_packet(self, link_end, packet):
