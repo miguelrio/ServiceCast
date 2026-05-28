@@ -159,11 +159,14 @@ class Server(Host):
             print("{:.3f}: {:5s} PACKET_PROCESSING {}.{} ({:.3f}) in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
         if packet.dst == self.hostid:
-            # consume the packet
-            self.sink.put(packet)
+            if getattr(packet, 'type', False) == "ClientRequest":
+                self.client_request_packet(link_end, packet)
+            else:
+                # consume the packet
+                self.sink.put(packet)
 
-            if Verbose.level >= 2:
-                print("{:.3f}: {:5s} PACKET_CONSUMED {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, self.hostid, (self.env.now - packet.time)))
+                if Verbose.level >= 2:
+                    print("{:.3f}: {:5s} PACKET_CONSUMED {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, self.hostid, (self.env.now - packet.time)))
 
         else:
             # MR: if packet is data packet (ClientRequest)
@@ -186,9 +189,10 @@ class Server(Host):
     # Handle a ClientRequest
     def client_request_packet(self, link_end, packet):
         """A Client has sent a request"""
+        service_name = getattr(packet, 'service', packet.dst)
 
         if Verbose.level >= 1:
-            print("{:.3f}: {:5s} SERVER_PROCESS ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.id))
+            print("{:.3f}: {:5s} SERVER_PROCESS ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), service_name, packet.src, packet.id))
 
         # Do some processing and logging to determine some ideal info.
         # Calls into the Network to get a global view
@@ -201,9 +205,10 @@ class Server(Host):
     # Process a ClientRequest packet
     def process_client_request_packet(self, packet):
         """Process a ClientRequest packet"""
+        service_name = getattr(packet, 'service', packet.dst)
 
         # convert packet data into a Request
-        request = Request(packet.src, packet.dst, packet.id, packet.size)
+        request = Request(packet.src, service_name, packet.id, packet.size)
 
         # increase_load will trigger a callback to decrease_load
         new_load = self.increase_load(request)

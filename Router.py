@@ -40,6 +40,9 @@ class Router(object):
     # forwarding utility change factor  10% -> 0.1
     forwarding_utility_change_factor = 0.1
 
+    # routing mode: True for hop-by-hop anycast, False for first-decide unicast
+    hop_by_hop = True
+
     # The following staticmethods can be reset from the outside
     # to change the behaviour of the algorithms
 
@@ -91,6 +94,9 @@ class Router(object):
 
         # service forwarding table
         self.service_forwarding_table = dict()
+
+        # best replicas table mapping service name -> best replica ID
+        self.best_replicas = dict()
 
         # are we aggregating directly connected replicas
         self.aggregating_connected = False
@@ -1184,6 +1190,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # update best_neighbour for servicename
         self.service_forwarding_table[self.servicename] =  self.best_neighbour
+        if self.servicename:
+            self.best_replicas[self.servicename] = self.best_replica
 
         if Verbose.level >= 1:
             print("{:.3f}: {:5s} SERVICE_FORWARDING_TABLE {}".format(self.env.now, self.id(), self.service_forwarding_table))
@@ -1207,30 +1215,42 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # Destination is likely to be a service name: e.g. §a
         service_name = packet.dst
 
-        # Check if we know that service name
-        if not service_name in self.service_forwarding_table:
-            # service_name isn't in service_forwarding_table
-            if Verbose.level >= 1:
-                print("{:.3f}: {:5s} NO_SERVICE_FORWARDING_TABLE_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
-
-        else:
-            # First we look up the service name
-            neighbour = self.service_forwarding_table[service_name]
-
-            if Verbose.level >= 2:
-                print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, neighbour))
-
-            if neighbour == None:
-                # service_name is in service_forwarding_table, but has no value
+        if Router.hop_by_hop:
+            # --- Original Hop-by-Hop Anycast Routing ---
+            if not service_name in self.service_forwarding_table:
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+                    print("{:.3f}: {:5s} NO_SERVICE_FORWARDING_TABLE_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
             else:
-                # value is link_end
-                # so forwarding the packet
-                if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
+                neighbour = self.service_forwarding_table[service_name]
+                if Verbose.level >= 2:
+                    print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, neighbour))
 
-                self.outgoing_ports[neighbour].put(packet)                
+                if neighbour == None:
+                    if Verbose.level >= 1:
+                        print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+                else:
+                    if Verbose.level >= 1:
+                        print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
+                    self.outgoing_ports[neighbour].put(packet)
+        else:
+            # --- First-Decide Single-Decision Unicast Routing ---
+            if not service_name in self.best_replicas:
+                if Verbose.level >= 1:
+                    print("{:.3f}: {:5s} NO_SERVICE_FORWARDING_TABLE_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+            else:
+                best_replica = self.best_replicas[service_name]
+                if Verbose.level >= 2:
+                    print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, best_replica))
+
+                if best_replica == None:
+                    if Verbose.level >= 1:
+                        print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+                else:
+                    packet.service = service_name
+                    packet.dst = best_replica
+                    if Verbose.level >= 1:
+                        print("{:.3f}: {:5s} SINGLE_DECISION ClientRequest for service {} mapped to replica {} pkt: {} send to neighbour".format(self.env.now, self.id(), service_name, best_replica, packet.id))
+                    self.normal_forwarding_packet(link_end, packet)                
 
     # Do normal forwarding
     def normal_forwarding_packet(self, link_end, packet):
@@ -1250,14 +1270,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 neighbour = self.route_to(packet.dst)
                 
-                if link_end.src_node.id() == neighbour:
+                if link_end and link_end.src_node and link_end.src_node.id() == neighbour:
                     # don't send to where it came from
                     if Verbose.level >= 2:
                         print("{:.3f}: PACKET {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
 
 
-                elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
-                    # don't send to any connected Hosts
+                elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host) and packet.dst != self.outgoing_ports[neighbour].out.dst_node.id():
+                    # don't send to any connected Hosts unless it is the destination of the packet
                     if Verbose.level >= 2:
                         print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
 
