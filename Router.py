@@ -442,7 +442,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # If there is NO existing entry in the service RIB
         if results == []:
             # nothing found - it must be new, so add it
-            val = self.service_RIB.insert({ 'replica': replica, 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots']  })
+            val = self.service_RIB.insert({ 'replica': replica, 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': int(metrics['no_of_flows']), 'delay': metrics['delay'], 'slots': metrics['slots']  })
 
             if Verbose.level >= 1:
                 print ("{:.3f}: {:5s} ADD_METRIC metric from {} as no {}".format(self.env.now, self.id(), replica, val) )
@@ -466,10 +466,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             # replica stay the same
             # update other values
-            val = self.service_RIB.update({ 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': int(metrics['load']), 'no_of_flows': int(metrics['no_of_flows']), 'delay': int(metrics['delay']), 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
+            val = self.service_RIB.update({ 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': metrics['no_of_flows'], 'delay': metrics['delay'], 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
 
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} UPDATE_METRIC metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, int(metrics['load']), int(metrics['delay']) ))
+                print("{:.3f}: {:5s} UPDATE_METRIC metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, metrics['load'], metrics['delay'] ))
 
             # mark this doc_id, if in sent_table
             # val[0] is a doc_id
