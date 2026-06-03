@@ -11,6 +11,10 @@ from gml import read_gml, write_gml
 import sys
 
 class Network:
+    # Timing of ground truth optimal utility measurement:
+    # 'replica' (at server arrival), 'router' (at forwarding decision), 'client' (at request origination)
+    optimal_utility_timing = 'replica'
+
     def __init__(self, env = None):
         """ Create a network
         """
@@ -609,6 +613,49 @@ class Network:
 
         return diameter
         
+    # Snapshot the optimal utility at the current time
+    # and store on the packet for later comparison
+    def snapshot_optimal_utility(self, packet):
+        """Compute optimal replica utility now and store on packet."""
+        client_name = packet.src
+        servers = [r for r in self.network_nodes() if isinstance(r, Server)]
+
+        all_utilities = {}
+        all_loads = {}
+
+        for server in servers:
+            load = server.calculate_load()
+            latency = self.latency_table[server.id()][client_name]
+            delay_utility = self.get_delay_utility(latency)
+            utility = Utility.eval_forwarding_utility(Utility.alpha, load, delay_utility)
+
+            all_utilities[server.id()] = utility
+            all_loads[server.id()] = load
+
+        # Find maximum utility and list of optimal candidates
+        max_utility = max(all_utilities.values()) if all_utilities else -1
+        best_servers = [sid for sid, util in all_utilities.items() if util == max_utility]
+
+        # Resolve tie-breaker in favor of selected destination replica if it is in the optimal set
+        selected_replica = getattr(packet, 'dst', None)
+        if selected_replica in best_servers:
+            best_id = selected_replica
+        else:
+            best_id = best_servers[0] if best_servers else None
+
+        best_load = all_loads[best_id] if best_id else 0
+        best_latency = self.latency_table[best_id][client_name] if best_id else 0
+        best_utility = max_utility
+
+        packet.optimal_snapshot = {
+            'server_id': best_id,
+            'load': best_load,
+            'latency': best_latency,
+            'utility': best_utility,
+            'all_utilities': all_utilities,
+            'all_loads': all_loads
+        }
+
     # Get the utility for best server / replica.
     # This is called by individual Servers
     def best_replica_utility(self, requesting_server, packet):
@@ -699,20 +746,33 @@ class Network:
         best_server_latency = 0
         best_server_utility = 0
         
-        selected_server_load = load_values[requesting_server_id]
-        selected_server_latency = self.latency_table[requesting_server_id][client_name]
-        selected_server_utility = utility_values[requesting_server_id]
-                
-        if requesting_server.id() in minimum_replicas:
-            # requesting_server has minimum load
-            best_server_id = requesting_server.id()
+        # Use pre-computed optimal snapshot if available ('client' or 'router' timing)
+        # Both selected and optimal use values from the same snapshot time
+        if hasattr(packet, 'optimal_snapshot'):
+            snapshot = packet.optimal_snapshot
+            selected_server_load = snapshot['all_loads'][requesting_server_id]
+            selected_server_latency = self.latency_table[requesting_server_id][client_name]
+            selected_server_utility = snapshot['all_utilities'][requesting_server_id]
+            best_server_id = snapshot['server_id']
+            best_server_load = snapshot['load']
+            best_server_latency = snapshot['latency']
+            best_server_utility = snapshot['utility']
         else:
-            # just pick one
-            best_server_id = minimum_replicas[0]
+            # Compute everything from current state ('replica' timing, default)
+            selected_server_load = load_values[requesting_server_id]
+            selected_server_latency = self.latency_table[requesting_server_id][client_name]
+            selected_server_utility = utility_values[requesting_server_id]
 
-        best_server_load = load_values[best_server_id]
-        best_server_latency = self.latency_table[best_server_id][client_name]
-        best_server_utility = utility_values[best_server_id]
+            if requesting_server.id() in minimum_replicas:
+                # requesting_server has minimum load
+                best_server_id = requesting_server.id()
+            else:
+                # just pick one
+                best_server_id = minimum_replicas[0]
+
+            best_server_load = load_values[best_server_id]
+            best_server_latency = self.latency_table[best_server_id][client_name]
+            best_server_utility = utility_values[best_server_id]
 
         # Log utility of true best replica and utility of selected replica: timestamp, selected server id, client id, client request id,  selected server id,  selected server load, selected server latency, selected server utility, best server id, best server load, best server latency
         if Verbose.level >= 0:

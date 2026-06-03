@@ -1229,6 +1229,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     if Verbose.level >= 1:
                         print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
                 else:
+                    # Snapshot optimal utility if timing is set to 'router' (first router only)
+                    if self.network.optimal_utility_timing == 'router' and not hasattr(packet, 'optimal_snapshot'):
+                        self.network.snapshot_optimal_utility(packet)
                     if Verbose.level >= 1:
                         print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
                     self.outgoing_ports[neighbour].put(packet)
@@ -1248,6 +1251,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 else:
                     packet.service = service_name
                     packet.dst = best_replica
+                    # Snapshot optimal utility if timing is set to 'router' (first router only)
+                    if self.network.optimal_utility_timing == 'router' and not hasattr(packet, 'optimal_snapshot'):
+                        self.network.snapshot_optimal_utility(packet)
                     if Verbose.level >= 1:
                         print("{:.3f}: {:5s} SINGLE_DECISION ClientRequest for service {} mapped to replica {} pkt: {} send to neighbour".format(self.env.now, self.id(), service_name, best_replica, packet.id))
                     self.normal_forwarding_packet(link_end, packet)                
