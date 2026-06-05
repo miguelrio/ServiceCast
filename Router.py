@@ -680,6 +680,23 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if Verbose.level >= 1:
                     self.print_metric_table()
 
+
+            # check if withdrawn replica is best replica
+            if replica == self.best_replica:
+                if Verbose.level >= 2:
+                    print("{:.3f}: {:5s} WITHDRAW_BEST_REPLICA_START replica: {}".format(self.env.now, self.id(), replica))
+
+                self.best_replica = None
+                self.best_utility = -0.0000000001
+
+                # now we need to select the best replica
+                # as we splatted the previous one
+                # due to the withdraw
+                self.choose_best_forwarding_replica(self.service_RIB.all())
+                
+                if Verbose.level >= 2:
+                    print("{:.3f}: {:5s} WITHDRAW_BEST_REPLICA_END replica: {}".format(self.env.now, self.id(), replica))
+
             if Verbose.level >= 2:
                 print("{:.3f}: {:5s} WITHDRAW_END".format(self.env.now, self.id()))
         
