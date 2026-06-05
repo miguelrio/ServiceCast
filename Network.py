@@ -776,7 +776,7 @@ class Network:
 
         # Log utility of true best replica and utility of selected replica: timestamp, selected server id, client id, client request id,  selected server id,  selected server load, selected server latency, selected server utility, best server id, best server load, best server latency
         if Verbose.level >= 0:
-            print("{:.3f}: {:5s} BEST_REPLICA_UTILITY '{}' pkt: {}.{} selected: {} load({}) latency({}) utility({}) best: {} load({}) latency({}) utility({}) {}".format(self.env.now, "Net ", requesting_server.id(),  packet.src, packet.id, requesting_server.id(), selected_server_load, selected_server_latency, selected_server_utility,  best_server_id, best_server_load, best_server_latency, best_server_utility, "SAME" if requesting_server_id == best_server_id else "DIFFERENT"))
+            print("{:.3f}: {:5s} BEST_REPLICA_UTILITY '{}' pkt: {}.{} selected: {} load({}) latency({}) utility({}) best: {} load({}) latency({}) utility({}) {}".format(self.env.now, "Net ", requesting_server.id(),  packet.src, packet.id, requesting_server.id(), selected_server_load, selected_server_latency, selected_server_utility,  best_server_id, best_server_load, best_server_latency, best_server_utility, "SAME" if requesting_server_id == best_server_id else ("DIFFERENT " + str(round(abs(selected_server_utility - best_server_utility) , 4 ))) ))
 
     # Get replica capacity
     def get_replica_capacity(self, replica, entry):

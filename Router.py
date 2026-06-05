@@ -1082,6 +1082,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # entry['load'] is normalised
             # entry['delay'] is raw value which is normalised in call_forwarding_utility
             utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'])
+
+            # keep the calculated utility into the utility table
             utility[entry_no] = utility_i
 
             if Verbose.level >= 2:
@@ -1090,24 +1092,31 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 normalised_delay = self.network.get_normalised_delay(entry['delay'])
 
 
-                print ("\t\t{:2d}. neighbour: {} utility_i: {} alpha: {} normalised_load: {} delay: {} normalised_delay: {} ".format(entry_no, entry['neighbour'], utility_i, Utility.alpha, entry['load'], entry['delay'], normalised_delay))
+                print ("\t\t{:2d}. replica: {} neighbour: {} utility_i: {} alpha: {} normalised_load: {} delay: {} normalised_delay: {} ".format(entry_no, entry['replica'], entry['neighbour'], utility_i, Utility.alpha, entry['load'], entry['delay'], normalised_delay))
 
-            #if Verbose.level >= 2:
-            #    print ("\t\t{:2d}. neighbour: {} utility_i: {}".format(entry_no, entry['neighbour'], utility_i))
 
 
             # is utility of this entry > current best utility 
-            if (utility_i >= this_best_utility):
+            if (utility_i > this_best_utility):
                 # update best replica data
                 this_best_replica = entry['replica']
                 this_best_neighbour = entry['neighbour']
                 this_servicename = entry['servicename']
                 this_best_utility = utility_i
 
-                # patch up the utility of the old_best_replica
-                # with the current utility value
-                if  this_best_replica == old_best_replica:
-                    old_best_utility = this_best_utility
+            else:
+                if Verbose.level >= 3:
+                    print("utility_i < this_best_utility " + str(utility_i) + " < " + str(this_best_utility) + " for " + entry['replica'])
+                
+            # patch up the utility of the old_best_replica
+            # with the current utility value
+            if entry['replica'] == old_best_replica:
+                # overwrite the previous value of utility
+                # with the new one calculated from the metric table
+                old_best_utility = utility_i
+
+                if Verbose.level >= 3:
+                    print("patched up utility value for " + old_best_replica + " to " + str(old_best_utility))
 
         if Verbose.level >= 1:
             self.print_utility_info(entries, utility)
@@ -1213,7 +1222,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # print("calculate_utility_difference: diff = " + str(diff) + " utility = " + str(utility) + " best_utility = " + str(best_utility))
 
-        return round(abs(diff), 4)
+        return diff
 
     # Handle a ClientRequest
     def client_request_packet(self, link_end, packet):
