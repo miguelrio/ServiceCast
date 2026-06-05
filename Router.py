@@ -341,9 +341,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             network_diameter = self.network.network_diameter()
 
-            load_utility = self.network.get_load_utility(replica)
+            normalised_load = self.network.get_normalised_load(replica)
 
-            average_load_utility = self.network.average_load_utility()
+            average_normalised_load = self.network.average_normalised_load()
 
             replica_available_capacity = self.network.get_replica_capacity(replica, 'slots')
 
@@ -355,12 +355,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     print("SYSTEM_AVAILABLE_CAPACITY " + "'" + str(self.id()) + "'" + " == 0 announcement_distance 0")
                 announcement_distance = 0
             else:
-                announcement_distance =  (replica_available_capacity / system_available_capacity)  * (load_utility - average_load_utility + 1) * network_diameter 
+                announcement_distance =  (replica_available_capacity / system_available_capacity)  * (normalised_load - average_normalised_load + 1) * network_diameter 
 
 
             if Verbose.level >= 1:
                 # example:   381.000: POT   ANNOUNCEMENT_DISTANCE msgid: 24 replica: s4 msg time: 379.0  propagation_time: 2 load_utility(s4): 2.0 average_load_utility: 1.9 replica_capacity: 45 system_available_capacity: 232 announcement_distance: 1.494 
-                print("{:.3f}: {:5s} ANNOUNCEMENT_DISTANCE msgid: {} replica: {} msg time: {}  propagation_time: {} load_utility({}): {} average_load_utility: {} replica_capacity: {} system_available_capacity: {} announcement_distance: {} ".format(self.env.now, self.id(), msgID, replica, creationTime, round(propagation_time, 6), replica, load_utility, round(average_load_utility, 6), replica_available_capacity, system_available_capacity,  round(announcement_distance, 3)))
+                print("{:.3f}: {:5s} ANNOUNCEMENT_DISTANCE msgid: {} replica: {} msg time: {}  propagation_time: {} normalised_load({}): {} average_normalised_load: {} replica_capacity: {} system_available_capacity: {} announcement_distance: {} ".format(self.env.now, self.id(), msgID, replica, creationTime, round(propagation_time, 6), replica, normalised_load, round(average_normalised_load, 6), replica_available_capacity, system_available_capacity,  round(announcement_distance, 3)))
 
             # do the announcement
             self.incoming_server_metrics_packet_announce(link_end, packet)
@@ -1033,20 +1033,22 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
     # Call the forwarding_utility_fn
     # which is usually set as a lambda in forwarding_utility_fn
+    # load is already normalised in range 0 -> 1
+    # delay is actual link delay: 1 .. n
     def call_forwarding_utility(self, alpha, load, delay):
 
-        # First we map the actual delay into a delay_utility
+        # First we map the actual delay into a normalised_delay
         # which is a value between 0 and 1
-        delay_utility = self.network.get_delay_utility(delay)
+        normalised_delay = self.network.get_normalised_delay(delay)
 
-        if Verbose.level >= 2:
-            print("{:.3f}: {:5s} delay_utility = {} for delay {}".format(self.env.now, self.id(), delay_utility, delay))
+        if Verbose.level >= 3:
+            print("{:.3f}: {:5s} normalised_delay = {} for delay {}".format(self.env.now, self.id(), normalised_delay, delay))
         
         # calculate the utility
-        forwarding_utility =  Utility.eval_forwarding_utility(alpha, load, delay_utility)
+        forwarding_utility =  Utility.eval_forwarding_utility(alpha, load, normalised_delay)
 
         if Verbose.level >= 2:
-            print("{:.3f}: {:5s} forwarding_utility = {} for load {} delay_utility {}".format(self.env.now, self.id(), forwarding_utility, load, delay_utility))
+            print("{:.3f}: {:5s} forwarding_utility = {} for normalised_load {} delay {} normalised_delay {}".format(self.env.now, self.id(), forwarding_utility, load, delay, normalised_delay))
         
         return forwarding_utility
 
@@ -1076,11 +1078,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         utility = [-1 for e in entries]
 
         for entry_no, entry in enumerate(entries):
+            # call call_forwarding_utility
+            # entry['load'] is normalised
+            # entry['delay'] is raw value which is normalised in call_forwarding_utility
             utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'])
             utility[entry_no] = utility_i
 
             if Verbose.level >= 2:
-                print ("\t\t{:2d}. alpha: {} load: {} delay: {} neighbour: {} utility_i: {}".format(entry_no, Utility.alpha, entry['load'], entry['delay'], entry['neighbour'], utility_i))
+                # First we map the actual delay into a normalised_delay
+                # which is a value between 0 and 1
+                normalised_delay = self.network.get_normalised_delay(entry['delay'])
+
+
+                print ("\t\t{:2d}. neighbour: {} utility_i: {} alpha: {} normalised_load: {} delay: {} normalised_delay: {} ".format(entry_no, entry['neighbour'], utility_i, Utility.alpha, entry['load'], entry['delay'], normalised_delay))
 
             #if Verbose.level >= 2:
             #    print ("\t\t{:2d}. neighbour: {} utility_i: {}".format(entry_no, entry['neighbour'], utility_i))

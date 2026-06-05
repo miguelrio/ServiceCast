@@ -1,7 +1,6 @@
 from Host import Host
 from SimComponents import Packet
 from Verbose import Verbose
-from Utility import Utility
 from enum import Enum
 
 # some default values for the slots and flows functions
@@ -231,16 +230,13 @@ class Server(Host):
 
         diff = self.calculate_load_difference()
         
-        # now tell the network about the 'load_utility'
-        # alpha * load (in current emulator)
-
-        # WAS load_utility = Utility.alpha * self.last_payload['load']
-        load_utility = self.calculate_load()
+        # now tell the network about the 'normalised_load'
+        normalised_load = self.calculate_load()
 
         if Verbose.level >= 2:
-            print("{:.3f}: {:5s} LOAD_UTILITY: = {} ".format(self.env.now, self.id(), load_utility))        
+            print("{:.3f}: {:5s} NORMALISED_LOAD: = {} ".format(self.env.now, self.id(), normalised_load))        
 
-        self.network.update_load_utility(self.id(), load_utility)
+        self.network.update_normalised_load(self.id(), normalised_load)
 
         #print("Average Load Utility = " + str(self.network.average_load_utility()))
 

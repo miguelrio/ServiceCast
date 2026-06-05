@@ -34,7 +34,7 @@ class Network:
         # aggregate of replica load utility
         # gives a total view over the network
         # replica name -> load value
-        self.replica_load_utility = dict()
+        self.replica_normalised_load = dict()
 
         # the network diameter
         self.network_diameter_val = 0
@@ -626,8 +626,8 @@ class Network:
         for server in servers:
             load = server.calculate_load()
             latency = self.latency_table[server.id()][client_name]
-            delay_utility = self.get_delay_utility(latency)
-            utility = Utility.eval_forwarding_utility(Utility.alpha, load, delay_utility)
+            normalised_delay = self.get_normalised_delay(latency)
+            utility = Utility.eval_forwarding_utility(Utility.alpha, load, normalised_delay)
 
             all_utilities[server.id()] = utility
             all_loads[server.id()] = load
@@ -684,9 +684,9 @@ class Network:
             # get latency from client to server
             latency = self.latency_table[server.id()][client_name]
 
-            # Now we map the actual latency / delay into a delay_utility
+            # Now we map the actual latency / delay into a normalised_delay
             # which is a value between 0 and 1
-            delay_utility = self.get_delay_utility(latency)
+            normalised_delay = self.get_normalised_delay(latency)
 
 
             # calculate utility
@@ -695,7 +695,7 @@ class Network:
             # load --> load at chosen replica
             # delay --> length of path (sum of weigths) from client to chosen replica
 
-            utility = Utility.eval_forwarding_utility(Utility.alpha, load, delay_utility)
+            utility = Utility.eval_forwarding_utility(Utility.alpha, load, normalised_delay)
 
             # save forwarding utility value for this server
             utility_values[server.id()] = utility
@@ -705,7 +705,7 @@ class Network:
             if Verbose.level >= 3:
                 print("best_replica_utility: '" + server.id() + "' load = " + str(load))
                 print("best_replica_utility: '" + server.id() + "' delay = " + str(latency))
-                print("best_replica_utility: '" + server.id() + "' delay_utility = " + str(delay_utility))
+                print("best_replica_utility: '" + server.id() + "' normalised_delay = " + str(normalised_delay))
                 print("best_replica_utility: '" + server.id() + "' forwarding_utility = " + str(utility))
             
             
@@ -818,23 +818,23 @@ class Network:
             print ("{:.3f}: {:5s} REPLICA_CAPACITY_NETWORK 'load': {} 'no_of_flows': {}  'capacity': {}  'slots': {}  (Update from {})".format(self.env.now, "Net ", round(load, 6) ,  self.replica_capacity_total["no_of_flows"],  self.replica_capacity_total["capacity"],  self.replica_capacity_total["slots"], replica ))
 
     # Get the load_utility for a replica
-    def get_load_utility(self, replica):
-        return self.replica_load_utility[replica]
+    def get_normalised_load(self, replica):
+        return self.replica_normalised_load[replica]
     
 
     # An update for load_utility
-    def update_load_utility(self, replica, load_val):
-        self.replica_load_utility[replica] = load_val
+    def update_normalised_load(self, replica, load_val):
+        self.replica_normalised_load[replica] = load_val
         
     # current average load_utility
     # average load_utilty = Network object collects all load_utility, returns average
-    def average_load_utility(self):
+    def average_normalised_load(self):
         count = 0
         total = 0
         
-        for key in self.replica_load_utility:
+        for key in self.replica_normalised_load:
 
-            load_val = self.replica_load_utility[key]
+            load_val = self.replica_normalised_load[key]
 
             # print("Network: average_load_utility: load at " + str(key) + " = " + str(load_val))
 
@@ -849,9 +849,9 @@ class Network:
         return avg
         
 
-    # Get the delay_utility for a delay
+    # Get the normalised_delay for a delay
     # This is the delay / network_diameter
-    def get_delay_utility(self, delay):
+    def get_normalised_delay(self, delay):
         return delay / self.network_diameter()
     
 
