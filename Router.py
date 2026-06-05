@@ -1097,7 +1097,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
             # is utility of this entry > current best utility 
-            if (utility_i > this_best_utility):
+            if (utility_i >= this_best_utility):
                 # update best replica data
                 this_best_replica = entry['replica']
                 this_best_neighbour = entry['neighbour']
