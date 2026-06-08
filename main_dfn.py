@@ -18,7 +18,7 @@ def topology_setup():
     Verbose.table = 1
 
     # Set routing mode: hop-by-hop anycast (True) or first-decide unicast (False)
-    Router.hop_by_hop = False
+    Router.hop_by_hop = True
 
     # Set alpha value
     Utility.alpha = 0.50
@@ -27,10 +27,10 @@ def topology_setup():
     Server.slots = 50
 
     # Server change factor damping
-    Server.change_factor = 0.05
+    Server.change_factor = 0.01
 
     # Router change factor damping
-    Router.forwarding_utility_change_factor = 0.05
+    Router.forwarding_utility_change_factor = 0.001
     
     # 1 - Define the topology
     print("- DFN")

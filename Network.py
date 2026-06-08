@@ -13,7 +13,7 @@ import sys
 class Network:
     # Timing of ground truth optimal utility measurement:
     # 'replica' (at server arrival), 'router' (at forwarding decision), 'client' (at request origination)
-    optimal_utility_timing = 'replica'
+    optimal_utility_timing = 'router'
 
     def __init__(self, env = None):
         """ Create a network
@@ -648,6 +648,7 @@ class Network:
         best_utility = max_utility
 
         packet.optimal_snapshot = {
+            'time': self.env.now,
             'server_id': best_id,
             'load': best_load,
             'latency': best_latency,
@@ -757,11 +758,13 @@ class Network:
             best_server_load = snapshot['load']
             best_server_latency = snapshot['latency']
             best_server_utility = snapshot['utility']
+            best_server_time = snapshot['time']
         else:
             # Compute everything from current state ('replica' timing, default)
             selected_server_load = load_values[requesting_server_id]
             selected_server_latency = self.latency_table[requesting_server_id][client_name]
             selected_server_utility = utility_values[requesting_server_id]
+            best_server_time = self.env.now
 
             if requesting_server.id() in minimum_replicas:
                 # requesting_server has minimum load
@@ -776,7 +779,17 @@ class Network:
 
         # Log utility of true best replica and utility of selected replica: timestamp, selected server id, client id, client request id,  selected server id,  selected server load, selected server latency, selected server utility, best server id, best server load, best server latency
         if Verbose.level >= 0:
-            print("{:.3f}: {:5s} BEST_REPLICA_UTILITY '{}' pkt: {}.{} selected: {} load({}) latency({}) utility({}) best: {} load({}) latency({}) utility({}) {}".format(self.env.now, "Net ", requesting_server.id(),  packet.src, packet.id, requesting_server.id(), selected_server_load, selected_server_latency, selected_server_utility,  best_server_id, best_server_load, best_server_latency, best_server_utility, "SAME" if requesting_server_id == best_server_id else ("DIFFERENT " + str(round(abs(selected_server_utility - best_server_utility) , 4 ))) ))
+            utility_diff = abs(selected_server_utility - best_server_utility)
+            if utility_diff >= 1e-9:
+                status = "DIFFERENT"
+                diff_text = " " + str(round(utility_diff, 4))
+            elif requesting_server_id == best_server_id:
+                status = "SAME"
+                diff_text = ""
+            else:
+                status = "EQUAL"
+                diff_text = ""
+            print("{:.3f}: {:5s} BEST_REPLICA_UTILITY '{}' pkt: {}.{} selected: {} load({}) latency({}) utility({}) best (at {:.3f}): {} load({}) latency({}) utility({}) {}{}".format(self.env.now, "Net ", requesting_server.id(),  packet.src, packet.id, requesting_server.id(), selected_server_load, selected_server_latency, selected_server_utility,  best_server_time, best_server_id, best_server_load, best_server_latency, best_server_utility, status, diff_text))
 
     # Get replica capacity
     def get_replica_capacity(self, replica, entry):
