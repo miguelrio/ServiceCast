@@ -1062,7 +1062,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print("{:.3f}: {:5s} normalised_delay = {} for delay {}".format(self.env.now, self.id(), normalised_delay, delay))
         
         # calculate the utility
-        forwarding_utility =  Utility.eval_forwarding_utility(alpha, load, normalised_delay)
+        # pass in the delay and the normalised_delay
+        forwarding_utility =  Utility.eval_forwarding_utility(alpha, load, delay, normalised_delay)
 
         if Verbose.level >= 2:
             print("{:.3f}: {:5s} forwarding_utility = {} for normalised_load {} delay {} normalised_delay {}".format(self.env.now, self.id(), forwarding_utility, load, delay, normalised_delay))

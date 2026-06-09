@@ -627,7 +627,9 @@ class Network:
             load = server.calculate_load()
             latency = self.latency_table[server.id()][client_name]
             normalised_delay = self.get_normalised_delay(latency)
-            utility = Utility.eval_forwarding_utility(Utility.alpha, load, normalised_delay)
+
+            # call the forwarding_utility - pass in delay and normalised_delay
+            utility = Utility.eval_forwarding_utility(Utility.alpha, load, latency, normalised_delay)
 
             all_utilities[server.id()] = utility
             all_loads[server.id()] = load
@@ -696,7 +698,8 @@ class Network:
             # load --> load at chosen replica
             # delay --> length of path (sum of weigths) from client to chosen replica
 
-            utility = Utility.eval_forwarding_utility(Utility.alpha, load, normalised_delay)
+            # call the forwarding_utility - pass in delay and normalised_delay
+            utility = Utility.eval_forwarding_utility(Utility.alpha, load, latency, normalised_delay)
 
             # save forwarding utility value for this server
             utility_values[server.id()] = utility
