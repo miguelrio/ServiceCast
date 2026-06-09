@@ -5,7 +5,7 @@ from Router import Router
 from Client import Client
 from Generator import Generator
 from Verbose import Verbose
-from Utility import Utility
+from Utility import Utility, Place
 import simpy
 from gml import read_gml
 
@@ -19,6 +19,9 @@ def topology_setup():
 
     # Set routing mode: hop-by-hop anycast (True) or first-decide unicast (False)
     Router.hop_by_hop = True
+
+    # Network optimal_utility_timing
+    Network.optimal_utility_timing = Place.Router
 
     # Set alpha value
     Utility.alpha = 0.50

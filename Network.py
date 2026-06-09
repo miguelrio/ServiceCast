@@ -5,15 +5,18 @@ from Host import Host
 from Server import Server
 from Client import Client
 from Verbose import Verbose
-from Utility import Utility
+from Utility import Utility, Place
 from collections import OrderedDict
 from gml import read_gml, write_gml
 import sys
 
+
 class Network:
     # Timing of ground truth optimal utility measurement:
-    # 'replica' (at server arrival), 'router' (at forwarding decision), 'client' (at request origination)
-    optimal_utility_timing = 'router'
+    # 'replica' (at server arrival),
+    # 'router' (at forwarding decision),
+    # 'client' (at request origination)
+    optimal_utility_timing = Place.Replica
 
     def __init__(self, env = None):
         """ Create a network
