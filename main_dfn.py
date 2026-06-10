@@ -9,15 +9,15 @@ from Utility import Utility, Place
 import simpy
 from gml import read_gml
 
-# david's seed-text
+# david's seed-test
 
 # sclayman:
 # Using a topology loaded from the DFN gml file
 
 # Use a topology from the DFN gml file
 def topology_setup():
-    Verbose.level = 2
-    Verbose.table = 1
+    Verbose.level = 0
+    Verbose.table = 0
 
     # Set routing mode: hop-by-hop anycast (True) or first-decide unicast (False)
     Router.hop_by_hop = False
