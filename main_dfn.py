@@ -9,6 +9,8 @@ from Utility import Utility, Place
 import simpy
 from gml import read_gml
 
+# david's seed-text
+
 # sclayman:
 # Using a topology loaded from the DFN gml file
 
