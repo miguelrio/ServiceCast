@@ -50,7 +50,7 @@ def topology_setup():
     # Router.better_than_fn['load'] = staticmethod(lambda x, y: x < y)
     Router.better_than_fn = staticmethod(lambda x, y: x < y)
 
-    Router.forwarding_utility_change_factor = 0.001
+    Router.fib_utility_update_threshold = 0.001
     
     # 1 - Define the topology
     topo = {

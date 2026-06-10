@@ -617,8 +617,8 @@ class Network:
         return diameter
         
     # Snapshot the optimal utility at the current time
-    # and store on the packet for later comparison
-    def snapshot_optimal_utility(self, packet):
+    # and inject the data in the packet for later comparison
+    def inject_snapshot_optimal_utility(self, packet):
         """Compute optimal replica utility now and store on packet."""
         client_name = packet.src
         servers = [r for r in self.network_nodes() if isinstance(r, Server)]

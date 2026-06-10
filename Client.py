@@ -38,7 +38,7 @@ class Client(Host):
 
         # Snapshot optimal utility if timing is set to 'client'
         if self.network and self.network.optimal_utility_timing == Place.Client:
-            self.network.snapshot_optimal_utility(packet)
+            self.network.inject_snapshot_optimal_utility(packet)
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node

@@ -37,11 +37,16 @@ class Router(object):
       Requires a put() method as a callback from the PacketGenerator.
     """
 
-    # forwarding utility change factor  10% -> 0.1
-    forwarding_utility_change_factor = 0.1
+    # threshold for FIB utility change factor  10% -> 0.1
+    fib_utility_update_threshold = 0.1
 
     # routing mode: True for hop-by-hop anycast, False for first-decide unicast
     hop_by_hop = True
+
+    # metric is better range
+    # a way to accept one metric being the Same as another metric
+    # if the difference between the values is < range
+    metric_is_better_range = 0
 
     # The following staticmethods can be reset from the outside
     # to change the behaviour of the algorithms
@@ -92,11 +97,13 @@ class Router(object):
         self.servicename = None
         self.best_utility = -0.0000000001   # just a tiny bit < 0
 
-        # service forwarding table
-        self.service_forwarding_table = dict()
+        # service forwarding table -- the FIB
+        # keeps neighbour for who to forward to
+        # and the best replica and utility
+        self.service_FIB = dict()
 
-        # best replicas table mapping service name -> best replica ID
-        self.best_replicas = dict()
+        # no of changes to the service_FIB
+        self.service_fib_updates = 0
 
         # are we aggregating directly connected replicas
         self.aggregating_connected = False
@@ -566,8 +573,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
         # STEP 6,12 check if fw table needs changing. If yes, change it. Choose the one with best utility function.
+        # and update the FIB
 
-        self.choose_best_forwarding_replica(self.service_RIB.all())
+        self.choose_best_forwarding_replica_update_fib()
 
         
 
@@ -665,7 +673,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             print("{:.3f}: {:5s} WITHDRAW_FORWARD {} to {}".format(self.env.now, self.id(), candidate['replica'], neighbour))
 
                         # send to relevant SwitchPort
-                        self.outgoing_ports[neighbour].put(new_packet)
+                        self.send_packet_to_neighbour(new_packet, neighbour)
 
 
                 # whatever the previous decision
@@ -692,7 +700,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 # now we need to select the best replica
                 # as we splatted the previous one
                 # due to the withdraw
-                self.choose_best_forwarding_replica(self.service_RIB.all())
+                self.choose_best_forwarding_replica_update_fib()
                 
                 if Verbose.level >= 2:
                     print("{:.3f}: {:5s} WITHDRAW_BEST_REPLICA_END replica: {}".format(self.env.now, self.id(), replica))
@@ -785,10 +793,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 # print("Check " +  metric_to_send['link_end'] +  " <--> " + str(neighbour))
 
-                if isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host):
+                if isinstance(self.neighbour_destination(neighbour),  Host):
                     # don't send to any connected Hosts
                     if Verbose.level >= 2:
-                        print("{:.3f}: {:5s} NOT_TO_HOST {} - metric no {}".format(self.env.now, self.id(), self.outgoing_ports[neighbour].out.dst_node, metric_to_send.doc_id))
+                        print("{:.3f}: {:5s} NOT_TO_HOST {} - metric no {}".format(self.env.now, self.id(), self.neighbour_destination(neighbour), metric_to_send.doc_id))
                     pass
 
 
@@ -826,7 +834,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                                 print("{:.3f}: {:5s} FORWARD_METRIC {} to {}".format(self.env.now,  self.id(), metric_to_send.doc_id, neighbour))
 
                             # send to relevant SwitchPort
-                            self.outgoing_ports[neighbour].put(new_packet)
+                            self.send_packet_to_neighbour(new_packet, neighbour)
 
                             # update sent_table
                             self.update_sent_table(metric_to_send, neighbour)
@@ -849,7 +857,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                                 print("{:.3f}: {:5s} FORWARD_WITHDRAW to {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour))
 
                             # send to relevant SwitchPort
-                            self.outgoing_ports[neighbour].put(new_packet)
+                            self.send_packet_to_neighbour(new_packet, neighbour)
 
                         else:
                             # not in sent_table, so no need to send Withdraw
@@ -1071,7 +1079,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         return forwarding_utility
 
     #  Check if fw table needs changing
-    def choose_best_forwarding_replica(self, entries):
+    # and update FIB
+    def choose_best_forwarding_replica_update_fib(self):
+        # pass in all RIB entries
+        self._choose_best_forwarding_replica_update_fib_with_entries(self.service_RIB.all())
+
+
+    # Check if fw table needs changing and update FIB
+    # by checking passed in RIB entries
+    def _choose_best_forwarding_replica_update_fib_with_entries(self, entries):
         # best_utility=Infinity
         # best replica=1
         # for all replicas i
@@ -1094,6 +1110,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # create a list of utility values
         utility = [-1 for e in entries]
+
+
+        # skip through all the entries
+        # in order to find the one with the best utility
 
         for entry_no, entry in enumerate(entries):
             # call call_forwarding_utility
@@ -1163,19 +1183,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if Verbose.level >= 1:
                     print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not change ", old_best_replica, this_best_replica ))
 
-            elif (diff < Router.forwarding_utility_change_factor):
-                # Compare diff to Router.forwarding_utility_change_factor
+            elif (diff < Router.fib_utility_update_threshold):
+                # Compare diff to Router.fib_utility_update_threshold
                 # change is too small, do nothing
                 
                 if Verbose.level >= 1:
-                    print("{:.3f}:{:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.forwarding_utility_change_factor, " do not change ", old_best_replica, this_best_replica ))
+                    print("{:.3f}:{:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.fib_utility_update_threshold, " do not change ", old_best_replica, this_best_replica ))
 
             else:
-                # diff > Router.forwarding_utility_change_factor
+                # diff > Router.fib_utility_update_threshold
                 # change replica
 
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.forwarding_utility_change_factor, " change ", old_best_replica, this_best_replica ))
+                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.fib_utility_update_threshold, " change ", old_best_replica, this_best_replica ))
 
                 self.best_replica = this_best_replica
                 self.best_neighbour = this_best_neighbour
@@ -1190,22 +1210,23 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if Verbose.level >= 1:
                     print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not update ", old_best_replica ))
 
-            elif (diff < Router.forwarding_utility_change_factor):
+            elif (diff < Router.fib_utility_update_threshold):
                 # change is too small, do nothing
 
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.forwarding_utility_change_factor, " do not update ", old_best_replica ))
+                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.fib_utility_update_threshold, " do not update ", old_best_replica ))
 
 
             else:
                 # update utility for this replica
                 
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.forwarding_utility_change_factor, " update ", old_best_replica ))
+                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.fib_utility_update_threshold, " update ", old_best_replica ))
 
 
                 self.best_utility = this_best_utility
 
+        # Print out some info on what changed
 
 
         if Verbose.level >= 1:
@@ -1213,25 +1234,32 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # print ("old_best_replica " + str(old_best_replica) + " self.best_replica " + str(self.best_replica) + " self.best_neighbour " + str(self.best_neighbour))
             
             if self.best_replica == self.best_neighbour:
+                # the best replica is the directly connected best neighbour
                 if Verbose.level >= 1:
                     if old_best_replica == None:
                         print("{:.3f}: {:5s} {}BEST_REPLICA {} direct ".format(self.env.now, self.id(), ("SET_" if old_best_replica != self.best_replica else ""), self.best_replica))
                     else:
                         print("{:.3f}: {:5s} {}BEST_REPLICA {} direct ".format(self.env.now, self.id(), ("CHANGED_" if old_best_replica != self.best_replica else "KEEP_"), self.best_replica))
+
             else:
+                # the best replica is via the best neighbour
                 if Verbose.level >= 1:
                     if old_best_replica == None:
                         print("{:.3f}: {:5s} {}BEST_REPLICA {} via best neighbour {} ".format(self.env.now, self.id(), ("SET_" if old_best_replica != self.best_replica else ""), self.best_replica, self.best_neighbour))
                     else:
                         print("{:.3f}: {:5s} {}BEST_REPLICA {} via best neighbour {} ".format(self.env.now, self.id(), ("CHANGED_" if old_best_replica != self.best_replica else "KEEP_"), self.best_replica, self.best_neighbour))
 
-        # update best_neighbour for servicename
-        self.service_forwarding_table[self.servicename] =  self.best_neighbour
-        if self.servicename:
-            self.best_replicas[self.servicename] = self.best_replica
+        # update the FIB
+        
+        # update best_neighbour, best_replica, best_utility for servicename
+        self.service_FIB[self.servicename] = { 'neighbour': self.best_neighbour,
+                                               'replica': self.best_replica,
+                                               'utility': self.best_utility }
+
+        self.service_fib_updates += 1
 
         if Verbose.level >= 1:
-            print("{:.3f}: {:5s} SERVICE_FORWARDING_TABLE {}".format(self.env.now, self.id(), self.service_forwarding_table))
+            print("{:.3f}: {:5s} SERVICE_FIB update count: {} {}".format(self.env.now, self.id(), self.service_fib_updates, self.service_FIB))
 
 
     # Work out utility difference from self.best_utility
@@ -1254,53 +1282,55 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         if Router.hop_by_hop:
             # --- Original Hop-by-Hop Anycast Routing ---
-            if not service_name in self.service_forwarding_table:
-                # no service name in the service_forwarding_table
+            if not service_name in self.service_FIB:
+                # no service name in the service_FIB
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} NO_SERVICE_FORWARDING_TABLE_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+                    print("{:.3f}: {:5s} NO_SERVICE_FIB_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
             else:
-                # we have that service name in the service_forwarding_table
-                neighbour = self.service_forwarding_table[service_name]
+                # we have that service name in the service_FIB
+                neighbour = self.service_FIB[service_name]['neighbour']
 
                 if Verbose.level >= 2:
                     print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, neighbour))
 
                 if neighbour == None:
                     if Verbose.level >= 1:
-                        print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+                        print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FIB ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
                 else:
-                    # Snapshot optimal utility if timing is set to 'router' (first router only)
+                    # Snapshot optimal utility if timing is set to 'router'
+                    # with hop_by_hop we use the last router only
                     # In this case we set the value only when the neighbour is a host
                     if self.network.optimal_utility_timing == Place.Router and not hasattr(packet, 'optimal_snapshot') and self.is_neighbour_host(neighbour):
-                        # David commented ths out becase we want the optimal as seen by the *last* router in hop-by-hop
-                        self.network.snapshot_optimal_utility(packet)
+
+                        self.network.inject_snapshot_optimal_utility(packet)
 
                     if Verbose.level >= 1:
                         print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
-                    self.outgoing_ports[neighbour].put(packet)
+                    self.send_packet_to_neighbour(packet, neighbour)
 
         else:
             # --- First-Decide Single-Decision Unicast Routing ---
-            if not service_name in self.best_replicas:
-                # no service name in the service_forwarding_table
+            if not service_name in self.service_FIB:
+                # no service name in the service_FIB
                 if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} NO_SERVICE_FORWARDING_TABLE_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+                    print("{:.3f}: {:5s} NO_SERVICE_FIB_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
             else:
-                # we have that service name in the service_forwarding_table
-                best_replica = self.best_replicas[service_name]
+                # we have that service name in the service_FIB
+                best_replica = self.service_FIB[service_name]['replica']
 
                 if Verbose.level >= 2:
                     print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, best_replica))
 
                 if best_replica == None:
                     if Verbose.level >= 1:
-                        print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FORWARDING_TABLE ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
+                        print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FIB ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
                 else:
                     packet.service = service_name
                     packet.dst = best_replica
+                    
                     # Snapshot optimal utility if timing is set to 'router' (first router only)
                     if self.network.optimal_utility_timing == Place.Router and not hasattr(packet, 'optimal_snapshot'):
-                        self.network.snapshot_optimal_utility(packet)
+                        self.network.inject_snapshot_optimal_utility(packet)
 
                     if Verbose.level >= 1:
                         print("{:.3f}: {:5s} SINGLE_DECISION ClientRequest for service {} mapped to replica {} pkt: {} send to neighbour".format(self.env.now, self.id(), service_name, best_replica, packet.id))
@@ -1330,15 +1360,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         print("{:.3f}: PACKET {}.{} dont send back from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
 
 
-                elif isinstance(self.outgoing_ports[neighbour].out.dst_node,  Host) and packet.dst != self.outgoing_ports[neighbour].out.dst_node.id():
+                elif isinstance(self.neighbour_destination(neighbour),  Host) and packet.dst != self.neighbour_destination(neighbour).id():
                     # don't send to any connected Hosts unless it is the destination of the packet
                     if Verbose.level >= 2:
-                        print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.id(), self.outgoing_ports[neighbour].out.dst_node.id(), (self.env.now - packet.time)))
+                        print("{:.3f}: PACKET {}.{} dont send to host from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, self.id(), self.neighbour_destination(neighbour).id(), (self.env.now - packet.time)))
 
                 else:
                     # forward the packet
                     # send to SwitchPort
-                    self.outgoing_ports[neighbour].put(packet)
+                    self.send_packet_to_neighbour(packet, neighbour)
 
                     if Verbose.level >= 1:
                         print("{:.3f}: PACKET {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, packet.src, packet.pkt_no, packet.dst, self.id(), neighbour, (self.env.now - packet.time)))
@@ -1352,6 +1382,16 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     print(str(self.unicast_forwarding_table))
         
 
+    # Send packet to neighbour
+    def send_packet_to_neighbour(self, packet, neighbour):
+        # forward the packet
+        # send to SwitchPort
+        self.outgoing_ports[neighbour].put(packet)
+
+    # Get the destination for a neighbour
+    def neighbour_destination(self, neighbour):
+        # get dst_node from the SwitchPort info for this neighbour
+        self.outgoing_ports[neighbour].out.dst_node
 
     def put(self, packet):
         """ The callback from an EventGenerator.
