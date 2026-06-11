@@ -1,3 +1,5 @@
+import argparse
+
 from Graph import Graph
 from Network import Network
 from Server import Server
@@ -14,8 +16,10 @@ from gml import read_gml
 # sclayman:
 # Using a topology loaded from the DFN gml file
 
+DEFAULT_SEED = 15112022
+
 # Use a topology from the DFN gml file
-def topology_setup():
+def topology_setup(seed=DEFAULT_SEED):
     Verbose.level = 0
     Verbose.table = 0
 
@@ -119,17 +123,22 @@ def topology_setup():
     # Server 's1' generates packets from arriving events
     # and sends to service 'a'  indicated by "§a"
     for server_name in servers:
-        generator = Generator.server_load_event_generator(network, server_name, ["§a"], exponential_lambda=55, seed=15112022, background_load=False)
+        generator = Generator.server_load_event_generator(network, server_name, ["§a"], exponential_lambda=55, seed=seed, background_load=False)
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=5, size_lambda=10, size_scale_factor=10, seed=15112022)
+    generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=5, size_lambda=10, size_scale_factor=10, seed=seed)
 
     # run
     print("RUN ----------------------------------------------------------------")
 
-    network.start(until=3600)
+    network.start(until=36000)
 
 
-# go !
-topology_setup()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run DFN topology simulation with optional generator seed.")
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED,
+                        help=f"Random seed for packet generation (default: {DEFAULT_SEED})")
+    args = parser.parse_args()
+
+    topology_setup(seed=args.seed)
 
