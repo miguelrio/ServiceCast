@@ -25,10 +25,10 @@ class Compare(Enum):
 LINKRATE = 10000000
 
 
-def less_than1(x,y):
+def less_than(x,y):
     return x < y
 
-def greater_than1(x,y):
+def greater_than(x,y):
     return x > y
 
 
@@ -55,10 +55,10 @@ class Router(object):
     
     # dict of better than fns
     better_than_fn_dict = {}
-    better_than_fn_dict['load'] = staticmethod(less_than1)
-    better_than_fn_dict['delay'] = staticmethod(less_than1)
+    better_than_fn_dict['load'] = staticmethod(less_than)
+    better_than_fn_dict['delay'] = staticmethod(less_than)
 
-    better_than_fn = staticmethod(less_than1)
+    better_than_fn = staticmethod(less_than)
 
 
 
@@ -1391,7 +1391,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # Get the destination for a neighbour
     def neighbour_destination(self, neighbour):
         # get dst_node from the SwitchPort info for this neighbour
-        self.outgoing_ports[neighbour].out.dst_node
+        return self.outgoing_ports[neighbour].out.dst_node
 
     def put(self, packet):
         """ The callback from an EventGenerator.
