@@ -75,26 +75,32 @@ def format_stats(stats):
         mean_diff_including_zero = mean(diffs) if diffs else 0.0
 
     return (
-        f"total requests: {total}\n"
-        f"EQUAL: {equal}\n"
-        f"SAME: {same}\n"
+        f"Requests: {total}; "
+        f"SAME: {same}; "
+        f"EQUAL: {equal}; "
         f"DIFFERENT: {different}\n"
-        f"accuracy: {accuracy * 100:.4g}%\n"
-        f"max utility gap: {max_diff * 100:.4g}%\n"
-        f"mean utility gap: {mean_diff_including_zero * 100:.4g}%\n"
-        f"mean conditional utility gap: {mean_diff * 100:.4g}%\n"
+        f"accuracy: {accuracy * 100:.4g}%; "
+        f"utility gap: max: {max_diff * 100:.4g}%; "
+        f"mean: {mean_diff_including_zero * 100:.4g}%; "
+        f"mean conditional: {mean_diff * 100:.4g}%\n"
     )
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Summarize BEST_REPLICA_UTILITY lines in a log file.")
-    parser.add_argument("path", help="Path to the log file to parse")
+    parser = argparse.ArgumentParser(description="Summarize BEST_REPLICA_UTILITY lines in one or more log files.")
+    parser.add_argument("paths", nargs="+", help="Path(s) to the log file(s) to parse")
     args = parser.parse_args()
 
-    with open(args.path, "r", encoding="utf-8") as fh:
-        stats = parse_log_lines(fh)
+    show_filename = len(args.paths) > 1
+    for index, path in enumerate(args.paths):
+        with open(path, "r", encoding="utf-8") as fh:
+            stats = parse_log_lines(fh)
 
-    print(format_stats(stats))
+        if show_filename:
+            print(path)
+        print(format_stats(stats), end="")
+        if show_filename and index != len(args.paths) - 1:
+            print()
 
 
 if __name__ == "__main__":
