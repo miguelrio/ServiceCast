@@ -162,6 +162,19 @@ To get the last router that sees a client request to make a decision, set:
 Router.hop-by-hop = True
 ```
 
+### Network class
+
+When doing experiments we get a snapshot of the optimal utility at the
+current time and inject the data in the packet for later comparison.
+
+This can be one of 3 values:
+- Place.Client  (at request origination)
+- Place.Router (at forwarding decision)
+- Place.Replica (at server arrival)
+
+This can be set using:
+```Network.optimal_utility_timing = Place.Replica```
+
 
 ### Logging output
 
