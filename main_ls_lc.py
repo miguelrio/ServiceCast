@@ -46,9 +46,10 @@ def topology_setup():
 
     Server.change_factor = 0
 
-    # dict approach
-    # Router.better_than_fn['load'] = staticmethod(lambda x, y: x < y)
-    Router.better_than_fn = staticmethod(lambda x, y: x < y)
+    # Update better_than_fn dict
+    Router.better_than_fn['load'] = staticmethod(lambda x, y: x < y)
+
+    Router.same_as_fn['load'] = staticmethod(lambda x, y:  x == y)
 
     Router.fib_utility_update_threshold = 0.001
     

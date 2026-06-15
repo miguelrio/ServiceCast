@@ -31,6 +31,9 @@ def less_than(x,y):
 def greater_than(x,y):
     return x > y
 
+def same_as(x,y):
+     return x == y
+
 
 class Router(object):
     """ A Router in the emulation.
@@ -54,11 +57,20 @@ class Router(object):
     # default better than fn
     
     # dict of better than fns
-    better_than_fn_dict = {}
-    better_than_fn_dict['load'] = staticmethod(less_than)
-    better_than_fn_dict['delay'] = staticmethod(less_than)
+    better_than_fn = {}
+    # the default better for load is less_than
+    better_than_fn['load'] = staticmethod(less_than)
+    # the default better for delay is less_than
+    better_than_fn['delay'] = staticmethod(less_than)
 
-    better_than_fn = staticmethod(less_than)
+    # dict of same as fns
+    same_as_fn = {}
+    # the default same as for load is less_than
+    same_as_fn['load'] = staticmethod(same_as)
+    # the default same as for delay is less_than
+    same_as_fn['delay'] = staticmethod(same_as)
+
+    # better_than_fn = staticmethod(less_than)
 
 
 
@@ -119,8 +131,20 @@ class Router(object):
         # setup metrics list
         # name and better function
         self.metric_list =  [
-            { 'name': 'load',  'better': Router.better_than_fn },
-            { 'name': 'delay', 'better': Router.better_than_fn }   ]
+            # specify the metric functions for 'load'
+            # currently get them from the class variables
+            { 'name': 'load',
+              'same': Router.same_as_fn['load'],
+              'better': Router.better_than_fn['load']
+
+             },
+            # specify the metric functions for 'delay'
+            # currently get them from the class variables
+            { 'name': 'delay',
+              'same': Router.same_as_fn['delay'],
+              'better': Router.better_than_fn['delay']
+             }
+        ]
     
 
 
@@ -919,15 +943,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
 
     # is the metric arg2 is better than arg1
-    def metric_is_better(self, arg1, arg2, better_fn):
-        if arg2 == arg1:
-            # arg2 is same
+    def metric_is_better(self, arg1, arg2, same_fn, better_fn):
+        if same_fn(arg1, arg2):
+            # arg2 is same as arg1
             return Compare.Same
         elif better_fn(arg2, arg1):
-            # arg2 is better
+            # arg2 is better than arg1
             return Compare.Better
         else:
-            # arg2 is worse
+            # arg2 is worse than arg1
             return Compare.Worse
          
     # is entry j better than entry i, in all metrics
@@ -938,13 +962,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         for index_m, m_dict in enumerate(self.metric_list):
             # m_dict has the name of the metric and the better-ness function
             m = m_dict['name']
-            fn = m_dict['better']
+            same_fn = m_dict['same']
+            better_fn = m_dict['better']
             
             # print("metric = " + m)
 
             # skip through each metric by selecting metric m of i and metric m of j
             # we want j[m] to be better than i[m]
-            better[index_m] = self.metric_is_better(i[m], j[m], fn)
+            better[index_m] = self.metric_is_better(i[m], j[m], same_fn, better_fn)
 
             
             if Verbose.level == 4:
