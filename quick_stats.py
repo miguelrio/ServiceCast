@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Parse BEST_REPLICA_UTILITY log files and summarize request accuracy.
+"""Parse log files and summarise request accuracy, etc. from BEST_REPLICA_UTILITY lines.
 
 Usage:
-    python parse_best_replica_utility_log.py logs/current-first_decide-replica
+    python quick_stats.py -v <log file> [<log file> ...]
 """
 
 import argparse
