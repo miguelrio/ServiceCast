@@ -349,7 +349,7 @@ class Server(Host):
         potential_slots = self.calculate_available_slots(new_slots)
 
         # now we need to check the capacity to see if we can accept this request
-        if (potential_slots <= 0):
+        if (potential_slots < 0):
             # there is no more capacity to take a job
             if Verbose.level >= 0:
                 print("{:.3f}: NO_MORE CAPACITY {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
