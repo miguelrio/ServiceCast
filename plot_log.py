@@ -10,12 +10,32 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from log_to_csv import convert_log_to_csv
 
+"""
+Plot utility comparison graphs from ServiceCast log/CSV files.
+
+Usage:
+    python plot_log.py [input_file] [-nolabel]
+
+Arguments:
+    input_file      Path to log or CSV file (optional; uses default if omitted)
+    -nolabel        Suppress client ID and utility labels on graph points (optional)
+
+Examples:
+    python plot_log.py                          # Use default CSV file
+    python plot_log.py logfile.log              # Convert and plot log file
+    python plot_log.py data.csv -nolabel        # Plot CSV without labels
+    python plot_log.py -nolabel logfile.log     # Flag order doesn't matter
+"""
+
 def generate_utility_plot():
     # Resolve absolute paths relative to the script location
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    # Handle optional command-line input (CSV or LOG file)
-    input_file = sys.argv[1] if len(sys.argv) > 1 else None
+    # Handle optional command-line input (CSV or LOG file) and -nolabel flag
+    raw_args = sys.argv[1:]
+    show_labels = '-nolabel' not in raw_args
+    args = [a for a in raw_args if a != '-nolabel']
+    input_file = args[0] if len(args) > 0 else None
     
     if input_file:
         if not os.path.exists(input_file):
@@ -38,7 +58,7 @@ def generate_utility_plot():
         
     if not os.path.exists(csv_path):
         print(f"Error: CSV file not found at: {csv_path}")
-        print("Please provide a log file or a CSV file: python3 plot_results.py [log_or_csv_file]")
+        print("Please provide a log file or a CSV file: python plot_results.py [log_or_csv_file]")
         return
 
     # Load data
@@ -78,50 +98,54 @@ def generate_utility_plot():
         zorder=3
     )
 
-    # Annotate grouped coordinate points elegant and clearly
-    for (opt_util, sel_util), group in grouped:
-        # Unique sorted list of client names for this exact coordinate
-        clients = ",".join(sorted(group['Client'].unique()))
-        count = len(group)
-        
-        # Format label text to maintain 4 decimal places of utility resolution
-        # Show oracle utility
-        # label_text = f"{clients}\n{opt_util:.4f}"
-        # Show selected utility
-        label_text = f"{clients}\n{sel_util:.4f}"
-        # Show both
-        # label_text = f"{clients}\n{opt_util:.4f} | {sel_util:.4f}"
-        if count > 1:
-            label_text += f" ({count})"
+    # Annotate grouped coordinate points elegant and clearly (skip if -nolabel)
+    if show_labels:
+        for (opt_util, sel_util), group in grouped:
+            # Unique sorted list of client names for this exact coordinate
+            clients = ",".join(sorted(group['Client'].unique()))
+            count = len(group)
+            
+            # Format label text to maintain 4 decimal places of utility resolution
+            # Show oracle utility
+            # label_text = f"{clients}\n{opt_util:.4f}"
+            # Show selected utility
+            label_text = f"{clients}\n{sel_util:.4f}"
+            # Show both
+            # label_text = f"{clients}\n{opt_util:.4f} | {sel_util:.4f}"
+            if count > 1:
+                label_text += f" ({count})"
 
-        # Offset heuristic: diagonal elements go up-left, off-diagonal elements go down-right
-        if abs(opt_util - sel_util) < 1e-7:
-            xytext = (-6, 6)
-            ha = 'right'
-            va = 'bottom'
-        else:
-            xytext = (6, -6)
-            ha = 'left'
-            va = 'top'
+            # Offset heuristic: diagonal elements go up-left, off-diagonal elements go down-right
+            if abs(opt_util - sel_util) < 1e-7:
+                xytext = (-6, 6)
+                ha = 'right'
+                va = 'bottom'
+            else:
+                xytext = (6, -6)
+                ha = 'left'
+                va = 'top'
 
-        ax.annotate(
-            label_text,
-            xy=(opt_util, sel_util),
-            xytext=xytext,
-            textcoords='offset points',
-            fontsize=6,
-            color='#1e293b',
-            fontweight='medium',
-            ha=ha,
-            va=va,
-            bbox=dict(boxstyle='round,pad=0.1', facecolor='#ffffff', edgecolor='none', alpha=0.7, zorder=2),
-            zorder=4
-        )
+            ax.annotate(
+                label_text,
+                xy=(opt_util, sel_util),
+                xytext=xytext,
+                textcoords='offset points',
+                fontsize=6,
+                color='#1e293b',
+                fontweight='medium',
+                ha=ha,
+                va=va,
+                bbox=dict(boxstyle='round,pad=0.1', facecolor='#ffffff', edgecolor='none', alpha=0.7, zorder=2),
+                zorder=4
+            )
 
     # Calculate oracle divergence metrics
     total_samples = len(df)
     divergent_samples = len(df[df['Is_Optimal'] == 'DIFFERENT'])
-    percentage_diff = (divergent_samples / total_samples) * 100
+    if total_samples > 0:
+        percentage_diff = (divergent_samples / total_samples) * 100
+    else:
+        percentage_diff = 0.0
 
     # Display stats text box at bottom right
     info_text = f"Different from oracle: {divergent_samples}/{total_samples} ({percentage_diff:.1f}%)"
