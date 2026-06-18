@@ -1201,14 +1201,16 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # check how much of a change in there is
         if (old_best_replica != this_best_replica):
             # different replicas
-            
-            if (diff == 0):
+
+            if (old_best_replica is not None and diff == 0):
                 # no change, do nothing
+                # (when there is no prior best replica there is nothing to
+                #  damp against, so always adopt the new replica below)
 
                 if Verbose.level >= 1:
                     print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not change ", old_best_replica, this_best_replica ))
 
-            elif (diff < Router.fib_utility_update_threshold):
+            elif (old_best_replica is not None and diff < Router.fib_utility_update_threshold):
                 # Compare diff to Router.fib_utility_update_threshold
                 # change is too small, do nothing
                 
