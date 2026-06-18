@@ -1202,7 +1202,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if (old_best_replica != this_best_replica):
             # different replicas
 
-            if (old_best_replica is not None and diff == 0):
+            if (diff == 0 and old_best_replica is not None):
                 # no change, do nothing
                 # (when there is no prior best replica there is nothing to
                 #  damp against, so always adopt the new replica below)
@@ -1210,7 +1210,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if Verbose.level >= 1:
                     print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {} to {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not change ", old_best_replica, this_best_replica ))
 
-            elif (old_best_replica is not None and diff < Router.fib_utility_update_threshold):
+            elif (diff < Router.fib_utility_update_threshold and old_best_replica is not None):
                 # Compare diff to Router.fib_utility_update_threshold
                 # change is too small, do nothing
                 
@@ -1228,6 +1228,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 self.best_neighbour = this_best_neighbour
                 self.servicename = this_servicename 
                 self.best_utility = this_best_utility
+
+                # update count
+                self.service_fib_updates += 1
+
         else:
             # same replica - maype update values for this replica
 
@@ -1253,9 +1257,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 self.best_utility = this_best_utility
 
+                # update count
+                self.service_fib_updates += 1
+
+
         # Print out some info on what changed
-
-
         if Verbose.level >= 1:
 
             # print ("old_best_replica " + str(old_best_replica) + " self.best_replica " + str(self.best_replica) + " self.best_neighbour " + str(self.best_neighbour))
@@ -1278,15 +1284,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # update the FIB
         
-        # update best_neighbour, best_replica, best_utility for servicename
+        # keep track of best_neighbour, best_replica, best_utility for servicename
         self.service_FIB[self.servicename] = { 'neighbour': self.best_neighbour,
                                                'replica': self.best_replica,
                                                'utility': self.best_utility }
 
-        self.service_fib_updates += 1
 
-        if Verbose.level >= 1:
-            print("{:.3f}: {:5s} SERVICE_FIB update count: {} {}".format(self.env.now, self.id(), self.service_fib_updates, self.service_FIB))
+        if Verbose.level >= 2:
+            print("{:.3f}: {:5s} SERVICE_FIB update_count: {} {}".format(self.env.now, self.id(), self.service_fib_updates, self.service_FIB))
 
 
     # Work out utility difference from self.best_utility
