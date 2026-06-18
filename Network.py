@@ -17,9 +17,6 @@ class Network:
     # 'router' (at forwarding decision),
     # 'client' (at request origination)
     optimal_utility_timing = Place.Replica
-    # Default propagation delay for links in the network (in seconds). This will usually be overridden by setting a value for it in main_dfn.py
-    # This is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
-    default_propagation_delay = 1
 
     def __init__(self, env = None):
         """ Create a network
@@ -81,8 +78,6 @@ class Network:
             for node in nodes:
                 # skip through [ ('b', 1), ('c', 4)]
                 (node_name, weight) = node
-                # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
-                weight = network.default_propagation_delay
                 
                 current = network.routers[name]
                 neighbour_obj = network.routers[node_name]
@@ -151,13 +146,11 @@ class Network:
 
         
     # add a host to the network and link it to a specified router
-    def add_host(self, host, router, weight=None):
+    def add_host(self, host, router, weight=1):
         """Add an edge from a Host to a Router.
            Pass in a Host and a Router.
         """
-        # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
-        if weight is None:
-            weight = self.default_propagation_delay
+
         if isinstance(host, Host):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
@@ -165,14 +158,11 @@ class Network:
             raise TypeError("host must be a Host")
 
     # add a client to the network and link it to a specified router
-    def add_client(self, host, router, weight=None):
+    def add_client(self, host, router, weight=1):
         """Add an edge from a Client to a Router.
            Pass in a name or a Client, and a Router.
         """
-        # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
-        if weight is None:
-            weight = self.default_propagation_delay
-
+        
         if isinstance(host, Client):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
@@ -185,13 +175,10 @@ class Network:
             raise TypeError("host must be a Client or a name")
 
     # add a server to the network and link it to a specified router
-    def add_server(self, host, router, weight=None):
+    def add_server(self, host, router, weight=1):
         """Add an edge from a Server to a Router.
            Pass in a name or a Server, and a Router.
         """
-        # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
-        if weight is None:
-            weight = self.default_propagation_delay
 
         if isinstance(host, Server):
             # now add it to the routers and add a link
@@ -209,13 +196,11 @@ class Network:
     # add new nodes if needed
     # return the new edge
     # or None, if nothing created
-    def add_edge(self,n1, n2, weight=None):
+    def add_edge(self,n1, n2, weight=1):
         """Add an edge from one Router to another Router.
            Pass in 2 Routers. Binds in the Environment to both Routers.
         """
-        # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
-        if weight is None:
-            weight = self.default_propagation_delay
+
         # does n1 exist
         r1 = None
 

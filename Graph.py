@@ -2,6 +2,11 @@ from Verbose import Verbose
 
 # A Graph
 class Graph:
+    # Default propagation delay for links in the network (in seconds).
+    # This will usually be overridden by setting a value for it in an experiment file.
+    # This allows us to set the link delays from links in the GML file.
+    default_propagation_delay = 1
+
     """A representation of a Graph"""
     def __init__(self, num=0):
         self.V = num                    # the size of the graph
@@ -126,16 +131,16 @@ class Graph:
     # Add edges
     def add_edge(self, s, d, weight=1):
         if Verbose.level >= 2:
-            print("add_edge " + str(s) + " " + str(d))
+            print("graph add_edge " + str(s) + " " + str(d))
 
         if not self.contains_node(s):
             if Verbose.level >= 2:
-                print("add_node " + str(s))
+                print("graph add_node " + str(s))
             self.add_node(s)
 
         if not self.contains_node(d):
             if Verbose.level >= 2:
-                print("add_node " + str(d))
+                print("graph add_node " + str(d))
             self.add_node(d)
 
         if not self.contains_edge(s, d):

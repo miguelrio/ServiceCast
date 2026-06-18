@@ -37,6 +37,7 @@ from io import StringIO
 from typing import Any, NamedTuple
 from pathlib import Path
 from Graph import Graph
+from Verbose import Verbose
 import sys
 
 
@@ -489,10 +490,13 @@ def parse_gml_lines(lines, label, destringizer):
             mapping[id] = node_label
         # ORIG
         #G.add_node(id, **node)
-        print("add_node " + node_label)
-        G.add_node(node_label)
-        print("node meta_data = " + str(node))
-        G.update_node_meta_data(node_label, node)
+        if Verbose.level >= 2:
+            print("gml add_node " + node_label)
+            G.add_node(node_label)
+
+        if Verbose.level >= 2:
+            print("gml node meta_data = " + str(node))
+            G.update_node_meta_data(node_label, node)
 
 
     edges = graph.get("edge", [])
@@ -506,8 +510,9 @@ def parse_gml_lines(lines, label, destringizer):
             raise ValueError(f"edge #{i} has undefined target {target!r}")
         if not multigraph:
             if not G.contains_edge(source, target):
-                print("add_edge " + str(source) + " " + str(target))
-                G.add_edge(source, target)
+                if Verbose.level >= 2:
+                    print("gml add_edge " + str(source) + " " + str(target) + ((" " + str(G.default_propagation_delay)) if G.default_propagation_delay != 1 else ""))
+                G.add_edge(source, target, G.default_propagation_delay)
             else:
                 arrow = "->" if directed else "--"
                 msg = f"edge #{i} ({source!r}{arrow}{target!r}) is duplicated"
@@ -525,8 +530,9 @@ def parse_gml_lines(lines, label, destringizer):
                 raise ValueError(msg + " is duplicated\n" + msg2)
             # ORIG
             # G.add_edge(source, target, key, **edge)
-            print("add_edge " + str(source) + " " + str(target))
-            G.add_edge(source, target)
+            if Verbose.level >= 2:
+                print("gml add_edge " + str(source) + " " + str(target) + ((" " + str(G.default_propagation_delay)) if G.default_propagation_delay != 1 else ""))
+            G.add_edge(source, target, G.default_propagation_delay)
 
     #if label is not None and label != "id":
     #    G = nx.relabel_nodes(G, mapping)

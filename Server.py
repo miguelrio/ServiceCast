@@ -426,7 +426,9 @@ class Server(Host):
     def calculate_available_slots(self, new_val):
         # this is currently:  self.slots - new_val
         raw = self.slots - new_val
-        # print(self.id() + " calculate_available_slots: " + str(raw) + " = " + str(self.slots) + " - " + str(new_val))
+        
+        if Verbose.level >= 3:
+            print(self.id() + " calculate_available_slots: " + str(raw) + " = " + str(self.slots) + " - " + str(new_val))
         return raw
 
     

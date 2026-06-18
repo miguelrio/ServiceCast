@@ -7,7 +7,6 @@ from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility, Place
 import simpy
-from gml import read_gml
 
 # sclayman:
 # Using a topology loaded from the DFN gml file
@@ -23,9 +22,11 @@ def topology_setup():
     # Network optimal_utility_timing
     Network.optimal_utility_timing = Place.Replica
 
-    # Default propagation delay. If this is not configured explicitly here then a default value of 1 will be used, see Network.py.    
-    # This is a temporary fix to override link delays specified in the GML file and some hardcoded delays for links to clients and servers in Network. We need to work on a better solution.
-    Network.default_propagation_delay = 1
+    # Default propagation delay.
+    # If this is not configured explicitly here then a default value of 1 will be used, see Graph.py.    
+    # This allows us to override link delays specified in the GML file
+    # and set some hardcoded delays for links to clients and servers in Network. 
+    Graph.default_propagation_delay = 2
 
     # Set alpha value
     Utility.alpha = 0.50
@@ -44,7 +45,7 @@ def topology_setup():
     Verbose.table = {Verbose.table}
     Router.hop_by_hop = {Router.hop_by_hop}
     Network.optimal_utility_timing = {Network.optimal_utility_timing}
-    Network.default_propagation_delay = {Network.default_propagation_delay}
+    Graph.default_propagation_delay = {Graph.default_propagation_delay}
     Utility.alpha = {Utility.alpha}
     Server.slots = {Server.slots}
     Server.change_factor = {Server.change_factor}
@@ -62,7 +63,9 @@ def topology_setup():
 
     print("SETUP ----------------------------------------------------------------")
 
-    graph = read_gml(gml_file)
+    graph = Graph.from_gml_file(gml_file)
+
+    print("GRAPH")
     graph.print()
 
     print ("graph nodes = " + str(graph.nodes()))
@@ -116,18 +119,24 @@ def topology_setup():
     # now calculate all the forwarding tables
     network.calculate_forwarding_tables()
     
-    dijkstra_c1 = Graph.dijkstra_algorithm(network, 'c1')
-    print("Network: dijkstra from c1 = " + str(dijkstra_c1))
-    print("Network: dijkstra routing from c1 = " + str(network.dijkstra_to_routing(dijkstra_c1)))
-    dijkstra_c4 = Graph.dijkstra_algorithm(network, 'c4')
-    print("Network: dijkstra from c4 = " + str(dijkstra_c4))
-    print("Network: dijkstra routing from c4 = " + str(network.dijkstra_to_routing(dijkstra_c4)))
 
+    # some cross check print outs
+    if Verbose.level >= 3:
+        dijkstra_c1 = Graph.dijkstra_algorithm(network, 'c1')
+        print("Network: dijkstra from c1 = " + str(dijkstra_c1))
+        print("Network: dijkstra routing from c1 = " + str(network.dijkstra_to_routing(dijkstra_c1)))
+        dijkstra_c4 = Graph.dijkstra_algorithm(network, 'c4')
+        print("Network: dijkstra from c4 = " + str(dijkstra_c4))
+        print("Network: dijkstra routing from c4 = " + str(network.dijkstra_to_routing(dijkstra_c4)))
+
+    # Network
     print("Network = ")
     network.print()
 
+    # dump graphviz file to tmp
     with open('/tmp/dfn.gv', mode='w') as file_object:
         network.graphviz(file=file_object)
+        
     # Services are not addresses -- they start with §
 
     # Server 's1' generates packets from arriving events
