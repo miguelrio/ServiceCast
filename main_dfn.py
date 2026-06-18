@@ -26,7 +26,7 @@ def topology_setup():
     # If this is not configured explicitly here then a default value of 1 will be used, see Graph.py.    
     # This allows us to override link delays specified in the GML file
     # and set some hardcoded delays for links to clients and servers in Network. 
-    Graph.default_propagation_delay = 2
+    Graph.default_propagation_delay = 0.1
 
     # Set alpha value
     Utility.alpha = 0.50
@@ -101,7 +101,7 @@ def topology_setup():
         servers.append(server_name)
         server_dest = core[s]
         print("Add " + str(server_name) + " at " + str(server_dest))
-        network.add_server(server_name, server_dest)
+        network.add_server(server_name, server_dest, Graph.default_propagation_delay)
 
     
     # add some clients
@@ -114,7 +114,7 @@ def topology_setup():
         clients.append(client_name)
         client_dest = local[c]
         print("Add " + str(client_name) + " at " + str(client_dest))
-        network.add_client(client_name, client_dest)
+        network.add_client(client_name, client_dest, Graph.default_propagation_delay)
 
     # now calculate all the forwarding tables
     network.calculate_forwarding_tables()
