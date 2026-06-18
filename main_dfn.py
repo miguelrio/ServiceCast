@@ -21,7 +21,11 @@ def topology_setup():
     Router.hop_by_hop = False
 
     # Network optimal_utility_timing
-    Network.optimal_utility_timing = Place.Router
+    Network.optimal_utility_timing = Place.Replica
+
+    # Default propagation delay. If this is not configured explicitly here then a default value of 1 will be used, see Network.py.    
+    # This is a temporary fix to override link delays specified in the GML file and some hardcoded delays for links to clients and servers in Network. We need to work on a better solution.
+    Network.default_propagation_delay = 1
 
     # Set alpha value
     Utility.alpha = 0.50
@@ -35,8 +39,20 @@ def topology_setup():
     # Router change factor damping
     Router.fib_utility_update_threshold = 0.001
     
+    print(f"""Simulation parameters:
+    Verbose.level = {Verbose.level}
+    Verbose.table = {Verbose.table}
+    Router.hop_by_hop = {Router.hop_by_hop}
+    Network.optimal_utility_timing = {Network.optimal_utility_timing}
+    Network.default_propagation_delay = {Network.default_propagation_delay}
+    Utility.alpha = {Utility.alpha}
+    Server.slots = {Server.slots}
+    Server.change_factor = {Server.change_factor}
+    Router.fib_utility_update_threshold = {Router.fib_utility_update_threshold}
+    """)
+    
     # 1 - Define the topology
-    print("- DFN")
+    print("Network - DFN")
     gml_file = "gml/Dfn.gml"
 
     # 2 - create the simpy environment 
@@ -120,6 +136,11 @@ def topology_setup():
         generator = Generator.server_load_event_generator(network, server_name, ["§a"], exponential_lambda=55, seed=15112022, background_load=False)
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
+    # arrival_lambda is the mean arrival time between requests (in seconds)
+    # size_lambda is the mean length/duration of the sessions (in seconds)
+    # size_scale_factor is a multiplier for the session duration
+    # Example: arrival_lambda=0.5, size_lambda=10, size_scale_factor=10 means an average of 2 requests per second, each lasting on average 100 seconds. This gives an average of 200 concurrent requests in the system. If there are 5 servers, each server will have an average of 40 concurrent requests.
+    # Note that it doesn't matter whether we have size_lambda=10, size_scale_factor=10 or size_lambda=100, size_scale_factor=1, the average session duration is the same (100 seconds). The scale factor is just a multiplier for the session duration.
     generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=5, size_lambda=10, size_scale_factor=10, seed=15112022)
 
     # run

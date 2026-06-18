@@ -17,6 +17,9 @@ class Network:
     # 'router' (at forwarding decision),
     # 'client' (at request origination)
     optimal_utility_timing = Place.Replica
+    # Default propagation delay for links in the network (in seconds). This will usually be overridden by setting a value for it in main_dfn.py
+    # This is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
+    default_propagation_delay = 1
 
     def __init__(self, env = None):
         """ Create a network
@@ -78,6 +81,8 @@ class Network:
             for node in nodes:
                 # skip through [ ('b', 1), ('c', 4)]
                 (node_name, weight) = node
+                # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
+                weight = network.default_propagation_delay
                 
                 current = network.routers[name]
                 neighbour_obj = network.routers[node_name]
@@ -146,10 +151,13 @@ class Network:
 
         
     # add a host to the network and link it to a specified router
-    def add_host(self, host, router, weight=1):
+    def add_host(self, host, router, weight=None):
         """Add an edge from a Host to a Router.
            Pass in a Host and a Router.
         """
+        # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
+        if weight is None:
+            weight = self.default_propagation_delay
         if isinstance(host, Host):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
@@ -157,10 +165,14 @@ class Network:
             raise TypeError("host must be a Host")
 
     # add a client to the network and link it to a specified router
-    def add_client(self, host, router, weight=1):
+    def add_client(self, host, router, weight=None):
         """Add an edge from a Client to a Router.
            Pass in a name or a Client, and a Router.
         """
+        # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
+        if weight is None:
+            weight = self.default_propagation_delay
+
         if isinstance(host, Client):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
@@ -173,10 +185,14 @@ class Network:
             raise TypeError("host must be a Client or a name")
 
     # add a server to the network and link it to a specified router
-    def add_server(self, host, router, weight=1):
+    def add_server(self, host, router, weight=None):
         """Add an edge from a Server to a Router.
            Pass in a name or a Server, and a Router.
         """
+        # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
+        if weight is None:
+            weight = self.default_propagation_delay
+
         if isinstance(host, Server):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
@@ -193,10 +209,13 @@ class Network:
     # add new nodes if needed
     # return the new edge
     # or None, if nothing created
-    def add_edge(self,n1, n2, weight=1):
+    def add_edge(self,n1, n2, weight=None):
         """Add an edge from one Router to another Router.
            Pass in 2 Routers. Binds in the Environment to both Routers.
         """
+        # this is a temporary fix to override link delays specified in the GML file. We need to work on a better solution.
+        if weight is None:
+            weight = self.default_propagation_delay
         # does n1 exist
         r1 = None
 
@@ -561,6 +580,8 @@ class Network:
         # before we return, calculate the network diameter
         # it uses the latency_table values
         self.network_diameter_val = self.network_diameter_fn()
+        if Verbose.level >= 3:
+            print("Net: network_diameter = " + str(self.network_diameter_val))
         
         return latency_table
 
@@ -599,12 +620,12 @@ class Network:
 
     # calculate the network diameter
     def network_diameter_fn(self):
-        diameter = 1
+        # Had to change the starting diameter from 1 to 0.0 to cope with link weights/latencies less than 1, previously the minimum the network diameter could be was 1.
+        diameter = 0.0
 
         # visit the keys -- nodes names
         for node in self.latency_table:
             latency_from_node = self.latency_table[node]
-
 
             for dst in latency_from_node:
                 distance = latency_from_node[dst]
@@ -613,6 +634,9 @@ class Network:
                     diameter = distance
             
                 # print(str(dst) + " -> " + str(distance) + " diameter: " + str(diameter))
+        # Avoid division by zero when there are no paths
+        if diameter == 0.0:
+            return 1.0
 
         return diameter
         
