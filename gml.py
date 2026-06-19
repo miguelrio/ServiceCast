@@ -492,11 +492,11 @@ def parse_gml_lines(lines, label, destringizer):
         #G.add_node(id, **node)
         if Verbose.level >= 2:
             print("gml add_node " + node_label)
-            G.add_node(node_label)
+        G.add_node(node_label)
 
         if Verbose.level >= 2:
             print("gml node meta_data = " + str(node))
-            G.update_node_meta_data(node_label, node)
+        G.update_node_meta_data(node_label, node)
 
 
     edges = graph.get("edge", [])
