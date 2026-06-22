@@ -10,6 +10,8 @@ import re
 import numpy as np
 
 LOG_LINE_RE = re.compile(r"\b(?P<status>SAME|EQUAL|DIFFERENT)(?:\s+(?P<diff>-?\d+(?:\.\d+)?))?\s*$")
+CREATE_SERVER_METRIC_RE = re.compile(r"PACKET_CREATED.*ServerMetric")
+RECV_SERVER_METRIC_RE = re.compile(r"RECV_PACKET\s+ServerMetric")
 
 
 def parse_log_lines(lines):
@@ -19,11 +21,19 @@ def parse_log_lines(lines):
     different = 0
     diffs = []
     different_diffs = []
+    server_updates_created = 0
+    server_metric_recv = 0
+
 
     for line in lines:
         line = line.strip()
         if not line:
             continue
+        
+        if CREATE_SERVER_METRIC_RE.search(line):
+            server_updates_created += 1
+        if RECV_SERVER_METRIC_RE.search(line):
+            server_metric_recv += 1
 
         match = LOG_LINE_RE.search(line)
         if not match:
@@ -52,6 +62,8 @@ def parse_log_lines(lines):
         "different": different,
         "diffs": diffs,
         "different_diffs": different_diffs,
+        "server_updates_created": server_updates_created,
+        "server_metric_recv": server_metric_recv,
     }
 
 
@@ -75,14 +87,10 @@ def format_stats(stats):
         mean_diff_including_zero = float(np.mean(diffs)) if diffs else 0.0
 
     return (
-        f"Requests: {total}; "
-        f"SAME: {same}; "
-        f"EQUAL: {equal}; "
-        f"DIFFERENT: {different}\n"
-        f"accuracy: {accuracy * 100:.4g}%; "
-        f"utility gap: max: {max_diff * 100:.4g}%; "
-        f"mean: {mean_diff_including_zero * 100:.4g}%; "
-        f"mean conditional: {mean_diff * 100:.4g}%\n"
+        f"Requests: {total}; SAME: {same}; EQUAL: {equal}; DIFFERENT: {different}\n"
+        f"accuracy: {accuracy * 100:.4g}%; utility gap: max: {max_diff * 100:.4g}%; mean: {mean_diff_including_zero * 100:.4g}%; mean conditional: {mean_diff * 100:.4g}%\n"
+        f"Server update events: {stats['server_updates_created']}; "
+        f"Total update messages: {stats['server_metric_recv']}\n"
     )
 
 
