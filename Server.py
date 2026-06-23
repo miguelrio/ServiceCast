@@ -197,11 +197,6 @@ class Server(Host):
         if Verbose.level >= 1:
             print("{:.3f}: {:5s} SERVER_PROCESS ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), service_name, packet.src, packet.id))
 
-        # Do some processing and logging to determine some ideal info.
-        # Calls into the Network to get a global view
-        # pass in self as the requesting_server
-        self.network.best_replica_utility(self, packet)
-
         # process the request packet
         self.process_client_request_packet(packet)
 
@@ -214,9 +209,24 @@ class Server(Host):
         # convert packet data into a Request
         request = Request(packet.src, service_name, packet.id, packet.size)
 
-        # increase_load will trigger a callback to decrease_load
-        new_load = self.increase_load(request)
+        if self.can_increase_load(request):
+            # Do some processing and logging to determine some ideal info.
+            # Calls into the Network to get a global view
+            # pass in self as the requesting_server
+            self.network.best_replica_utility(self, packet)
 
+            # increase_load will trigger a callback to decrease_load
+            # at some later stage
+            load_increased = self.increase_load(request)
+
+        else:
+            # This request is blocked
+
+            if Verbose.level >= 0:
+                print("{:.3f}: {:5s} SERVER_ERROR {} no more capacity for request [{}.{}]".format(self.env.now, self.id(), self.id(), request.src, request.id))
+
+            # call best_replica_utility with an error code
+            self.network.best_replica_utility(self, packet, {'error': "no_more_capacity", 'msg': "BLOCKED"})
 
     # Deal with increased load
     # This may or may not send an update to the network
@@ -334,7 +344,24 @@ class Server(Host):
                  'slots': self.slots,
                  'used_slots': self.used_slots }
 
+    # can we increase the load on this server
+    def can_increase_load(self, request):
+        # calculate new info
+        new_slots = Server.slots_up_fn(self.used_slots)
+
+        potential_slots = self.calculate_available_slots(new_slots)
+
+        # now we need to check the capacity to see if we can accept this request
+        if (potential_slots < 0):
+            # there is no more capacity to take a job
+            return False
+
+        else:
+            return True
+
     # increase load based on request size
+    # returns True if it increased the load
+    # returns False if there is no more capacity
     def increase_load(self, request):
 
         # MR: STEP 9 update load (add or subtract)
@@ -347,20 +374,16 @@ class Server(Host):
         new_slots = Server.slots_up_fn(self.used_slots)
         new_flows =  Server.flows_up_fn(self.no_of_flows)
 
+        # double check we can accept the request
         potential_slots = self.calculate_available_slots(new_slots)
 
         # now we need to check the capacity to see if we can accept this request
         if (potential_slots < 0):
             # there is no more capacity to take a job
             if Verbose.level >= 0:
-                print("{:.3f}: SERVER_ERROR no more capacity {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
+                print("{:.3f}: {:5s} SERVER_ERROR increase_load no more capacity for request {}.{} timeout {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size)))
 
-                
-            # Calls into the Network to get a global view
-            # pass in self as the requesting_server
-            self.network.best_replica_utility(self, packet)
-
-            return
+            return False
 
         else:
             # process extra load
@@ -377,8 +400,10 @@ class Server(Host):
             # Destination is likely to be a service name: e.g. §a
             self.send_load_change(self.env.now, request.dst)
 
-            # process callback event for future decrease
+            # process callback event for future decrease of the load
             self.env.process(self.decrease_load(request))
+
+            return True
 
 
     # decrease load based once request times out

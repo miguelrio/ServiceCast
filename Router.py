@@ -214,7 +214,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             return ("exists", self.outgoing_ports[neighbour_obj.id()])
 
         else:
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print("LinkEnd Add " + self.id() + " -> " + "neighbour " + str(neighbour) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
 
             self.outgoing_ports[neighbour] = SwitchPort(self.env, rate=rate, limit_bytes=False)
@@ -295,7 +295,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     
             else:
                 # normal forwarding
-                self.normal_forwarding_packet(link_end, packet)
+                self.normal_forwarding_packet(packet, link_end)
 
 
 
@@ -337,7 +337,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # in the forwarding table, for the replica then Drop the message
         valid_route = self.arrived_from_unicast_route(replica, link_end)
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print("{:.3f}: {:5s} UNICAST_ROUTE for {} from {} --> {} ".format(self.env.now, self.id(), replica, link_end.src_node.id(), 'VALID' if valid_route else 'INVALID'))
 
         if not valid_route:
@@ -389,7 +389,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 announcement_distance =  (replica_available_capacity / system_available_capacity)  * (normalised_load - average_normalised_load + 1) * network_diameter 
 
 
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 # example:   381.000: POT   ANNOUNCEMENT_DISTANCE msgid: 24 replica: s4 msg time: 379.0  propagation_time: 2 load_utility(s4): 2.0 average_load_utility: 1.9 replica_capacity: 45 system_available_capacity: 232 announcement_distance: 1.494 
                 print("{:.3f}: {:5s} ANNOUNCEMENT_DISTANCE msgid: {} replica: {} msg time: {}  propagation_time: {} normalised_load({}): {} average_normalised_load: {} replica_capacity: {} system_available_capacity: {} announcement_distance: {} ".format(self.env.now, self.id(), msgID, replica, creationTime, round(propagation_time, 6), replica, normalised_load, round(average_normalised_load, 6), replica_available_capacity, system_available_capacity,  round(announcement_distance, 3)))
 
@@ -475,7 +475,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # nothing found - it must be new, so add it
             val = self.service_RIB.insert({ 'replica': replica, 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': int(metrics['no_of_flows']), 'delay': metrics['delay'], 'slots': metrics['slots']  })
 
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print ("{:.3f}: {:5s} ADD_METRIC metric from {} as no {}".format(self.env.now, self.id(), replica, val) )
 
         else:
@@ -488,7 +488,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # check results
             if resultsT != []:
                 # we found an entry with a newer time
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     print("{:.3f}: {:5s} METRIC_TOO_OLD link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), resultsT))))
                     
                 return
@@ -523,7 +523,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # announce on all the links that it wasn't received from
 
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             self.print_metric_table()
 
         # ---- Announcement Decision Phase ----
@@ -531,7 +531,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         #  decide the PBR entries to announce        
         decide_pbr = self.decide_announcements(self.service_RIB.all())
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             self.print_announce_info(decide_pbr)
 
         # Work out what to send from the PBR and the sent_table
@@ -592,7 +592,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             self.announce_metrics(announce + withdraw)
 
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             self.print_sent_table()
 
 
@@ -658,13 +658,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if no_found_in_sent_table == 0:
                 # nothing in sent_table
                 # so no withdrawals sent on
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     print("{:.3f}: {:5s} SENT_TABLE_NOTHING in sent_table: for {}".format(self.env.now, self.id(), candidate.doc_id))
 
                 # now delete the candidate metric from the RIB
                 self.delete_rib_entry(candidate)
 
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     self.print_metric_table()
             
             else:
@@ -709,7 +709,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 # now delete the candidate metric from the RIB
                 self.delete_rib_entry(candidate)
 
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     self.print_metric_table()
 
 
@@ -840,7 +840,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                         if self.check_sent_table(metric_to_send, neighbour):
                             # this is in the sent table, so no need to send
-                            if Verbose.level >= 1:
+                            if Verbose.level >= 2:
                                 print ("{:.3f}: {:5s} ALREADY_IN_SENT_TABLE neighbour {} metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
                                 pass
 
@@ -855,7 +855,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                             # forward the packet
                             if Verbose.level >= 1:
-                                print("{:.3f}: {:5s} FORWARD_METRIC {} to {}".format(self.env.now,  self.id(), metric_to_send.doc_id, neighbour))
+                                print("{:.3f}: {:5s} FORWARD_METRIC to {} msg {}".format(self.env.now,  self.id(), self.neighbour_destination(neighbour).id(), metric_to_send))
 
                             # send to relevant SwitchPort
                             self.send_packet_to_neighbour(new_packet, neighbour)
@@ -878,7 +878,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                             # forward the packet
                             if Verbose.level >= 1:
-                                print("{:.3f}: {:5s} FORWARD_WITHDRAW to {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour))
+                                print("{:.3f}: {:5s} FORWARD_WITHDRAW to {} msg {}".format(self.env.now, self.id(), self.neighbour_destination(neighbour).id(), metric_to_send))
 
                             # send to relevant SwitchPort
                             self.send_packet_to_neighbour(new_packet, neighbour)
@@ -1181,7 +1181,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if Verbose.level >= 3:
                     print("patched up utility value for " + old_best_replica + " to " + str(old_best_utility))
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             self.print_utility_info(entries, utility)
 
 
@@ -1290,7 +1290,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                                                'utility': self.best_utility }
 
 
-        if Verbose.level >= 2:
+        if Verbose.level >= 1:
             print("{:.3f}: {:5s} SERVICE_FIB update_count: {} {}".format(self.env.now, self.id(), self.service_fib_updates, self.service_FIB))
 
 
@@ -1316,7 +1316,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # --- Original Hop-by-Hop Anycast Routing ---
             if not service_name in self.service_FIB:
                 # no service name in the service_FIB
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     print("{:.3f}: {:5s} NO_SERVICE_FIB_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
             else:
                 # we have that service name in the service_FIB
@@ -1326,7 +1326,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, neighbour))
 
                 if neighbour == None:
-                    if Verbose.level >= 1:
+                    if Verbose.level >= 2:
                         print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FIB ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
                 else:
                     # Snapshot optimal utility if timing is set to 'router'
@@ -1344,7 +1344,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # --- First-Decide Single-Decision Unicast Routing ---
             if not service_name in self.service_FIB:
                 # no service name in the service_FIB
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     print("{:.3f}: {:5s} NO_SERVICE_FIB_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
             else:
                 # we have that service name in the service_FIB
@@ -1365,11 +1365,17 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         self.network.inject_snapshot_optimal_utility(packet)
 
                     if Verbose.level >= 1:
-                        print("{:.3f}: {:5s} SINGLE_DECISION ClientRequest for service {} mapped to replica {} pkt: {} send to neighbour".format(self.env.now, self.id(), service_name, best_replica, packet.id))
-                    self.normal_forwarding_packet(link_end, packet)                
+                        print("{:.3f}: {:5s} SINGLE_DECISION ClientRequest for service {} mapped to replica {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), service_name, best_replica, packet.id, link_end.dst_node))
+
+                    # print forward info
+                    neighbour = self.route_to(packet.dst)
+                    if Verbose.level >= 1:
+                        print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, link_end.dst_node))
+
+                    self.normal_forwarding_packet(packet, link_end)                
 
     # Do normal forwarding
-    def normal_forwarding_packet(self, link_end, packet):
+    def normal_forwarding_packet(self, packet, link_end):
         
         if packet.dst == None:
             # dont forward to None
@@ -1402,13 +1408,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     # send to SwitchPort
                     self.send_packet_to_neighbour(packet, neighbour)
 
-                    if Verbose.level >= 2:
+                    if Verbose.level >= 1:
                         print("{:.3f}: {:5s} PACKET_FORWARD {}.{} for {} forwarded from {} to {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.dst, self.id(), neighbour, (self.env.now - packet.time)))
 
 
             else:
                 # not in unicast_forwarding_table
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     print("{:.3f}: {:5s} PACKET_ERROR {}.{} for {} not in unicast_forwarding_table at {} ".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.dst, self.id()))
 
                     print(str(self.unicast_forwarding_table))
@@ -1469,12 +1475,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # nothing found - it must be new, so add it
             val = self.sent_table.insert({'metric_doc_id': metric_to_send.doc_id, 'neighbour': neighbour })
 
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print ("{:.3f}: {:5s} ADD_SENT_TABLE metric no {} neighbour {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour) )
 
         else:
             # update the table
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print ("{:.3f}: {:5s} UPDATE_SENT_TABLE metric no {} neighbour {}".format(self.env.now, self.id(), metric_to_send.doc_id, neighbour) )
 
 
@@ -1483,7 +1489,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def clear_sent_table(self, metric_doc_id):
         """Clear entries in sent table with 'metric_doc_id'"""
         
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print ("{:.3f}: {:5s} CLEAR_SENT_TABLE metric no {}".format(self.env.now, self.id(), metric_doc_id) )
 
         before = len(self.sent_table)

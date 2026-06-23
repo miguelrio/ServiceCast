@@ -65,7 +65,7 @@ class Host(object):
         """Add a neighbour from this host to a router"""
         link = None
         
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print("LinkEnd Add " + self.id() + " -> " + "neighbour " + str(neighbour_obj) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
 
         self.neighbour = neighbour_obj.id()
@@ -112,7 +112,7 @@ class Host(object):
             # consume the packet
             self.sink.put(packet)
 
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print("{:.3f}: {:5s} PACKET_CONSUMED {}.{} consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, self.hostid, (self.env.now - packet.time)))
         else:
             # If the packet is not for us, forward to the neighbour
