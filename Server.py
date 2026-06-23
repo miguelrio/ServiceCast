@@ -110,7 +110,7 @@ class Server(Host):
     # Process a LoadEvent which generates background load
     def process_load_event(self, event):
         # we got a load event
-        if Verbose.level >= 0:
+        if Verbose.level >= 1:
             print("{:.3f}: {:5s} SERVER_LOAD {}".format(self.env.now, self.id(), event))
         
         # it should have: seqno, time, no_of_flows, load
@@ -199,6 +199,7 @@ class Server(Host):
 
         # Do some processing and logging to determine some ideal info.
         # Calls into the Network to get a global view
+        # pass in self as the requesting_server
         self.network.best_replica_utility(self, packet)
 
         # process the request packet
@@ -352,7 +353,13 @@ class Server(Host):
         if (potential_slots < 0):
             # there is no more capacity to take a job
             if Verbose.level >= 0:
-                print("{:.3f}: NO_MORE CAPACITY {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
+                print("{:.3f}: SERVER_ERROR no more capacity {} timeout {} for {}.{}".format(self.env.now, self.id(), size_to_time(size), request.src, request.id))
+
+                
+            # Calls into the Network to get a global view
+            # pass in self as the requesting_server
+            self.network.best_replica_utility(self, packet)
+
             return
 
         else:

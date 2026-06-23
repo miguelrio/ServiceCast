@@ -794,6 +794,7 @@ class Network:
 
         # Log utility of true best replica and utility of selected replica: timestamp, selected server id, client id, client request id,  selected server id,  selected server load, selected server latency, selected server utility, best server id, best server load, best server latency
         if Verbose.level >= 0:
+            # processing for BEST_REPLICA_UTILITY 
             utility_diff = abs(selected_server_utility - best_server_utility)
             if utility_diff >= 1e-9:
                 status = "DIFFERENT"
@@ -842,7 +843,7 @@ class Network:
 
         load = self.replica_capacity_total["load"] / len(self.replica_capacity)
 
-        if Verbose.level >= 0:
+        if Verbose.level >= 1:
             print ("{:.3f}: {:5s} REPLICA_CAPACITY_NETWORK 'load': {} 'no_of_flows': {}  'capacity': {}  'slots': {}  (Update from {})".format(self.env.now, "Net ", round(load, 6) ,  self.replica_capacity_total["no_of_flows"],  self.replica_capacity_total["capacity"],  self.replica_capacity_total["slots"], replica ))
 
     # Get the load_utility for a replica
