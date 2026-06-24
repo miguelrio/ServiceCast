@@ -313,7 +313,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def incoming_server_metrics_packet(self, link_end, packet):
         """The process for a packet with type ServerMetric"""
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 0:
             print("{:.3f}: {:5s} RECV_PACKET  ServerMetric {} {}.{} ({:.3f}) [{}.{}] MT({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.pkt_no, packet.time, packet.replica, packet.id, packet.msg_time, self.id(), (self.env.now - packet.time)))
 
         # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
@@ -1306,7 +1306,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def client_request_packet(self, link_end, packet):
         """A Client has sent a request"""
 
-        if Verbose.level >= 0:
+        if Verbose.level >= 1:
             print("{:.3f}: {:5s} RECV_PACKET ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
 
         # Destination is likely to be a service name: e.g. §a
