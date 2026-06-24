@@ -9,21 +9,22 @@ import argparse
 import re
 import numpy as np
 
-LOG_LINE_RE = re.compile(r"\b(?P<status>SAME|EQUAL|DIFFERENT)(?:\s+(?P<diff>-?\d+(?:\.\d+)?))?\s*$")
+LOG_LINE_RE = re.compile(r"\b(?P<status>SAME|EQUAL|DIFFERENT|BLOCKED)(?:\s+(?P<diff>-?\d+(?:\.\d+)?))?\s*$")
 CREATE_SERVER_METRIC_RE = re.compile(r"PACKET_CREATED.*ServerMetric")
-RECV_SERVER_METRIC_RE = re.compile(r"RECV_PACKET\s+ServerMetric")
-
+RECV_SERVER_METRIC_ANNOUNCEMENT_RE = re.compile(r"RECV_PACKET\s+ServerMetric A")
+RECV_SERVER_METRIC_WITHDRAWAL_RE = re.compile(r"RECV_PACKET\s+ServerMetric W")
 
 def parse_log_lines(lines):
     total = 0
     equal = 0
     same = 0
+    blocked = 0
     different = 0
     diffs = []
     different_diffs = []
     server_updates_created = 0
-    server_metric_recv = 0
-
+    server_metrics_announce = 0
+    server_metrics_withdraw = 0
 
     for line in lines:
         line = line.strip()
@@ -32,8 +33,10 @@ def parse_log_lines(lines):
         
         if CREATE_SERVER_METRIC_RE.search(line):
             server_updates_created += 1
-        if RECV_SERVER_METRIC_RE.search(line):
-            server_metric_recv += 1
+        if RECV_SERVER_METRIC_ANNOUNCEMENT_RE.search(line):
+            server_metrics_announce += 1
+        elif RECV_SERVER_METRIC_WITHDRAWAL_RE.search(line):
+            server_metrics_withdraw += 1
 
         match = LOG_LINE_RE.search(line)
         if not match:
@@ -49,6 +52,8 @@ def parse_log_lines(lines):
         elif status == "EQUAL":
             equal += 1
             diffs.append(0.0)
+        elif status == "BLOCKED":
+            blocked += 1
         elif status == "DIFFERENT":
             different += 1
             diff_value = float(diff_text) if diff_text is not None else 0.0
@@ -59,11 +64,13 @@ def parse_log_lines(lines):
         "total": total,
         "equal": equal,
         "same": same,
+        "blocked": blocked,
         "different": different,
         "diffs": diffs,
         "different_diffs": different_diffs,
         "server_updates_created": server_updates_created,
-        "server_metric_recv": server_metric_recv,
+        "server_metrics_announce": server_metrics_announce,
+        "server_metrics_withdraw": server_metrics_withdraw,
     }
 
 
@@ -71,26 +78,32 @@ def format_stats(stats):
     total = stats["total"]
     equal = stats["equal"]
     same = stats["same"]
+    blocked = stats["blocked"]
     different = stats["different"]
     diffs = stats["diffs"]
+    updates = stats["server_updates_created"]
+    announces = stats["server_metrics_announce"]
+    withdraws = stats["server_metrics_withdraw"]
 
     if total == 0:
         accuracy = 0.0
+        blocked_rate = 0.0
         mean_diff = 0.0
         mean_diff_including_zero = 0.0
         max_diff = 0.0
     else:
-        accuracy = (equal + same) / total
+        accuracy = (equal + same) / (total - blocked)
+        blocked_rate = blocked / total
         different_diffs = stats["different_diffs"]
         max_diff = max(different_diffs) if different_diffs else 0.0
         mean_diff = float(np.mean(different_diffs)) if different_diffs else 0.0
         mean_diff_including_zero = float(np.mean(diffs)) if diffs else 0.0
 
     return (
-        f"Requests: {total}; SAME: {same}; EQUAL: {equal}; DIFFERENT: {different}\n"
-        f"accuracy: {accuracy * 100:.4g}%; utility gap: max: {max_diff * 100:.4g}%; mean: {mean_diff_including_zero * 100:.4g}%; mean conditional: {mean_diff * 100:.4g}%\n"
-        f"Server update events: {stats['server_updates_created']}; "
-        f"Total update messages: {stats['server_metric_recv']}\n"
+        f"requests: {total:,}; SAME: {same:,}; EQUAL: {equal:,}; DIFFERENT: {different:,}; BLOCKED: {blocked:,}\n"
+        f"accuracy: {accuracy * 100:.4g}%; blocked: {blocked_rate * 100:.4g}%; utility gap: max: {max_diff * 100:.4g}%; mean: {mean_diff_including_zero * 100:.4g}%; mean conditional: {mean_diff * 100:.4g}%\n"
+        f"server update events: {updates:,}; "
+        f"total update messages: {(announces + withdraws):,} ({announces:,} announcements, {withdraws:,} withdrawals)\n"
     )
 
 
