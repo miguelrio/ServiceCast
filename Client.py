@@ -31,7 +31,7 @@ class Client(Host):
         packet.type = "ClientRequest"
         packet.pkt_no = self.pkt_no
         
-        if Verbose.level >= 0:
+        if Verbose.level >= 1:
             print("{:.3f}: {:5s} PACKET_CREATED {}.{} ({:.3f}) ClientRequest in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
         self.pkt_no += 1

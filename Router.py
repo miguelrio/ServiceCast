@@ -313,7 +313,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def incoming_server_metrics_packet(self, link_end, packet):
         """The process for a packet with type ServerMetric"""
 
-        if Verbose.level >= 0:
+        if Verbose.level >= 1:
             print("{:.3f}: {:5s} RECV_PACKET  ServerMetric {} {}.{} ({:.3f}) [{}.{}] MT({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.pkt_no, packet.time, packet.replica, packet.id, packet.msg_time, self.id(), (self.env.now - packet.time)))
 
         # collect incoming metrics table [servicename, replicaID, metrics (delay, load), original messageID, creation timestamp, last update timestamp, link_received, calculated utility]
