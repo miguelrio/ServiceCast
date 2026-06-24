@@ -773,7 +773,7 @@ class Network:
         # Both selected and optimal use values from the same snapshot time
         if hasattr(packet, 'optimal_snapshot'):
 
-            print("packet has optimal_snapshot " + str(packet.optimal_snapshot))
+            # print("packet has optimal_snapshot " + str(packet.optimal_snapshot))
 
             now = self.env.now
 
