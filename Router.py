@@ -178,7 +178,8 @@ class Router(object):
         # "Register" the process
         self.env.process(self.run())
 
-        print ("Router " + str(self._routerid) + " running")
+        if Verbose.level >= 2:
+            print ("Router " + str(self._routerid) + " running")
 
       
     def add_neighbours(self, neighbours, rate=LINKRATE):

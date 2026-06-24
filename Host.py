@@ -58,7 +58,8 @@ class Host(object):
         # "Register" the process
         self.env.process(self.run())
 
-        print (self.type + " " + str(self.hostid) + " running")
+        if Verbose.level >= 2:
+            print (self.type + " " + str(self.hostid) + " running")
 
       
     def add_neighbour(self, neighbour_obj, propdelay=1, rate=LINKRATE):
