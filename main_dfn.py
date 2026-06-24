@@ -16,7 +16,7 @@ def topology_setup():
     Verbose.level = 0
     Verbose.table = 1
 
-    # Set routing mode: hop-by-hop anycast (True) or first-decide unicast (False)
+    # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
     Router.hop_by_hop = False
 
     # Network optimal_utility_timing
@@ -161,7 +161,7 @@ def topology_setup():
     # Server 's1' generates packets from arriving events
     # and sends to service 'a'  indicated by "§a"
     for server_name in servers:
-        generator = Generator.server_load_event_generator(network, server_name, ["§a"], exponential_lambda=55, seed=15112022, background_load=False)
+        generator = Generator.server_load_event_generator(network, server_name, ["§a"], seed=15112022, background_load=False)
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
     # arrival_lambda is the mean arrival time between requests (in seconds)

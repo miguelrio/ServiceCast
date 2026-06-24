@@ -210,7 +210,12 @@ class Generator(object):
         # used if background_load is True
         genB = itertools.chain([0], itertools.repeat(10))
 
-        # The interarrival time is the same
+        if Verbose.level >= 1:
+            print(f"""Server {idstr} server_event_generator parameters:
+    background_load = {background_load}
+            """)
+
+        # The interarrival time at the server is the same
         def arrival_dist():
             if background_load:
                 ##next_time = gen.exponential(exponential_lambda)
@@ -229,6 +234,7 @@ class Generator(object):
                 
             return next_val
 
+        # what is the load on the server
         def load_dist():
             if background_load:
                 # normal 0 - 100,  mu = 50 +/- 20 stddevs
@@ -324,8 +330,12 @@ class Generator(object):
 
         env = network.env
 
-        if Verbose.level >= 1:
-            print("Generator multi_client_event_generator arrival_lambda = {} size_lambda = {} size_scale_factor = {}".format(arrival_lambda, size_lambda, size_scale_factor))
+        if Verbose.level >= 0:
+            print(f"""Client multi_client_event_generator parameters:
+    arrival_lambda = {arrival_lambda}
+    size_lambda = {size_lambda}
+    size_scale_factor = {size_scale_factor}
+            """)
 
         # EventGenerator accepts three (zero arguments) functions as arguments,
         # - one that gives the inter arrival times,

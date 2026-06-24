@@ -277,7 +277,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             else:
                 # packet for me, but not a ServerMetric
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     print("{:.3f}: {:5s} PACKET_CONSUME {}.{}  ({:.3f}) consumed in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, self.id(), (self.env.now - packet.time)))
 
 
@@ -383,7 +383,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             
             if system_available_capacity == 0:
-                if Verbose.level >= 1:
+                if Verbose.level >= 2:
                     print("SYSTEM_AVAILABLE_CAPACITY " + "'" + str(self.id()) + "'" + " == 0 announcement_distance 0")
                 announcement_distance = 0
             else:
@@ -467,7 +467,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         searchR = Query()
         results = self.service_RIB.search((searchR.replica == replica))
 
-        if Verbose.level >= 2:
+        if Verbose.level >= 1:
             print("{:.3f}: {:5s} METRIC_SEARCH_RESULTS link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, list(zip (map(lambda doc: doc.doc_id, results), results))))
         
         # check results
@@ -500,7 +500,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # update other values
             val = self.service_RIB.update({ 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': metrics['no_of_flows'], 'delay': metrics['delay'], 'slots': metrics['slots'] } , doc_ids=[ r.doc_id for r in results ])
 
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print("{:.3f}: {:5s} UPDATE_METRIC metric no {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), val, msgID, creationTime, metrics['load'], metrics['delay'] ))
 
             # mark this doc_id, if in sent_table
@@ -524,7 +524,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # announce on all the links that it wasn't received from
 
 
-        if Verbose.level >= 2:
+        if Verbose.level >= 1:
             self.print_metric_table()
 
         # ---- Announcement Decision Phase ----
@@ -532,7 +532,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         #  decide the PBR entries to announce        
         decide_pbr = self.decide_announcements(self.service_RIB.all())
 
-        if Verbose.level >= 2:
+        if Verbose.level >= 1:
             self.print_announce_info(decide_pbr)
 
         # Work out what to send from the PBR and the sent_table
@@ -973,7 +973,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             better[index_m] = self.metric_is_better(i[m], j[m], same_fn, better_fn)
 
             
-            if Verbose.level == 4:
+            if Verbose.level >= 4:
                 print("metric_is_better = " + str(better[index_m]) + " for " + "i["+ m + "] and j[" + m + "]")
 
         # return value
@@ -1015,7 +1015,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             # so we don't need i anymore
                             announce[index_i] = False
 
-                            if Verbose.level == 3:
+                            if Verbose.level >= 3:
                                 print("Compare.Better: j_{} is better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
                             break
@@ -1025,18 +1025,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             # so we don't need j
                             announce[index_j] = False
                             
-                            if Verbose.level == 3:
+                            if Verbose.level >= 3:
                                 print("Compare.Same: j_{} is same as i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
 
 
                         else:
                             # we keep i
-                            if Verbose.level == 3:
+                            if Verbose.level >= 3:
                                 print("Compare.Worse: j_{} is not better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
                         
 
             # at this point the announce list should have a True for all the entries to announce
-            if Verbose.level == 3:
+            if Verbose.level >= 3:
                 print("announce: {}".format(announce))
 
             # select those entries which are laballed as True in announce

@@ -185,7 +185,7 @@ class Server(Host):
                 # This is where the main servicecast algorithm will be implemented.
                 self.outgoing_port.put(packet)
 
-                if Verbose.level >= 2:
+                if Verbose.level >= 1:
                     print("{:.3f}: {:5s} PACKET_DELIVER {}.{} for {} deliver to {}".format(self.env.now, self.id(), packet.src, packet.id, packet.dst,  self.neighbour))
            
 
@@ -255,14 +255,14 @@ class Server(Host):
         # check how much of a change in slots there is
         if (diff != 0 and diff < Server.change_factor):
             # change is too small, do nothing
-            if Verbose.level >= 2:
+            if Verbose.level >= 1:
                 print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- do nothing".format(self.env.now, self.id(),diff))
             return
         else:
             # a big enough change
             if Server.send_at_second_boundaries == False:
                 # send change immediately in a ServerMetric packet
-                if Verbose.level >= 2:
+                if Verbose.level >= 1:
                     print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric".format(self.env.now, self.id(),diff))
 
                 self.send_load_packet(time, service_name)
@@ -274,7 +274,7 @@ class Server(Host):
                 if (now == int(now)):
                     # are on second boundary
                     # send a ServerMetric packet
-                    if Verbose.level >= 2:
+                    if Verbose.level >= 1:
                         print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric at second boundary".format(self.env.now, self.id(),diff))
 
                     self.send_load_packet(time, service_name)
@@ -283,7 +283,7 @@ class Server(Host):
                     # work out next second boundary
                     timeout = int(now) + 1 - now
 
-                    if Verbose.level >= 2:
+                    if Verbose.level >= 1:
                         print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric at next second boundary in {:.3f} secs".format(self.env.now, self.id(),diff, timeout))
 
                     # process callback for a delayed announce
@@ -322,7 +322,7 @@ class Server(Host):
         # save last_payload announced
         self.last_payload = self.calculate_payload()
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print("{:.3f}: {:5s} CALCULATE_PAYLOAD: slots: {} flows: {} load: {}".format(self.env.now, self.id(), self.last_payload['slots'], self.last_payload['no_of_flows'], self.last_payload['load']))
         
         packet.payload = self.last_payload
