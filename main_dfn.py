@@ -13,7 +13,7 @@ import simpy
 
 # Use a topology from the DFN gml file
 def topology_setup():
-    Verbose.level = 2
+    Verbose.level = 0
     Verbose.table = 1
 
     # Set routing mode: hop-by-hop anycast (True) or first-decide unicast (False)
@@ -53,72 +53,92 @@ def topology_setup():
     """)
     
     # 1 - Define the topology
-    print("Network - DFN")
+
     gml_file = "gml/Dfn.gml"
+
+    if Verbose.level >= 3:
+        print("Network - DFN")
+        
 
     # 2 - create the simpy environment 
     env = simpy.Environment()
 
     # 3 - build the network: topology -> graph -> network
 
-    print("SETUP ----------------------------------------------------------------")
-
     graph = Graph.from_gml_file(gml_file)
 
-    print("GRAPH")
-    graph.print()
+    if Verbose.level >= 3:
+        print("GRAPH")
+        graph.print()
 
-    print ("graph nodes = " + str(graph.nodes()))
+        print ("graph nodes = " + str(graph.nodes()))
 
-    print("graph edges = " + str(graph.edges()))
+        print("graph edges = " + str(graph.edges()))
 
-    # graph -> network
+    # 4 - graph -> network
 
-    print("--- Convert Graph to Network Begin ---")
-    
     network = Network.from_graph(graph, env)
 
-    print("Network nodes = " + str(network.nodes()))
-    print("Network edges = " + str(network.edges()))
+    if Verbose.level >= 3:
+        print("Network nodes = " + str(network.nodes()))
+        print("Network edges = " + str(network.edges()))
 
+    # 5 - determine core and local nodes
+    
     # filter out core nodes -  degree > 3
     core = [ r  for r in network.network_nodes() if r.degree() > 3 ]
     # filter out local nodes -  degree <= 3
     local = [ r  for r in network.network_nodes() if r.degree() <= 3 ]
 
-    print("core  (degree > 3)  = " + str([(r.id(), r.degree()) for r in core]))
-    print("local (degree <= 3) = " + str([(r.id(), r.degree()) for r in local]))
+    if Verbose.level >= 3:
+        print("core  (degree > 3)  = " + str([(r.id(), r.degree()) for r in core]))
+        print("local (degree <= 3) = " + str([(r.id(), r.degree()) for r in local]))
 
-    print("--- Add Servers and Clients to Network ---")
+
+    # 6 - add servers and clients to the network
+    
+    if Verbose.level >= 3:
+        print("--- Add Servers and Clients to Network ---")
 
     # add some servers
     servers = []
     
-    # connected to core nodes
+    # servers will be connected to core nodes
     server_count = range(1,6)
     for s in server_count:
         server_name = "s" + str(s)
         servers.append(server_name)
         server_dest = core[s]
-        print("Add " + str(server_name) + " at " + str(server_dest))
+
+        if Verbose.level >= 3:
+            print("Add " + str(server_name) + " at " + str(server_dest))
+            
         network.add_server(server_name, server_dest, Graph.default_propagation_delay)
 
     
     # add some clients
     clients = []
     
-    # connected to local nodes
+    # clients will be connected to local nodes
     client_count = range(1,6)
     for c in client_count:
         client_name = "c" + str(c)
         clients.append(client_name)
         client_dest = local[c]
-        print("Add " + str(client_name) + " at " + str(client_dest))
+
+        if Verbose.level >= 3:
+            print("Add " + str(client_name) + " at " + str(client_dest))
+            
         network.add_client(client_name, client_dest, Graph.default_propagation_delay)
 
-    # now calculate all the forwarding tables
+    # 7 - now calculate all the forwarding tables
     network.calculate_forwarding_tables()
     
+
+    # 8 - dump graphviz file to tmp
+    with open('/tmp/dfn.gv', mode='w') as file_object:
+        network.graphviz(file=file_object)
+        
 
     # some cross check print outs
     if Verbose.level >= 3:
@@ -130,13 +150,12 @@ def topology_setup():
         print("Network: dijkstra routing from c4 = " + str(network.dijkstra_to_routing(dijkstra_c4)))
 
     # Network
-    print("Network = ")
-    network.print()
+    if Verbose.level >= 3:
+        print("Network = ")
+        network.print()
 
-    # dump graphviz file to tmp
-    with open('/tmp/dfn.gv', mode='w') as file_object:
-        network.graphviz(file=file_object)
-        
+    # 9 - setup generators
+    
     # Services are not addresses -- they start with §
 
     # Server 's1' generates packets from arriving events
@@ -152,8 +171,10 @@ def topology_setup():
     # Note that it doesn't matter whether we have size_lambda=10, size_scale_factor=10 or size_lambda=100, size_scale_factor=1, the average session duration is the same (100 seconds). The scale factor is just a multiplier for the session duration.
     generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=5, size_lambda=10, size_scale_factor=10, seed=15112022)
 
-    # run
-    print("RUN ----------------------------------------------------------------")
+    # 10 - run
+    
+    if Verbose.level >= 3:
+        print("RUN ----------------------------------------------------------------")
 
     network.start(until=3600)
 

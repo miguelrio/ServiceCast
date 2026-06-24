@@ -470,7 +470,8 @@ def parse_gml_lines(lines, label, destringizer):
             # raise ValueError(msg)
 
             # no need to drop out on duplicates
-            print(msg)
+            if Verbose.level >= 2:
+                print(msg)
             continue
 
         if label is not None and label != "id":
@@ -481,7 +482,8 @@ def parse_gml_lines(lines, label, destringizer):
                 # raise ValueError(msg)
 
                 # no need to drop out on duplicates
-                print(msg)
+                if Verbose.level >= 2:
+                    print(msg)
 
                 # create a modified version of the name to avoid duplicates
                 node_label = node_label + "_" + str(len(node_labels))
@@ -520,7 +522,8 @@ def parse_gml_lines(lines, label, destringizer):
                 # raise ValueError(msg)
 
                 # no need to drop out on duplicates
-                print(msg)
+                if Verbose.level >= 2:
+                    print(msg)
         else:
             key = edge.pop("key", None)
             if key is not None and G.contains_edge(source, target, key):

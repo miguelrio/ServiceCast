@@ -187,8 +187,10 @@ Set verbose level for system [logging](Logging.md) outputs
 
 ```Verbose.level = 2```
 
-Current values for ```Verbose.level``` are [0, 1, 2, 3].
+Current values for ```Verbose.level``` to produced output are [0, 1, 2, 3].
 
+
+Setting the value to -1 will produce no logging output.
 
 
 Set table printout style.  
