@@ -766,42 +766,75 @@ class Network:
         destination_server_latency = 0
         destination_server_utility = 0
         
+
+        print("Network.optimal_utility_timing " + str(Network.optimal_utility_timing))
+
         # Use pre-computed optimal snapshot if available ('client' or 'router' timing)
         # Both selected and optimal use values from the same snapshot time
         if hasattr(packet, 'optimal_snapshot'):
+
+            print("packet has optimal_snapshot " + str(packet.optimal_snapshot))
+
+            now = self.env.now
+
+            # collect optimal_snapshot from packet
             snapshot = packet.optimal_snapshot
+            
             selected_server_load = snapshot['all_loads'][requesting_server_id]
             selected_server_latency = self.latency_table[requesting_server_id][client_name]
             selected_server_utility = snapshot['all_utilities'][requesting_server_id]
-
+            selected_server_time = snapshot['time']
+            selected_server_id = requesting_server_id
+            
             # destination server
             destination_server_load = load_values[requesting_server_id]
             destination_server_latency = self.latency_table[requesting_server_id][client_name]
             destination_server_utility = utility_values[requesting_server_id]
 
-            # best server
+            # best server at selection time
             best_server_id = snapshot['server_id']
             best_server_load = snapshot['load']
             best_server_latency = snapshot['latency']
             best_server_utility = snapshot['utility']
             best_server_time = snapshot['time']
+
+            # best server at arrival time
+            arrival_best_server_time = now
+
+            if requesting_server_id in minimum_replicas:
+                # requesting_server has minimum load
+                arrival_best_server_id = requesting_server_id
+            else:
+                # just pick one
+                arrival_best_server_id = minimum_replicas[0]
+
+            arrival_best_server_load = load_values[best_server_id]
+            arrival_best_server_latency = self.latency_table[best_server_id][client_name]
+            arrival_best_server_utility = utility_values[best_server_id]
+
+            
         else:
+            # We expect Network.optimal_utility_timing == Place.Replica
+
+            now = self.env.now
             # Compute everything from current state ('replica' timing, default)
             selected_server_load = load_values[requesting_server_id]
             selected_server_latency = self.latency_table[requesting_server_id][client_name]
             selected_server_utility = utility_values[requesting_server_id]
-
+            selected_server_time = now
+            selected_server_id = requesting_server_id
+            
             # destination server
             destination_server_load = load_values[requesting_server_id]
             destination_server_latency = self.latency_table[requesting_server_id][client_name]
             destination_server_utility = utility_values[requesting_server_id]
 
             # best server
-            best_server_time = self.env.now
+            best_server_time = now
 
-            if requesting_server.id() in minimum_replicas:
+            if requesting_server_id in minimum_replicas:
                 # requesting_server has minimum load
-                best_server_id = requesting_server.id()
+                best_server_id = requesting_server_id
             else:
                 # just pick one
                 best_server_id = minimum_replicas[0]
@@ -809,6 +842,13 @@ class Network:
             best_server_load = load_values[best_server_id]
             best_server_latency = self.latency_table[best_server_id][client_name]
             best_server_utility = utility_values[best_server_id]
+
+            # best server at arrival time is same as best server when Place.Replica
+            arrival_best_server_time = now
+            arrival_best_server_id = best_server_id
+            arrival_best_server_load = best_server_load
+            arrival_best_server_latency = best_server_latency
+            arrival_best_server_utility = best_server_utility
 
         # Log utility of true best replica and utility of selected replica: timestamp, selected server id, client id, client request id,  selected server id,  selected server load, selected server latency, selected server utility, best server id, best server load, best server latency
         if Verbose.level >= 0:
@@ -838,8 +878,17 @@ class Network:
                 msg = status['msg']
                 diff_text = ""
 
+            # Now we want to print out 3 bits of information
+            # related to what the values were when the decision was made
+            # and what the values actually are at the destination i.e here
 
-            print("{:.3f}: {:5s} BEST_REPLICA_UTILITY '{}' pkt: {}.{} selected: {} load({}) latency({}) utility({}) best (at {:.3f}): {} load({}) latency({}) utility({}) {}{}".format(self.env.now, "Net ", requesting_server.id(),  packet.src, packet.id, requesting_server.id(), selected_server_load, round(selected_server_latency, 3), round(selected_server_utility, 5),  best_server_time, best_server_id, best_server_load, round(best_server_latency, 3), round(best_server_utility, 5), msg, diff_text))
+            print("{:.3f}: {:5s} BEST_REPLICA_UTILITY '{}' {} [{}.{}] SELECTED: time: {:.3f} server: {} load: {} latency: {} utility: {} BEST_AT_SELECTION_TIME: time: {:.3f} server: {} load: {} latency: {} utility: {} BEST_AT_ARRIVAL_TIME: time: {:.3f} server: {} load: {} latency: {} utility: {} {}{}".format(self.env.now, "Net ", 
+                requesting_server_id, Network.optimal_utility_timing,
+                packet.src, packet.id, 
+                selected_server_time, selected_server_id, selected_server_load, round(selected_server_latency, 3), round(selected_server_utility, 5),  
+                best_server_time, best_server_id, best_server_load, round(best_server_latency, 3), round(best_server_utility, 5),
+                arrival_best_server_time, arrival_best_server_id, arrival_best_server_load, round(arrival_best_server_latency, 3), round(arrival_best_server_utility, 5),
+                msg, diff_text))
 
     # Get replica capacity
     def get_replica_capacity(self, replica, entry):
