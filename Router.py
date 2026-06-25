@@ -1333,7 +1333,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     # Snapshot optimal utility if timing is set to 'router'
                     # with hop_by_hop we use the last router only
                     # In this case we set the value only when the neighbour is a host
-                    if self.network.optimal_utility_timing == Place.Router and not hasattr(packet, 'optimal_snapshot') and self.is_neighbour_host(neighbour):
+                    if (self.network.optimal_utility_timing in [Place.Router, Place.Replica]) and not hasattr(packet, 'optimal_snapshot') and self.is_neighbour_host(neighbour):
 
                         self.network.inject_snapshot_optimal_utility(packet)
 
