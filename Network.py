@@ -767,7 +767,7 @@ class Network:
         destination_server_utility = 0
         
 
-        print("Network.optimal_utility_timing " + str(Network.optimal_utility_timing))
+        # print("Network.optimal_utility_timing " + str(Network.optimal_utility_timing))
 
         # Use pre-computed optimal snapshot if available ('client' or 'router' timing)
         # Both selected and optimal use values from the same snapshot time
