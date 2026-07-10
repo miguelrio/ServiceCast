@@ -167,9 +167,12 @@ Router.hop-by-hop = True
 When a router makes its forwarding decision (the last router with
 hop-by-hop, the first router with first-decide) it always records on the
 packet a snapshot of the ground-truth utilities (at selection time) and
-the FIB estimate the decision was based on. These are reported when the
-request arrives at a Server as the OUTCOME_GAP / DECISION_GAP /
-STALENESS_ERR log lines (see Logging.md).
+the FIB estimate the decision was based on. The snapshot is taken from
+the deciding router's vantage (its own latency to each replica), so the
+selection-time ground truth shares the latency basis of the FIB
+estimate. These are reported when the request arrives at a Server as
+the OUTCOME_GAP / DECISION_GAP / STALENESS_ERR log lines (see
+Logging.md); OUTCOME_GAP uses the client's vantage.
 
 
 ### Logging output

@@ -29,6 +29,8 @@ the total number of update packets
 1. OUTCOME_GAP - one per client request, printed when the request arrives
 at a Server: the utility of the selected replica vs the best replica,
 both at arrival time (B = BEST_UTIL_ARR - SEL_UTIL_ARR).
+Utilities are computed from the CLIENT's vantage (client-to-replica
+latency), as B measures the outcome from the client's point of view.
 Status is SAME / EQUAL / DIFFERENT / BLOCKED, followed by the signed gap.
 
 At Verbose level 0 the line is plain:
@@ -61,9 +63,22 @@ utility the deciding router believed the selected replica had
 vs the utility the deciding router believed it had
 (C = SEL_UTIL_SEL - SEL_UTIL_EST)
 
+Both selection-time metrics are computed from the DECIDING ROUTER's
+vantage (the last router with hop-by-hop, the first router with
+first-decide): the ground-truth sections use the deciding router's
+latency to each replica, matching the latency basis of the FIB estimate
+SEL_UTIL_EST. Only load staleness then contributes to C, and A compares
+the decision against the best the router could have made from its own
+position with fresh information. Note that with hop-by-hop the deciding
+router is the selected replica's attachment router, so DECISION_GAP is
+structurally close to zero; it is most informative in first-decide mode.
+
 As these lines only appear at Verbose >= 1, they always carry the
-notation annotations (field(NOTATION): value, formula after the tag),
-in the same style as the OUTCOME_GAP example above.
+notation annotations, e.g.:
+
+```
+3131.183: Net   STALENESS_ERR (C = SEL_UTIL_SEL - SEL_UTIL_EST) 's5' [c3.128] SELECTED: time(t_update): 2871.037 server(SEL_ID): s5 load: 0.14 latency: 0.1 utility(SEL_UTIL_EST): 0.85857 ACTUAL: time(t_sel): 3131.083 server(SEL_ID): s5 load: 0.2 latency: 0.1 utility(SEL_UTIL_SEL): 0.75857 SAME -0.1
+```
 
 ##### Server packets
 

@@ -636,18 +636,23 @@ class Network:
         return diameter
         
     # Snapshot the optimal utility at the current time
-    # and inject the data in the packet for later comparison
-    def inject_snapshot_optimal_utility(self, packet):
+    # and inject the data in the packet for later comparison.
+    # vantage: the node whose latencies the utilities are computed from.
+    # For decision-time quantities (SEL_UTIL_SEL, BEST_UTIL_SEL) this must be
+    # the DECIDING router, so the ground truth shares the latency basis of the
+    # FIB estimate (SEL_UTIL_EST). Falls back to the client if not given.
+    def inject_snapshot_optimal_utility(self, packet, vantage=None):
         """Compute optimal replica utility now and store on packet."""
-        client_name = packet.src
+        vantage_node = vantage if vantage is not None else packet.src
         servers = [r for r in self.network_nodes() if isinstance(r, Server)]
 
         all_utilities = {}
         all_loads = {}
+        all_latencies = {}
 
         for server in servers:
             load = server.calculate_load()
-            latency = self.latency_table[server.id()][client_name]
+            latency = self.latency_table[vantage_node][server.id()]
             normalised_delay = self.get_normalised_delay(latency)
 
             # call the forwarding_utility - pass in delay and normalised_delay
@@ -655,6 +660,7 @@ class Network:
 
             all_utilities[server.id()] = utility
             all_loads[server.id()] = load
+            all_latencies[server.id()] = latency
 
         # Find maximum utility and list of optimal candidates
         max_utility = max(all_utilities.values()) if all_utilities else -1
@@ -668,17 +674,19 @@ class Network:
             best_id = best_servers[0] if best_servers else None
 
         best_load = all_loads[best_id] if best_id else 0
-        best_latency = self.latency_table[best_id][client_name] if best_id else 0
+        best_latency = all_latencies[best_id] if best_id else 0
         best_utility = max_utility
 
         packet.optimal_snapshot = {
             'time': self.env.now,
+            'vantage': vantage_node,
             'server_id': best_id,
             'load': best_load,
             'latency': best_latency,
             'utility': best_utility,
             'all_utilities': all_utilities,
-            'all_loads': all_loads
+            'all_loads': all_loads,
+            'all_latencies': all_latencies
         }
 
     # Format one side of a gap line: {'time','server','load','latency','utility'}
@@ -814,8 +822,10 @@ class Network:
             estimate = packet.selection_estimate    # FIB belief, from the update at t_update
             selected_id = estimate['server_id']
 
-            # the estimate's latency is the router->replica RIB delay (the input to
-            # SEL_UTIL_EST); the ground-truth sections use client->replica latency
+            # the estimate's latency is the deciding router's RIB delay (the input
+            # to SEL_UTIL_EST); the snapshot ground truth (SEL_UTIL_SEL,
+            # BEST_UTIL_SEL) is computed from the same router's vantage, so A and
+            # C compare like with like and only load staleness remains
             selected_estimate = { 'time': estimate['update_time'],
                                   'server': selected_id,
                                   'load': estimate['load'],
@@ -836,7 +846,7 @@ class Network:
             selected_at_selection = { 'time': snapshot['time'],
                                       'server': selected_id,
                                       'load': snapshot['all_loads'][selected_id],
-                                      'latency': self.latency_table[selected_id][client_name],
+                                      'latency': snapshot['all_latencies'][selected_id],
                                       'utility': snapshot['all_utilities'][selected_id] }
             self._log_request_gap("STALENESS_ERR", requesting_server_id, packet,
                                   selected_estimate, selected_at_selection,

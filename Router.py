@@ -1329,9 +1329,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # the last router with hop_by_hop, the first router with first-decide
     def record_forwarding_decision(self, packet, fib_entry):
         """At the forwarding decision: snapshot ground truth (t_sel) and the
-           FIB estimate the decision was based on (from the update at t_update)."""
-        self.network.inject_snapshot_optimal_utility(packet)
-        packet.selection_estimate = { 'update_time': fib_entry['update_time'],  # t_update
+           FIB estimate the decision was based on (from the update at t_update).
+           The snapshot is taken from THIS router's vantage so the ground truth
+           (SEL_UTIL_SEL, BEST_UTIL_SEL) shares the latency basis of the FIB
+           estimate (SEL_UTIL_EST)."""
+        self.network.inject_snapshot_optimal_utility(packet, vantage=self.id())
+        packet.selection_estimate = { 'decider': self.id(),
+                                      'update_time': fib_entry['update_time'],  # t_update
                                       'server_id': fib_entry['replica'],        # s_sel
                                       'load': fib_entry['load'],
                                       'delay': fib_entry['delay'],
