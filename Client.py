@@ -1,6 +1,5 @@
 from Host import Host
 from SimComponents import Packet
-from Utility import Place
 from Verbose import Verbose
 
 class Client(Host):
@@ -35,10 +34,6 @@ class Client(Host):
             print("{:.3f}: {:5s} PACKET_CREATED {}.{} ({:.3f}) ClientRequest in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
         self.pkt_no += 1
-
-        # Snapshot optimal utility if timing is set to 'client'
-        if self.network and self.network.optimal_utility_timing == Place.Client:
-            self.network.inject_snapshot_optimal_utility(packet)
 
         # add a tuple of (link_end, packet) to the packet store
         # None represents this node

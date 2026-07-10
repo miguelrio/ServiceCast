@@ -164,16 +164,12 @@ Router.hop-by-hop = True
 
 ### Network class
 
-When doing experiments we get a snapshot of the optimal utility at the
-current time and inject the data in the packet for later comparison.
-
-This can be one of 3 values:
-- Place.Client  (at request origination)
-- Place.Router (at forwarding decision)
-- Place.Replica (at server arrival)
-
-This can be set using:
-```Network.optimal_utility_timing = Place.Replica```
+When a router makes its forwarding decision (the last router with
+hop-by-hop, the first router with first-decide) it always records on the
+packet a snapshot of the ground-truth utilities (at selection time) and
+the FIB estimate the decision was based on. These are reported when the
+request arrives at a Server as the OUTCOME_GAP / DECISION_GAP /
+STALENESS_ERR log lines (see Logging.md).
 
 
 ### Logging output

@@ -5,19 +5,29 @@ from Host import Host
 from Server import Server
 from Client import Client
 from Verbose import Verbose
-from Utility import Utility, Place
+from Utility import Utility
 from collections import OrderedDict
 from gml import read_gml, write_gml
 import sys
 
 
-class Network:
-    # Timing of ground truth optimal utility measurement:
-    # 'replica' (at server arrival),
-    # 'router' (at forwarding decision),
-    # 'client' (at request origination)
-    optimal_utility_timing = Place.Replica
+# PDF notation for the per-request metric lines (see BEST_REPLICA_UTILITY notes).
+# At Verbose.level >= 1 each annotated field is printed as field(NOTATION): value
+# and the metric formula is shown after the tag. Level 0 output is unchanged.
+GAP_NOTATIONS = {
+    'OUTCOME_GAP':   { 'formula': 'B = BEST_UTIL_ARR - SEL_UTIL_ARR',
+                       'selected': {'time': 't_arr',    'server': 'SEL_ID',      'utility': 'SEL_UTIL_ARR'},
+                       'compared': {'time': 't_arr',    'server': 'BEST_ID_ARR', 'utility': 'BEST_UTIL_ARR'} },
+    'DECISION_GAP':  { 'formula': 'A = BEST_UTIL_SEL - SEL_UTIL_EST',
+                       'selected': {'time': 't_update', 'server': 'SEL_ID',      'utility': 'SEL_UTIL_EST'},
+                       'compared': {'time': 't_sel',    'server': 'BEST_ID_SEL', 'utility': 'BEST_UTIL_SEL'} },
+    'STALENESS_ERR': { 'formula': 'C = SEL_UTIL_SEL - SEL_UTIL_EST',
+                       'selected': {'time': 't_update', 'server': 'SEL_ID',      'utility': 'SEL_UTIL_EST'},
+                       'compared': {'time': 't_sel',    'server': 'SEL_ID',      'utility': 'SEL_UTIL_SEL'} },
+}
 
+
+class Network:
     def __init__(self, env = None):
         """ Create a network
         """
@@ -671,25 +681,79 @@ class Network:
             'all_loads': all_loads
         }
 
-    # Get the utility for best server / replica.
-    # This is called by individual Servers
+    # Format one side of a gap line: {'time','server','load','latency','utility'}
+    # notes: optional {'time','server','utility'} PDF notations, printed as
+    # field(NOTATION): value
+    @staticmethod
+    def _gap_section(label, section, notes=None):
+        if notes is None:
+            return "{}: time: {:.3f} server: {} load: {} latency: {} utility: {}".format(
+                label, section['time'], section['server'], section['load'],
+                round(section['latency'], 3), round(section['utility'], 5))
+        else:
+            return "{}: time({}): {:.3f} server({}): {} load: {} latency: {} utility({}): {}".format(
+                label, notes['time'], section['time'], notes['server'], section['server'],
+                section['load'], round(section['latency'], 3),
+                notes['utility'], round(section['utility'], 5))
+
+    # Print one per-request metric line
+    # gap = compared utility - selected utility (signed)
+    # At Verbose.level >= 1 the PDF notation is shown before each value
+    # (see GAP_NOTATIONS); the trailing "KEYWORD gap" is the same at all levels.
+    def _log_request_gap(self, tag, arrival_server_id, packet, selected, compared,
+                         status=None, compared_label="BEST"):
+        gap = compared['utility'] - selected['utility']
+
+        if status is not None:
+            # client request not handled: BLOCKED
+            keyword = status['msg']
+        elif selected['server'] == compared['server']:
+            keyword = "SAME"
+        elif abs(gap) < 1e-9:
+            keyword = "EQUAL"
+        else:
+            keyword = "DIFFERENT"
+
+        notes = GAP_NOTATIONS.get(tag) if Verbose.level >= 1 else None
+
+        if notes is None:
+            tag_text = tag
+            selected_notes = None
+            compared_notes = None
+        else:
+            tag_text = "{} ({})".format(tag, notes['formula'])
+            selected_notes = notes['selected']
+            compared_notes = notes['compared']
+
+        print("{:.3f}: {:5s} {} '{}' [{}.{}] {} {} {} {}".format(
+            self.env.now, "Net ", tag_text, arrival_server_id, packet.src, packet.id,
+            self._gap_section("SELECTED", selected, selected_notes),
+            self._gap_section(compared_label, compared, compared_notes),
+            keyword, round(gap, 5)))
+
+    # Report the per-request metrics.
+    # This is called by individual Servers, when the request arrives (t_arr).
+    #   OUTCOME_GAP   (B = BEST_UTIL_ARR - SEL_UTIL_ARR)   at Verbose level >= 0
+    #   DECISION_GAP  (A = BEST_UTIL_SEL - SEL_UTIL_EST)   at Verbose level >= 1
+    #   STALENESS_ERR (C = SEL_UTIL_SEL - SEL_UTIL_EST)    at Verbose level >= 1
     def best_replica_utility(self, requesting_server, packet, status = None):
+
+        if Verbose.level < 0:
+            return
 
         client_name = packet.src
         requesting_server_id = requesting_server.id()
+        now = self.env.now
 
         # filter out server nodes
         servers = [ r  for r in self.network_nodes() if isinstance(r, Server) ]
 
-
-        # Utility of best replica:
+        # Ground truth at arrival time (t_arr):
         # - grab snapshot of load on all replicas.
         # - get latency from the client to all replicas (from dijkstra).
         # - calculate utility for each.
-        # - Choose minimum.
         utility_values = {}
         load_values = {}
-
 
         for server in servers:
             # get load at server
@@ -703,28 +767,17 @@ class Network:
             # which is a value between 0 and 1
             normalised_delay = self.get_normalised_delay(latency)
 
-
-            # calculate utility
-            # we use
-            # alpha --> same alpha
-            # load --> load at chosen replica
-            # delay --> length of path (sum of weigths) from client to chosen replica
-
             # call the forwarding_utility - pass in delay and normalised_delay
             utility = Utility.eval_forwarding_utility(Utility.alpha, load, latency, normalised_delay)
 
             # save forwarding utility value for this server
             utility_values[server.id()] = utility
 
-            
-            # current values
             if Verbose.level >= 3:
                 print("best_replica_utility: '" + server.id() + "' load = " + str(load))
                 print("best_replica_utility: '" + server.id() + "' delay = " + str(latency))
                 print("best_replica_utility: '" + server.id() + "' normalised_delay = " + str(normalised_delay))
                 print("best_replica_utility: '" + server.id() + "' forwarding_utility = " + str(utility))
-            
-            
 
         # summary
         if Verbose.level >= 3:
@@ -732,163 +785,62 @@ class Network:
             print("best_replica_utility: '" + requesting_server_id + "' latency = " + str(self.latency_table[requesting_server_id]))
             print("best_replica_utility: '" + requesting_server_id + "' utility from " + str(client_name) + " = " + str(utility_values))
 
+        # best replica at arrival time, tie-break towards the arrival server
+        best_arrival_utility = max(utility_values.values())
+        best_arrival_replicas = [sid for sid, u in utility_values.items() if u == best_arrival_utility]
 
-        # now we sort them by value (descending), so the maximum value is the first item
-        ordered = {k: v for k, v in sorted(utility_values.items(), key=lambda item: item[1], reverse=True)}
-        
-        if Verbose.level >= 3:
-            print("best_replica_utility: '" + requesting_server_id + "' ordered_utility = " + str(ordered))
-
-        # and select all the keys which match the minimum value
-        minimum_pair = list(ordered.items())[0]
-
-        if Verbose.level >= 3:
-            print("best_replica_utility: '" + requesting_server_id + "' minimum_pair = " + str(minimum_pair))
-        
-        minimum_replicas = [k for k, v in ordered.items() if v == minimum_pair[1]]
-        
-        if Verbose.level >= 3:
-            print("best_replica_utility: '" + requesting_server_id + "' minimum_replicas = " + str(minimum_replicas))
-
-        # need to keep:
-        # selected server load, selected server latency, selected server utility
-        # for logging
-        selected_server_load = 0
-        selected_server_latency = 0
-        selected_server_utility = 0
-
-        best_server_id = None
-        best_server_load = 0
-        best_server_latency = 0
-        best_server_utility = 0
-
-        destination_server_load = 0
-        destination_server_latency = 0
-        destination_server_utility = 0
-        
-
-        # print("Network.optimal_utility_timing " + str(Network.optimal_utility_timing))
-
-        # Use pre-computed optimal snapshot if available ('client' or 'router' timing)
-        # Both selected and optimal use values from the same snapshot time
-        if hasattr(packet, 'optimal_snapshot'):
-
-            # print("packet has optimal_snapshot " + str(packet.optimal_snapshot))
-
-            now = self.env.now
-
-            # collect optimal_snapshot from packet
-            snapshot = packet.optimal_snapshot
-            
-            selected_server_load = snapshot['all_loads'][requesting_server_id]
-            selected_server_latency = self.latency_table[requesting_server_id][client_name]
-            selected_server_utility = snapshot['all_utilities'][requesting_server_id]
-            selected_server_time = snapshot['time']
-            selected_server_id = requesting_server_id
-            
-            # destination server
-            destination_server_load = load_values[requesting_server_id]
-            destination_server_latency = self.latency_table[requesting_server_id][client_name]
-            destination_server_utility = utility_values[requesting_server_id]
-
-            # best server at selection time
-            best_server_id = snapshot['server_id']
-            best_server_load = snapshot['load']
-            best_server_latency = snapshot['latency']
-            best_server_utility = snapshot['utility']
-            best_server_time = snapshot['time']
-
-            # best server at arrival time
-            arrival_best_server_time = now
-
-            if requesting_server_id in minimum_replicas:
-                # requesting_server has minimum load
-                arrival_best_server_id = requesting_server_id
-            else:
-                # just pick one
-                arrival_best_server_id = minimum_replicas[0]
-
-            arrival_best_server_load = load_values[best_server_id]
-            arrival_best_server_latency = self.latency_table[best_server_id][client_name]
-            arrival_best_server_utility = utility_values[best_server_id]
-
-            
+        if requesting_server_id in best_arrival_replicas:
+            best_arrival_id = requesting_server_id
         else:
-            # We expect Network.optimal_utility_timing == Place.Replica
+            best_arrival_id = best_arrival_replicas[0]
 
-            now = self.env.now
-            # Compute everything from current state ('replica' timing, default)
-            selected_server_load = load_values[requesting_server_id]
-            selected_server_latency = self.latency_table[requesting_server_id][client_name]
-            selected_server_utility = utility_values[requesting_server_id]
-            selected_server_time = now
-            selected_server_id = requesting_server_id
-            
-            # destination server
-            destination_server_load = load_values[requesting_server_id]
-            destination_server_latency = self.latency_table[requesting_server_id][client_name]
-            destination_server_utility = utility_values[requesting_server_id]
+        # a ground-truth section (at t_arr) for a given server
+        def truth_section(server_id):
+            return { 'time': now,
+                     'server': server_id,
+                     'load': load_values[server_id],
+                     'latency': self.latency_table[server_id][client_name],
+                     'utility': utility_values[server_id] }
 
-            # best server
-            best_server_time = now
+        # B: OUTCOME_GAP = BEST_UTIL_ARR - SEL_UTIL_ARR, both at t_arr
+        self._log_request_gap("OUTCOME_GAP", requesting_server_id, packet,
+                              truth_section(requesting_server_id),
+                              truth_section(best_arrival_id),
+                              status=status)
 
-            if requesting_server_id in minimum_replicas:
-                # requesting_server has minimum load
-                best_server_id = requesting_server_id
-            else:
-                # just pick one
-                best_server_id = minimum_replicas[0]
+        # A and C need the decision-time data recorded by the deciding router
+        if Verbose.level >= 1 and hasattr(packet, 'optimal_snapshot') and hasattr(packet, 'selection_estimate'):
+            snapshot = packet.optimal_snapshot      # ground truth at t_sel
+            estimate = packet.selection_estimate    # FIB belief, from the update at t_update
+            selected_id = estimate['server_id']
 
-            best_server_load = load_values[best_server_id]
-            best_server_latency = self.latency_table[best_server_id][client_name]
-            best_server_utility = utility_values[best_server_id]
+            # the estimate's latency is the router->replica RIB delay (the input to
+            # SEL_UTIL_EST); the ground-truth sections use client->replica latency
+            selected_estimate = { 'time': estimate['update_time'],
+                                  'server': selected_id,
+                                  'load': estimate['load'],
+                                  'latency': estimate['delay'],
+                                  'utility': estimate['utility'] }
 
-            # best server at arrival time is same as best server when Place.Replica
-            arrival_best_server_time = now
-            arrival_best_server_id = best_server_id
-            arrival_best_server_load = best_server_load
-            arrival_best_server_latency = best_server_latency
-            arrival_best_server_utility = best_server_utility
+            # A: DECISION_GAP = BEST_UTIL_SEL - SEL_UTIL_EST
+            best_at_selection = { 'time': snapshot['time'],
+                                  'server': snapshot['server_id'],
+                                  'load': snapshot['load'],
+                                  'latency': snapshot['latency'],
+                                  'utility': snapshot['utility'] }
+            self._log_request_gap("DECISION_GAP", requesting_server_id, packet,
+                                  selected_estimate, best_at_selection)
 
-        # Log utility of true best replica and utility of selected replica: timestamp, selected server id, client id, client request id,  selected server id,  selected server load, selected server latency, selected server utility, best server id, best server load, best server latency
-        if Verbose.level >= 0:
-            # processing for BEST_REPLICA_UTILITY 
-
-            # check load on requesting server
-            if (status == None):
-                # client request in packet processed
-                # as load < 1.0
-                
-                # work out utility difference
-                utility_diff = abs(selected_server_utility - best_server_utility)
-                
-                if utility_diff >= 1e-9:
-                    msg = "DIFFERENT"
-                    diff_text = " " + str(round(utility_diff, 5))
-                elif requesting_server_id == best_server_id:
-                    msg = "SAME"
-                    diff_text = ""
-                else:
-                    msg = "EQUAL"
-                    diff_text = ""
-
-            else:
-                # client request not handled
-                # as load == 1.0
-                msg = status['msg']
-                diff_text = ""
-
-            # Now we want to print out 3 bits of information
-            # related to what the values were when the decision was made
-            # and what the values actually are at the destination i.e here
-
-            print("{:.3f}: {:5s} BEST_REPLICA_UTILITY '{}' {} [{}.{}] SELECTED: time: {:.3f} server: {} load: {} latency: {} utility: {} BEST_AT_SELECTION_TIME: time: {:.3f} server: {} load: {} latency: {} utility: {} BEST_AT_ARRIVAL_TIME: time: {:.3f} server: {} load: {} latency: {} utility: {} {}{}".format(self.env.now, "Net ", 
-                requesting_server_id, Network.optimal_utility_timing,
-                packet.src, packet.id, 
-                selected_server_time, selected_server_id, selected_server_load, round(selected_server_latency, 3), round(selected_server_utility, 5),  
-                best_server_time, best_server_id, best_server_load, round(best_server_latency, 3), round(best_server_utility, 5),
-                arrival_best_server_time, arrival_best_server_id, arrival_best_server_load, round(arrival_best_server_latency, 3), round(arrival_best_server_utility, 5),
-                msg, diff_text))
+            # C: STALENESS_ERR = SEL_UTIL_SEL - SEL_UTIL_EST
+            # (same replica: stale belief vs fresh ground truth at t_sel)
+            selected_at_selection = { 'time': snapshot['time'],
+                                      'server': selected_id,
+                                      'load': snapshot['all_loads'][selected_id],
+                                      'latency': self.latency_table[selected_id][client_name],
+                                      'utility': snapshot['all_utilities'][selected_id] }
+            self._log_request_gap("STALENESS_ERR", requesting_server_id, packet,
+                                  selected_estimate, selected_at_selection,
+                                  compared_label="ACTUAL")
 
     # Get replica capacity
     def get_replica_capacity(self, replica, entry):

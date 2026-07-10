@@ -1,6 +1,7 @@
 from Graph import Graph
 from Network import Network
 from Server import Server
+from Router import Router
 from Client import Client
 from Generator import Generator
 from Verbose import Verbose
@@ -20,6 +21,9 @@ import simpy
 def topology_setup():
     Verbose.level = 2
     Verbose.table = 1
+
+    # Set routing mode: hop-by-hop anycast (True) or first-decide unicast (False)
+    Router.hop_by_hop = True
 
     # Set alpha value
     Utility.alpha = 0.50

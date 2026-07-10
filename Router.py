@@ -3,7 +3,7 @@ from SimComponents import SwitchPort, PacketSink, Packet
 from Link import LinkEnd
 from Host import Host
 from Verbose import Verbose
-from Utility import Utility, Place
+from Utility import Utility
 from Server import ServerMetricMessageType
 from tinydb import TinyDB, Query
 from enum import Enum
@@ -108,6 +108,13 @@ class Router(object):
         self.best_neighbour = None
         self.servicename = None
         self.best_utility = -0.0000000001   # just a tiny bit < 0
+
+        # provenance of the best replica estimate:
+        # the RIB values the utility was calculated from,
+        # and the creation time of the update they came from (t_update)
+        self.best_load = None
+        self.best_delay = None
+        self.best_update_time = None
 
         # service forwarding table -- the FIB
         # keeps neighbour for who to forward to
@@ -721,6 +728,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 self.best_replica = None
                 self.best_utility = -0.0000000001
+                self.best_load = None
+                self.best_delay = None
+                self.best_update_time = None
 
                 # now we need to select the best replica
                 # as we splatted the previous one
@@ -1133,6 +1143,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         this_best_neighbour = None
         this_best_utility = -1
         this_servicename = None
+        this_best_entry = None
 
         # create a list of utility values
         utility = [-1 for e in entries]
@@ -1167,6 +1178,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 this_best_neighbour = entry['neighbour']
                 this_servicename = entry['servicename']
                 this_best_utility = utility_i
+                this_best_entry = entry
 
             else:
                 if Verbose.level >= 3:
@@ -1227,8 +1239,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                 self.best_replica = this_best_replica
                 self.best_neighbour = this_best_neighbour
-                self.servicename = this_servicename 
+                self.servicename = this_servicename
                 self.best_utility = this_best_utility
+                self.best_load = this_best_entry['load']
+                self.best_delay = this_best_entry['delay']
+                self.best_update_time = this_best_entry['creationTime']
 
                 # update count
                 self.service_fib_updates += 1
@@ -1251,12 +1266,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
             else:
                 # update utility for this replica
-                
+
                 if Verbose.level >= 1:
                     print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.fib_utility_update_threshold, " update ", old_best_replica ))
 
 
                 self.best_utility = this_best_utility
+                self.best_load = this_best_entry['load']
+                self.best_delay = this_best_entry['delay']
+                self.best_update_time = this_best_entry['creationTime']
 
                 # update count
                 self.service_fib_updates += 1
@@ -1288,7 +1306,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # keep track of best_neighbour, best_replica, best_utility for servicename
         self.service_FIB[self.servicename] = { 'neighbour': self.best_neighbour,
                                                'replica': self.best_replica,
-                                               'utility': self.best_utility }
+                                               'utility': self.best_utility,
+                                               'load': self.best_load,
+                                               'delay': self.best_delay,
+                                               'update_time': self.best_update_time }
 
 
         if Verbose.level >= 1:
@@ -1302,6 +1323,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # print("calculate_utility_difference: diff = " + str(diff) + " utility = " + str(utility) + " best_utility = " + str(best_utility))
 
         return diff
+
+    # Record the forwarding decision on the packet
+    # This router is the deciding router:
+    # the last router with hop_by_hop, the first router with first-decide
+    def record_forwarding_decision(self, packet, fib_entry):
+        """At the forwarding decision: snapshot ground truth (t_sel) and the
+           FIB estimate the decision was based on (from the update at t_update)."""
+        self.network.inject_snapshot_optimal_utility(packet)
+        packet.selection_estimate = { 'update_time': fib_entry['update_time'],  # t_update
+                                      'server_id': fib_entry['replica'],        # s_sel
+                                      'load': fib_entry['load'],
+                                      'delay': fib_entry['delay'],
+                                      'utility': fib_entry['utility'] }         # SEL_UTIL_EST
 
     # Handle a ClientRequest
     def client_request_packet(self, link_end, packet):
@@ -1330,12 +1364,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     if Verbose.level >= 2:
                         print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FIB ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
                 else:
-                    # Snapshot optimal utility if timing is set to 'router'
-                    # with hop_by_hop we use the last router only
-                    # In this case we set the value only when the neighbour is a host
-                    if (self.network.optimal_utility_timing in [Place.Router, Place.Replica]) and not hasattr(packet, 'optimal_snapshot') and self.is_neighbour_host(neighbour):
-
-                        self.network.inject_snapshot_optimal_utility(packet)
+                    # Record the forwarding decision at the deciding router
+                    # with hop_by_hop that is the last router only,
+                    # i.e. when the neighbour is a host
+                    if not hasattr(packet, 'optimal_snapshot') and self.is_neighbour_host(neighbour):
+                        self.record_forwarding_decision(packet, self.service_FIB[service_name])
 
                     if Verbose.level >= 1:
                         print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
@@ -1361,9 +1394,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     packet.service = service_name
                     packet.dst = best_replica
                     
-                    # Snapshot optimal utility if timing is set to 'router' (first router only)
-                    if self.network.optimal_utility_timing == Place.Router and not hasattr(packet, 'optimal_snapshot'):
-                        self.network.inject_snapshot_optimal_utility(packet)
+                    # Record the forwarding decision at the deciding router
+                    # with first-decide that is the first router
+                    # (after packet.dst is set: the snapshot tie-breaks towards packet.dst)
+                    if not hasattr(packet, 'optimal_snapshot'):
+                        self.record_forwarding_decision(packet, self.service_FIB[service_name])
 
                     if Verbose.level >= 1:
                         print("{:.3f}: {:5s} SINGLE_DECISION ClientRequest for service {} mapped to replica {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), service_name, best_replica, packet.id, link_end.dst_node))

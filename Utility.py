@@ -1,19 +1,3 @@
-from enum import Enum
-
-# A Place to work out where the utility value is calculated
-# 'Client' (at request origination)
-# 'Router' (at forwarding decision),
-# 'Replica' (at server arrival),
-class Place(Enum):
-    Client = 0
-    Router = 1
-    Replica = 2
-
-    def __repr__(self):
-        return self.name
-
-    
-
 # the first forwarding utility function
 # load should be normalised in range 0 -> 1
 # delay should be normalised in range 0 -> 1

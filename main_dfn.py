@@ -5,7 +5,7 @@ from Router import Router
 from Client import Client
 from Generator import Generator
 from Verbose import Verbose
-from Utility import Utility, Place
+from Utility import Utility
 import simpy
 
 # sclayman:
@@ -13,14 +13,11 @@ import simpy
 
 # Use a topology from the DFN gml file
 def topology_setup():
-    Verbose.level = 0
-    Verbose.table = 1
+    Verbose.level = 1
+    Verbose.table = 2
 
     # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
-    Router.hop_by_hop = False
-
-    # Network optimal_utility_timing
-    Network.optimal_utility_timing = Place.Replica
+    Router.hop_by_hop = True
 
     # Default propagation delay.
     # If this is not configured explicitly here then a default value of 1 will be used, see Graph.py.    
@@ -44,7 +41,6 @@ def topology_setup():
     Verbose.level = {Verbose.level}
     Verbose.table = {Verbose.table}
     Router.hop_by_hop = {Router.hop_by_hop}
-    Network.optimal_utility_timing = {Network.optimal_utility_timing}
     Graph.default_propagation_delay = {Graph.default_propagation_delay}
     Utility.alpha = {Utility.alpha}
     Server.slots = {Server.slots}
