@@ -1249,18 +1249,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 self.service_fib_updates += 1
 
         else:
-            # same replica - always update the tracked values to the current ones.
-            # Damping only prevents switching replicas, not recording the current
-            # utility (restores commit 43f9490, which was lost in the fb24737
-            # Router.py restore; extended to the load/delay/update_time
-            # provenance fields so SEL_UTIL_EST / t_update always reflect the
-            # most recent update the decision is based on).
-            # Note: the keep/switch decision above compared fresh values on both
-            # sides (old_best_utility is patched up), so recording them here does
-            # not interact with the flap damping. diff is 0 here whenever the
-            # old best replica is present in the RIB entries.
-            # this_best_entry can be None (e.g. no usable RIB entries right now);
-            # in that case there is nothing newer to record.
+            # Same replica: keep it, and always refresh the tracked values
+            # (utility/load/delay/update_time) from the newest RIB entry, so
+            # SEL_UTIL_EST / t_update always reflect the most recent update.
+            # This cannot affect the keep/switch damping: that comparison uses
+            # patched-up fresh values on both sides (see above).
+            # this_best_entry can be None (no usable RIB entries right now);
+            # then there is nothing newer to record.
 
             if this_best_entry is not None:
                 self.best_utility = this_best_utility
@@ -1268,29 +1263,21 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 self.best_delay = this_best_entry['delay']
                 self.best_update_time = this_best_entry['creationTime']
 
-            if (diff == 0):
-                # keep replica, tracked values refreshed
+            if Verbose.level >= 1:
+                if diff == 0:
+                    diff_text, comparator, threshold_text = "", "0", ""
+                elif diff < Router.fib_utility_update_threshold:
+                    diff_text, comparator, threshold_text = diff, "<", Router.fib_utility_update_threshold
+                else:
+                    diff_text, comparator, threshold_text = diff, ">", Router.fib_utility_update_threshold
 
-                if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, "", "0", "", " do not update ", old_best_replica ))
+                print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff_text, comparator, threshold_text, " keep ", old_best_replica ))
 
-            elif (diff < Router.fib_utility_update_threshold):
-                # keep replica, tracked values refreshed
-
-                if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, "<", Router.fib_utility_update_threshold, " do not update ", old_best_replica ))
-
-
-            else:
-                # keep replica, tracked values refreshed
-
-                if Verbose.level >= 1:
-                    print("{:.3f}: {:5s} CHOOSE_BEST_REPLICA: U_old({}, {}) U_new({}, {}) diff({} {} {}) {} {}".format(self.env.now, self.id(), old_best_utility, old_best_replica, this_best_utility, this_best_replica, diff, ">", Router.fib_utility_update_threshold, " update ", old_best_replica ))
-
+            if diff != 0 and diff >= Router.fib_utility_update_threshold:
                 # update count
-                # (kept: only counts replica changes and the rare same-replica
-                #  case where diff > threshold, i.e. the old best had no RIB
-                #  entry to patch from; value refreshes are not counted so the
+                # (kept: only counts the rare same-replica case where diff
+                #  crosses the threshold, i.e. the old best had no RIB entry
+                #  to patch from; value refreshes are not counted so the
                 #  counter's meaning matches previous runs)
                 self.service_fib_updates += 1
 
@@ -1349,11 +1336,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
            (SEL_UTIL_SEL, BEST_UTIL_SEL) shares the latency basis of the FIB
            estimate (SEL_UTIL_EST)."""
         self.network.inject_snapshot_optimal_utility(packet, vantage=self.id())
-        packet.selection_estimate = { 'decider': self.id(),
-                                      'update_time': fib_entry['update_time'],  # t_update
+        packet.selection_estimate = { 'update_time': fib_entry['update_time'],  # t_update
                                       'server_id': fib_entry['replica'],        # s_sel
+                                      # RIB delay: this router's latency to the replica
+                                      'latency': fib_entry['delay'],
                                       'load': fib_entry['load'],
-                                      'delay': fib_entry['delay'],
                                       'utility': fib_entry['utility'] }         # SEL_UTIL_EST
 
     # Handle a ClientRequest

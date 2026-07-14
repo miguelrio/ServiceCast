@@ -67,15 +67,19 @@ Both selection-time metrics are computed from the DECIDING ROUTER's
 vantage (the last router with hop-by-hop, the first router with
 first-decide): the ground-truth sections use the deciding router's
 latency to each replica, matching the latency basis of the FIB estimate
-SEL_UTIL_EST. t_update is the creation time of the most recent update
-the deciding router has recorded for the selected replica: the tracked
-FIB values follow every received update (damping only prevents switching
-replicas), so staleness in SEL_UTIL_EST comes from server-side update
-suppression (Server.change_factor) and in-flight propagation delay only. Only load staleness then contributes to C, and A compares
+SEL_UTIL_EST. So only load staleness contributes to C, and A compares
 the decision against the best the router could have made from its own
-position with fresh information. Note that with hop-by-hop the deciding
-router is the selected replica's attachment router, so DECISION_GAP is
-structurally close to zero; it is most informative in first-decide mode.
+position with fresh information.
+
+t_update is the creation time of the most recent update the deciding
+router has recorded for the selected replica. The tracked FIB values
+follow every received update (damping only prevents switching replicas),
+so staleness in SEL_UTIL_EST comes from server-side update suppression
+(Server.change_factor) and in-flight propagation delay only.
+
+Note that with hop-by-hop the deciding router is the selected replica's
+attachment router, so DECISION_GAP is structurally close to zero; it is
+most informative in first-decide mode.
 
 As these lines only appear at Verbose >= 1, they always carry the
 notation annotations, e.g.:

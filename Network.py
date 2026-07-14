@@ -11,7 +11,14 @@ from gml import read_gml, write_gml
 import sys
 
 
-# PDF notation for the per-request metric lines (see BEST_REPLICA_UTILITY notes).
+# PDF notation for the per-request metric lines (see the BEST_REPLICA_UTILITY
+# notes PDF). The PDF numbers five measurable quantities:
+#   1: SEL_UTIL_EST = u(s_sel, t_update)        router's FIB belief
+#   2: SEL_UTIL_SEL = u(s_sel, t_sel)           selected, truth at selection
+#   3: SEL_UTIL_ARR = u(s_sel, t_arr)           selected, truth at arrival
+#   4: BEST_UTIL_SEL = u(best(t_sel), t_sel)    best, truth at selection
+#   5: BEST_UTIL_ARR = u(best(t_arr), t_arr)    best, truth at arrival
+# and three metrics: A = 4 - 1, B = 5 - 3, C = 2 - 1.
 # At Verbose.level >= 1 each annotated field is printed as field(NOTATION): value
 # and the metric formula is shown after the tag. Level 0 output is unchanged.
 GAP_NOTATIONS = {
@@ -25,6 +32,10 @@ GAP_NOTATIONS = {
                        'selected': {'time': 't_update', 'server': 'SEL_ID',      'utility': 'SEL_UTIL_EST'},
                        'compared': {'time': 't_sel',    'server': 'SEL_ID',      'utility': 'SEL_UTIL_SEL'} },
 }
+
+# Two utilities within this distance count as EQUAL ("a tiny difference,
+# e.g. 1e-9" in the BEST_REPLICA_UTILITY notes PDF)
+UTILITY_EQUAL_EPSILON = 1e-9
 
 
 class Network:
@@ -679,7 +690,6 @@ class Network:
 
         packet.optimal_snapshot = {
             'time': self.env.now,
-            'vantage': vantage_node,
             'server_id': best_id,
             'load': best_load,
             'latency': best_latency,
@@ -717,7 +727,7 @@ class Network:
             keyword = status['msg']
         elif selected['server'] == compared['server']:
             keyword = "SAME"
-        elif abs(gap) < 1e-9:
+        elif abs(gap) < UTILITY_EQUAL_EPSILON:
             keyword = "EQUAL"
         else:
             keyword = "DIFFERENT"
@@ -829,7 +839,7 @@ class Network:
             selected_estimate = { 'time': estimate['update_time'],
                                   'server': selected_id,
                                   'load': estimate['load'],
-                                  'latency': estimate['delay'],
+                                  'latency': estimate['latency'],
                                   'utility': estimate['utility'] }
 
             # A: DECISION_GAP = BEST_UTIL_SEL - SEL_UTIL_EST
