@@ -6,6 +6,7 @@ Usage:
 """
 
 import argparse
+from collections import defaultdict
 import re
 import numpy as np
 
@@ -15,6 +16,12 @@ ENTRY_LINE_START_RE = re.compile(r"^\s*\d+(?:\.\d+)?:\s+\S+\s+(?:OUTCOME_GAP|DEC
 CREATE_SERVER_METRIC_RE = re.compile(r"PACKET_CREATED.*ServerMetric")
 RECV_SERVER_METRIC_ANNOUNCEMENT_RE = re.compile(r"RECV_PACKET\s+ServerMetric A")
 RECV_SERVER_METRIC_WITHDRAWAL_RE = re.compile(r"RECV_PACKET\s+ServerMetric W")
+FIB_STABILITY_RE = re.compile(
+    r"^\s*\d+(?:\.\d+)?:\s+"
+    r"(?P<router>\S+)\s+"
+    r"(?P<action>SET_BEST_REPLICA|KEEP_BEST_REPLICA|CHANGED_BEST_REPLICA)\s+"
+    r"(?P<server>s\d+)\b"
+)
 
 
 def _consume_entry(entry, stats):
@@ -48,6 +55,7 @@ def _consume_entry(entry, stats):
         return
 
     # DECISION_GAP and STALENESS_ERR statistics are separate and exclude BLOCKED.
+    # We do not strictly need to exclude BLOCKED here as DECISION_GAP and STALENESS_ERR should always be reported even if the request is blocked
     if status == "BLOCKED":
         return
 
@@ -72,6 +80,9 @@ def parse_log_lines(lines):
         "server_updates_created": 0,
         "server_metrics_announce": 0,
         "server_metrics_withdraw": 0,
+        "fib_totals": {"SET": 0, "KEEP": 0, "CHANGED": 0},
+        "fib_router_counts": defaultdict(lambda: {"SET": 0, "KEEP": 0, "CHANGED": 0}),
+        "fib_router_server_counts": defaultdict(lambda: defaultdict(lambda: {"SET": 0, "KEEP": 0, "CHANGED": 0})),
     }
 
     pending_entry = None
@@ -87,6 +98,16 @@ def parse_log_lines(lines):
             stats["server_metrics_announce"] += 1
         elif RECV_SERVER_METRIC_WITHDRAWAL_RE.search(line):
             stats["server_metrics_withdraw"] += 1
+
+        fib_match = FIB_STABILITY_RE.search(line)
+        if fib_match:
+            router = fib_match.group("router")
+            server = fib_match.group("server")
+            action = fib_match.group("action")
+            action_key = action.split("_", 1)[0]
+            stats["fib_totals"][action_key] += 1
+            stats["fib_router_counts"][router][action_key] += 1
+            stats["fib_router_server_counts"][router][server][action_key] += 1
 
         is_entry_start = bool(ENTRY_LINE_START_RE.search(line))
 
@@ -112,6 +133,20 @@ def parse_log_lines(lines):
         _consume_entry(pending_entry, stats)
 
     return stats
+
+
+def _format_fib_stability_summary(stats):
+    fib_totals = stats.get("fib_totals", {})
+    set_count = fib_totals.get("SET", 0)
+    changed_count = fib_totals.get("CHANGED", 0)
+    keep_count = fib_totals.get("KEEP", 0)
+    updates_count = set_count + changed_count
+    total_count = updates_count + keep_count
+    return (
+        f"FIB stability: updates: {updates_count:,} "
+        f"(set: {set_count:,}, changed: {changed_count:,}), "
+        f"kept: {keep_count:,}, total: {total_count:,}\n"
+    )
 
 
 def format_stats(stats):
@@ -145,6 +180,7 @@ def format_stats(stats):
         f"accuracy: {accuracy * 100:.4g}%; blocked: {blocked_rate * 100:.4g}%; utility gap: max: {max_diff * 100:.4g}%; mean: {mean_diff_including_zero * 100:.4g}%; mean conditional: {mean_diff * 100:.4g}%\n"
         f"server update events: {updates:,}; "
         f"total update messages: {(announces + withdraws):,} ({announces:,} [{(announces/(announces + withdraws) * 100):.3g}%] announcements, {withdraws:,} [{(withdraws/(announces + withdraws) * 100):.3g}%] withdrawals)\n"
+        f"{_format_fib_stability_summary(stats)}"
     )
 
 
@@ -163,17 +199,52 @@ def _fmt_row(name, data):
 def _fmt_metric_section(title, values):
     print(title)
     if values:
-        print(_fmt_row("overall", values), end="")
+        print(_fmt_row(f"overall [{len(values):,}]", values), end="")
     else:
-        print("overall: N/A")
+        print("overall [0]: N/A")
 
     non_zero = [v for v in values if v > 0]
     if non_zero:
-        print(_fmt_row("non-zero", non_zero), end="")
+        print(_fmt_row(f"non-zero [{len(non_zero):,}]", non_zero), end="")
     else:
-        print("non-zero: N/A")
+        print("non-zero [0]: N/A")
 
 
+def _print_fib_router_table(stats):
+    fib_router_counts = stats.get("fib_router_counts", {})
+    print("FIB stability by router:")
+    header = f"{'router':<8} {'updates':>10} {'set':>10} {'changed':>10} {'kept':>10} {'total':>10}"
+    print(header)
+    if not fib_router_counts:
+        print("(none)")
+        return
+
+    total_set = 0
+    total_changed = 0
+    total_kept = 0
+    for router in sorted(fib_router_counts):
+        counts = fib_router_counts[router]
+        set_count = counts["SET"]
+        changed_count = counts["CHANGED"]
+        kept_count = counts["KEEP"]
+        updates_count = set_count + changed_count
+        total_count = updates_count + kept_count
+        total_set += set_count
+        total_changed += changed_count
+        total_kept += kept_count
+        print(
+            f"{router:<8} {updates_count:>10,} {set_count:>10,} {changed_count:>10,} "
+            f"{kept_count:>10,} {total_count:>10,}"
+        )
+
+    grand_updates = total_set + total_changed
+    grand_total = grand_updates + total_kept
+    print(
+        f"{'TOTAL':<8} {grand_updates:>10,} {total_set:>10,} {total_changed:>10,} "
+        f"{total_kept:>10,} {grand_total:>10,}"
+    )
+
+    
 def main():
     parser = argparse.ArgumentParser(description="Summarise OUTCOME_GAP lines in one or more log files.")
     parser.add_argument("paths", nargs="+", help="Path(s) to the log file(s) to parse")
@@ -194,19 +265,20 @@ def main():
             print()
             print("Utility gap stats (abs, BLOCKED excluded):")
             if gaps_all:
-                print(_fmt_row("overall", gaps_all), end="")
+                print(_fmt_row(f"overall [{len(gaps_all):,}]", gaps_all), end="")
             else:
-                print("overall: N/A")
+                print("overall [0]: N/A")
 
             if gaps_worse:
-                print(_fmt_row("worse-than-optimal", gaps_worse), end="")
+                print(_fmt_row(f"worse-than-optimal [{len(gaps_worse):,}]", gaps_worse), end="")
             else:
-                print("worse-than-optimal: N/A")
-
+                print("worse-than-optimal [0]: N/A")
             print()
-            _fmt_metric_section("Decision gap stats (abs, BLOCKED excluded):", stats.get("decision_gap_values", []))
+            _fmt_metric_section("Decision gap stats (abs):", stats.get("decision_gap_values", []))
             print()
-            _fmt_metric_section("Staleness error stats (abs, BLOCKED excluded):", stats.get("staleness_err_values", []))
+            _fmt_metric_section("Staleness error stats (abs):", stats.get("staleness_err_values", []))
+            print()
+            _print_fib_router_table(stats)
         if show_filename and index != len(args.paths) - 1:
             print()
 
