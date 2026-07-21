@@ -32,6 +32,13 @@ both at arrival time (B = BEST_UTIL_ARR - SEL_UTIL_ARR).
 Utilities are computed from the CLIENT's vantage (client-to-replica
 latency), as B measures the outcome from the client's point of view.
 Status is SAME / EQUAL / DIFFERENT / BLOCKED, followed by the signed gap.
+BLOCKED lines carry an extra MINLOAD section — the lowest-loaded replica at
+`t_arr` — printed before the keyword; `load < 1.0` there means the blocked
+request could have been served elsewhere:
+
+```
+270.990: Net   OUTCOME_GAP (B = BEST_UTIL_ARR - SEL_UTIL_ARR) 's1' [c4.141] SELECTED: time(t_arr): 270.990 server(SEL_ID): s1 load: 1.0 latency: 0.3 utility(SEL_UTIL_ARR): 0.28571 BEST: time(t_arr): 270.990 server(BEST_ID_ARR): s1 load: 1.0 latency: 0.3 utility(BEST_UTIL_ARR): 0.28571 MINLOAD: time(t_arr): 270.990 server(MIN_LOAD_ID): s3 load: 0.7 latency: 0.6 utility(MIN_LOAD_UTIL): 0.22143 BLOCKED 0.0
+```
 
 At Verbose level 0 the line is plain:
 

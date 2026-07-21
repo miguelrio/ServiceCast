@@ -24,7 +24,8 @@ import sys
 GAP_NOTATIONS = {
     'OUTCOME_GAP':   { 'formula': 'B = BEST_UTIL_ARR - SEL_UTIL_ARR',
                        'selected': {'time': 't_arr',    'server': 'SEL_ID',      'utility': 'SEL_UTIL_ARR'},
-                       'compared': {'time': 't_arr',    'server': 'BEST_ID_ARR', 'utility': 'BEST_UTIL_ARR'} },
+                       'compared': {'time': 't_arr',    'server': 'BEST_ID_ARR', 'utility': 'BEST_UTIL_ARR'},
+                       'minload':  {'time': 't_arr',    'server': 'MIN_LOAD_ID', 'utility': 'MIN_LOAD_UTIL'} },
     'DECISION_GAP':  { 'formula': 'A = BEST_UTIL_SEL - SEL_UTIL_EST',
                        'selected': {'time': 't_update', 'server': 'SEL_ID',      'utility': 'SEL_UTIL_EST'},
                        'compared': {'time': 't_sel',    'server': 'BEST_ID_SEL', 'utility': 'BEST_UTIL_SEL'} },
@@ -719,7 +720,7 @@ class Network:
     # At Verbose.level >= 1 the PDF notation is shown before each value
     # (see GAP_NOTATIONS); the trailing "KEYWORD gap" is the same at all levels.
     def _log_request_gap(self, tag, arrival_server_id, packet, selected, compared,
-                         status=None, compared_label="BEST"):
+                         status=None, compared_label="BEST", minload=None):
         gap = compared['utility'] - selected['utility']
 
         if status is not None:
@@ -743,11 +744,18 @@ class Network:
             selected_notes = notes['selected']
             compared_notes = notes['compared']
 
-        print("{:.3f}: {:5s} {} '{}' [{}.{}] {} {} {} {}".format(
+        sections = [self._gap_section("SELECTED", selected, selected_notes),
+                    self._gap_section(compared_label, compared, compared_notes)]
+        if minload is not None:
+            # BLOCKED lines carry an extra MINLOAD section (lowest-loaded
+            # replica), placed before the trailing "KEYWORD gap" so
+            # end-anchored parsers keep working
+            minload_notes = notes.get('minload') if notes else None
+            sections.append(self._gap_section("MINLOAD", minload, minload_notes))
+
+        print("{:.3f}: {:5s} {} '{}' [{}.{}] {} {} {}".format(
             self.env.now, "Net ", tag_text, arrival_server_id, packet.src, packet.id,
-            self._gap_section("SELECTED", selected, selected_notes),
-            self._gap_section(compared_label, compared, compared_notes),
-            keyword, round(gap, 5)))
+            " ".join(sections), keyword, round(gap, 5)))
 
     # Report the per-request metrics.
     # This is called by individual Servers, when the request arrives (t_arr).
@@ -820,11 +828,18 @@ class Network:
                      'latency': self.latency_table[server_id][client_name],
                      'utility': utility_values[server_id] }
 
+        # On BLOCKED requests also report the lowest-loaded replica: load < 1.0
+        # there means the request could have been served somewhere
+        # (can_increase_load accepts while used_slots < slots, i.e. load < 1.0)
+        minload = None
+        if status is not None:
+            minload = truth_section(min(load_values, key=load_values.get))
+
         # B: OUTCOME_GAP = BEST_UTIL_ARR - SEL_UTIL_ARR, both at t_arr
         self._log_request_gap("OUTCOME_GAP", requesting_server_id, packet,
                               truth_section(requesting_server_id),
                               truth_section(best_arrival_id),
-                              status=status)
+                              status=status, minload=minload)
 
         # A and C need the decision-time data recorded by the deciding router
         if Verbose.level >= 1 and hasattr(packet, 'optimal_snapshot') and hasattr(packet, 'selection_estimate'):

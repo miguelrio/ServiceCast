@@ -64,7 +64,10 @@ from typing import Iterable, NamedTuple
 #   "{ts}: Net   {TAG}[ (formula)] '{arrival_server}' [{client}.{pkt}]
 #    SELECTED: time[(note)]: T server[(note)]: S load: L latency: LAT utility[(note)]: U
 #    {BEST|ACTUAL}: time[(note)]: T server[(note)]: S load: L latency: LAT utility[(note)]: U
+#    [MINLOAD: time[(note)]: T server[(note)]: S load: L latency: LAT utility[(note)]: U]
 #    {KEYWORD} {gap}"
+# The MINLOAD section (lowest-loaded replica at t_arr) appears only on BLOCKED
+# OUTCOME_GAP lines; old logs simply don't have it.
 # The (note) annotations are the PDF notation, printed only at Verbose >= 1; every
 # annotation is optional here so both verbosity levels parse. load is printed via
 # str() and utility/gap via round(,5), so numbers may use scientific notation.
@@ -88,7 +91,8 @@ GAP_LINE_RE = re.compile(
     rf"'(?P<arrival>[^']+)'\s+\[(?P<client>[^.\]]+)\.(?P<pkt>\d+)\]\s+"
     + _side("sel", "SELECTED") + r"\s+"
     + _side("cmp", "BEST|ACTUAL") + r"\s+"
-    rf"(?P<keyword>\S+)\s+(?P<gap>{_NUM})\s*$"
+    + rf"(?:{_side('min', 'MINLOAD')}\s+)?"
+    + rf"(?P<keyword>\S+)\s+(?P<gap>{_NUM})\s*$"
 )
 
 # Lighter patterns for the counter lines (substring-prefiltered before use).
