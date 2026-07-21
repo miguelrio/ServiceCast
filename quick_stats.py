@@ -13,6 +13,7 @@ import numpy as np
 LOG_LINE_RE = re.compile(r"\b(?P<status>SAME|EQUAL|DIFFERENT|BLOCKED)(?:\s+(?P<diff>-?\d+(?:\.\d+)?))?\s*$")
 ENTRY_TYPE_RE = re.compile(r"\b(?P<entry_type>OUTCOME_GAP|DECISION_GAP|STALENESS_ERR)\b")
 ENTRY_LINE_START_RE = re.compile(r"^\s*\d+(?:\.\d+)?:\s+\S+\s+(?:OUTCOME_GAP|DECISION_GAP|STALENESS_ERR)\b")
+MINLOAD_LOAD_RE = re.compile(r"\bMINLOAD:\s+.*?\bload:\s*([-+]?\d+(?:\.\d+)?)")
 CREATE_SERVER_METRIC_RE = re.compile(r"PACKET_CREATED.*ServerMetric")
 RECV_SERVER_METRIC_ANNOUNCEMENT_RE = re.compile(r"RECV_PACKET\s+ServerMetric A")
 RECV_SERVER_METRIC_WITHDRAWAL_RE = re.compile(r"RECV_PACKET\s+ServerMetric W")
@@ -47,6 +48,12 @@ def _consume_entry(entry, stats):
             stats["diffs"].append(0.0)
         elif status == "BLOCKED":
             stats["blocked"] += 1
+            minload_match = MINLOAD_LOAD_RE.search(entry)
+            if minload_match and float(minload_match.group(1)) < 1.0:
+                stats["blocked_avoidable"] += 1
+            else:
+                # Treat missing MINLOAD as unavoidable to keep counters additive.
+                stats["blocked_unavoidable"] += 1
         elif status == "DIFFERENT":
             stats["different"] += 1
             diff_value = abs(float(diff_text)) if diff_text is not None else 0.0
@@ -72,6 +79,8 @@ def parse_log_lines(lines):
         "equal": 0,
         "same": 0,
         "blocked": 0,
+        "blocked_unavoidable": 0,
+        "blocked_avoidable": 0,
         "different": 0,
         "diffs": [],
         "different_diffs": [],
@@ -142,10 +151,11 @@ def _format_fib_stability_summary(stats):
     keep_count = fib_totals.get("KEEP", 0)
     updates_count = set_count + changed_count
     total_count = updates_count + keep_count
+    updated_pct = (updates_count / total_count * 100) if total_count else 0.0
     return (
         f"FIB stability: updates: {updates_count:,} "
         f"(set: {set_count:,}, changed: {changed_count:,}), "
-        f"kept: {keep_count:,}, total: {total_count:,}\n"
+        f"kept: {keep_count:,}, total: {total_count:,} (churn: {updated_pct:.4g}%)\n"
     )
 
 
@@ -154,6 +164,8 @@ def format_stats(stats):
     equal = stats["equal"]
     same = stats["same"]
     blocked = stats["blocked"]
+    blocked_unavoidable = stats["blocked_unavoidable"]
+    blocked_avoidable = stats["blocked_avoidable"]
     different = stats["different"]
     diffs = stats["diffs"]
     updates = stats["server_updates_created"]
@@ -163,6 +175,8 @@ def format_stats(stats):
     if total == 0:
         accuracy = 0.0
         blocked_rate = 0.0
+        blocked_unavoidable_rate = 0.0
+        blocked_avoidable_rate = 0.0
         mean_diff = 0.0
         mean_diff_including_zero = 0.0
         max_diff = 0.0
@@ -170,6 +184,8 @@ def format_stats(stats):
         denom = total - blocked
         accuracy = (equal + same) / denom if denom else 0.0
         blocked_rate = blocked / total
+        blocked_unavoidable_rate = blocked_unavoidable / total
+        blocked_avoidable_rate = blocked_avoidable / total
         different_diffs = stats["different_diffs"]
         max_diff = max(different_diffs) if different_diffs else 0.0
         mean_diff = float(np.mean(different_diffs)) if different_diffs else 0.0
@@ -177,7 +193,7 @@ def format_stats(stats):
 
     return (
         f"requests: {total:,}; SAME: {same:,}; EQUAL: {equal:,}; DIFFERENT: {different:,}; BLOCKED: {blocked:,}\n"
-        f"accuracy: {accuracy * 100:.4g}%; blocked: {blocked_rate * 100:.4g}%; utility gap: max: {max_diff * 100:.4g}%; mean: {mean_diff_including_zero * 100:.4g}%; mean conditional: {mean_diff * 100:.4g}%\n"
+        f"accuracy: {accuracy * 100:.4g}%; blocked: {blocked_rate * 100:.4g}% (unavoidable: {blocked_unavoidable_rate * 100:.4g}%, avoidable: {blocked_avoidable_rate * 100:.4g}%); utility gap: max: {max_diff * 100:.4g}%; mean: {mean_diff_including_zero * 100:.4g}%; mean conditional: {mean_diff * 100:.4g}%\n"
         f"server update events: {updates:,}; "
         f"total update messages: {(announces + withdraws):,} ({announces:,} [{(announces/(announces + withdraws) * 100):.3g}%] announcements, {withdraws:,} [{(withdraws/(announces + withdraws) * 100):.3g}%] withdrawals)\n"
         f"{_format_fib_stability_summary(stats)}"
@@ -213,7 +229,7 @@ def _fmt_metric_section(title, values):
 def _print_fib_router_table(stats):
     fib_router_counts = stats.get("fib_router_counts", {})
     print("FIB stability by router:")
-    header = f"{'router':<8} {'updates':>10} {'set':>10} {'changed':>10} {'kept':>10} {'total':>10}"
+    header = f"{'router':<8} {'updates':>10} {'set':>10} {'changed':>10} {'kept':>10} {'total':>10} {'churn':>10}"
     print(header)
     if not fib_router_counts:
         print("(none)")
@@ -229,19 +245,21 @@ def _print_fib_router_table(stats):
         kept_count = counts["KEEP"]
         updates_count = set_count + changed_count
         total_count = updates_count + kept_count
+        updated_pct = (updates_count / total_count * 100) if total_count else 0.0
         total_set += set_count
         total_changed += changed_count
         total_kept += kept_count
         print(
             f"{router:<8} {updates_count:>10,} {set_count:>10,} {changed_count:>10,} "
-            f"{kept_count:>10,} {total_count:>10,}"
+            f"{kept_count:>10,} {total_count:>10,} {updated_pct:>9.4g}%"
         )
 
     grand_updates = total_set + total_changed
     grand_total = grand_updates + total_kept
+    grand_updated_pct = (grand_updates / grand_total * 100) if grand_total else 0.0
     print(
         f"{'TOTAL':<8} {grand_updates:>10,} {total_set:>10,} {total_changed:>10,} "
-        f"{total_kept:>10,} {grand_total:>10,}"
+        f"{total_kept:>10,} {grand_total:>10,} {grand_updated_pct:>9.4g}%"
     )
 
     
