@@ -969,11 +969,11 @@ class Network:
         for router in self.routers:
             node = self.node(router)
             if isinstance(node, Client):
-                print(router + " [shape=egg, style=\"filled\", fillcolor=\"pink\"", end="", file=file)
+                print("\"" + router + "\" [shape=egg, style=\"filled\", fillcolor=\"pink\"", end="", file=file)
             elif isinstance(node, Server):
-                print(router + " [shape=parallelogram, style=\"filled\", fillcolor=\"yellow\"", end="", file=file)
+                print("\"" + router + "\" [shape=parallelogram, style=\"filled\", fillcolor=\"yellow\"", end="", file=file)
             else:
-                print(router + " [shape=circle, fixedsize=true, width=1", end="", file=file)
+                print("\"" + router + "\" [shape=circle", end="", file=file)
 
             print("];", file=file)
 
@@ -983,7 +983,7 @@ class Network:
             node = self.node(router)
             for neighbour in node.neighbours():
                 if router < neighbour:
-                    print(router + " -- " + neighbour + ";", file=file)
+                    print("\"" + router + "\" -- \"" + neighbour + "\";", file=file)
 
 
         print("}", file=file)
