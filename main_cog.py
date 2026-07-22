@@ -14,11 +14,11 @@ import random
 
 # Use a topology from the DFN gml file
 def topology_setup():
-    Verbose.level = 3
+    Verbose.level = 0
     Verbose.table = 2
 
     # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
-    Router.hop_by_hop = True
+    Router.hop_by_hop = False
 
     # Default propagation delay.
     # If this is not configured explicitly here then a default value of 1 will be used, see Graph.py.    
@@ -105,8 +105,8 @@ def topology_setup():
     clients = []
     
     # both servers and clients are connected to local nodes
-    num_servers = 100
-    num_clients = 20
+    num_servers = 5
+    num_clients = 5
     needed = num_servers + num_clients
 
     if len(local) < needed:
@@ -178,14 +178,14 @@ def topology_setup():
     # size_scale_factor is a multiplier for the session duration
     # Example: arrival_lambda=0.5, size_lambda=10, size_scale_factor=10 means an average of 2 requests per second, each lasting on average 100 seconds. This gives an average of 200 concurrent requests in the system. If there are 5 servers, each server will have an average of 40 concurrent requests.
     # Note that it doesn't matter whether we have size_lambda=10, size_scale_factor=10 or size_lambda=100, size_scale_factor=1, the average session duration is the same (100 seconds). The scale factor is just a multiplier for the session duration.
-    generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=5, size_lambda=10, size_scale_factor=10, seed=15112022)
+    generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=0.4, size_lambda=10, size_scale_factor=10, seed=15112022)
 
     # 10 - run
     
     if Verbose.level >= 3:
         print("RUN ----------------------------------------------------------------")
 
-    network.start(until=3600)
+    network.start(until=360)
 
 
 # go !

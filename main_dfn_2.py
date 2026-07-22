@@ -16,7 +16,7 @@ import random
 
 # Use a topology from the DFN gml file
 def topology_setup():
-    Verbose.level = 1
+    Verbose.level = 0
     Verbose.table = 2
 
     # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
@@ -29,7 +29,7 @@ def topology_setup():
     Graph.default_propagation_delay = 0.1
 
     # Set alpha value
-    Utility.alpha = 0.50
+    Utility.alpha = 0.5
 
     # Set slots
     Server.slots = 50
@@ -107,7 +107,7 @@ def topology_setup():
 
     # both servers and clients are connected to local nodes
     num_servers = 5
-    num_clients = 10
+    num_clients = 5
     needed = num_servers + num_clients
 
     if len(local) < needed:
