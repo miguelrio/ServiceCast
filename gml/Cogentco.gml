@@ -48,7 +48,7 @@ graph [
   ]
   node [
     id 2
-    label "Mainz-Wiesbaden"
+    label "Mainz_Wiesbaden"
     Country "Germany"
     Longitude 8.27111
     Internal 1
@@ -1275,7 +1275,7 @@ graph [
   ]
   node [
     id 138
-    label "Padua-Venice"
+    label "Padua_Venice"
     Country "Italy"
     Longitude 12.32667
     Internal 1
