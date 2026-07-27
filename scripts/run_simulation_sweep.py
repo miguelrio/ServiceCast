@@ -270,7 +270,7 @@ def _configure_globals(server_cf, router_cf, hop_by_hop, propagation_delay):
 def build_network(env, propagation_delay):
     """Build the Dfn network ready to run: graph -> network, attach servers and clients,
     pre-compute forwarding tables, and install the load/request generators."""
-    gml_file = os.path.join(project_path, "gml/Dfn.gml")
+    gml_file = os.path.join(project_path, "topologies/gml/Dfn.gml")
     network = Network.from_graph(read_gml(gml_file), env)
 
     # Core nodes (degree > 3) host servers; local nodes (degree <= 3) host clients.

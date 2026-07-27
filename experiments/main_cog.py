@@ -51,7 +51,7 @@ def topology_setup():
     
     # 1 - Define the topology
 
-    gml_file = "gml/Cogentco.gml"
+    gml_file = "topologies/gml/Cogentco.gml"
 
     if Verbose.level >= 3:
         print("Network - DFN")

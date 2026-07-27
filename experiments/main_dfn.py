@@ -50,7 +50,7 @@ def topology_setup():
     
     # 1 - Define the topology
 
-    gml_file = "gml/Dfn.gml"
+    gml_file = "topologies/gml/Dfn.gml"
 
     if Verbose.level >= 3:
         print("Network - DFN")

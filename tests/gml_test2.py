@@ -7,14 +7,14 @@ import simpy
 # and using Graph.from_gml_file and Network.from_gml_file
 
 print("- Bics")
-g = Graph.from_gml_file("gml/Bics.gml")
+g = Graph.from_gml_file("topologies/gml/Bics.gml")
 g.print()
 
 
 print("- Bics Network")
 env = simpy.Environment()
 
-n = Network.from_gml_file("gml/Bics.gml", env)
+n = Network.from_gml_file("topologies/gml/Bics.gml", env)
 n.print()
 
 print("- Bics Graph --> Network")
