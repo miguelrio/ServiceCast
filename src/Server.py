@@ -137,7 +137,7 @@ class Server(Host):
         packet = Packet(event.time, event.size, self.pkt_no, event.src, event.dst, event.flow_id)
         packet.pkt_no = self.pkt_no
 
-        if Verbose.level >= 0:
+        if Verbose.level >= 2:
             print("{:.3f}: {:5s} PACKET_CREATED {}.{} ({:.3f}) EVENT in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))
 
         self.pkt_no += 1
@@ -194,7 +194,7 @@ class Server(Host):
         """A Client has sent a request"""
         service_name = getattr(packet, 'service', packet.dst)
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print("{:.3f}: {:5s} SERVER_PROCESS ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), service_name, packet.src, packet.id))
 
         # process the request packet

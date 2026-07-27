@@ -210,7 +210,7 @@ class Generator(object):
         # used if background_load is True
         genB = itertools.chain([0], itertools.repeat(10))
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print(f"""Server {idstr} server_event_generator parameters:
     background_load = {background_load}
             """)
@@ -278,7 +278,7 @@ class Generator(object):
 
         env = network.env
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print("Generator client_event_generator arrival_lambda = {}".format(arrival_lambda))
 
         # EventGenerator accepts three (zero arguments) functions as arguments,
@@ -330,7 +330,7 @@ class Generator(object):
 
         env = network.env
 
-        if Verbose.level >= 0:
+        if Verbose.level >= 2:
             print(f"""Client multi_client_event_generator parameters:
     arrival_lambda = {arrival_lambda}
     size_lambda = {size_lambda}

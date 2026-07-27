@@ -701,7 +701,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         self.pkt_no += 1
 
                         # forward the packet
-                        if Verbose.level >= 1:
+                        if Verbose.level >= 2:
                             print("{:.3f}: {:5s} WITHDRAW_FORWARD {} to {}".format(self.env.now, self.id(), candidate['replica'], neighbour))
 
                         # send to relevant SwitchPort
@@ -770,14 +770,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         for key in self.connected_capacity:
             entry = self.connected_capacity[key]
 
-            print("announce_aggregated_connected_capacity: server " + key + " entry " + str(entry))
+            if Verbose.level >= 2:
+                print("announce_aggregated_connected_capacity: server " + key + " entry " + str(entry))
             
             self.connected_capacity_total["load"] += entry["load"]
             self.connected_capacity_total["no_of_flows"] += entry["no_of_flows"]
             self.connected_capacity_total["slots"] += entry["slots"]
             self.connected_capacity_total["capacity"] += entry["capacity"]
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print ("{:.3f}: CONNECTED_CAPACITY {} 'load': {}, 'no_of_flows': {}, 'slots': {}, 'capacity': {}".format(self.env.now, self.id(),  self.connected_capacity_total["load"],  self.connected_capacity_total["no_of_flows"],  self.connected_capacity_total["slots"], self.connected_capacity_total["capacity"]   ))
 
         self.network.update_replica_capacity(self.id(), self.connected_capacity_total)
@@ -888,7 +889,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                             self.pkt_no += 1
 
                             # forward the packet
-                            if Verbose.level >= 1:
+                            if Verbose.level >= 2:
                                 print("{:.3f}: {:5s} FORWARD_WITHDRAW to {} msg {}".format(self.env.now, self.id(), self.neighbour_destination(neighbour).id(), metric_to_send))
 
                             # send to relevant SwitchPort
@@ -896,7 +897,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                         else:
                             # not in sent_table, so no need to send Withdraw
-                            if Verbose.level >= 1:
+                            if Verbose.level >= 2:
                                 print ("{:.3f}: {:5s} NOT_IN_SENT_TABLE neighbour {} metric no {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send.doc_id, metric_to_send['msgID']) )
 
                             pass
@@ -1347,7 +1348,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def client_request_packet(self, link_end, packet):
         """A Client has sent a request"""
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print("{:.3f}: {:5s} RECV_PACKET ClientRequest {}.{} ({:.3f}) [{}.{}]  for service {} pkt: {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, packet.src, packet.id, packet.dst, packet.id, (self.env.now - packet.time)))
 
         # Destination is likely to be a service name: e.g. §a
@@ -1376,7 +1377,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     if not hasattr(packet, 'optimal_snapshot') and self.is_neighbour_host(neighbour):
                         self.record_forwarding_decision(packet, self.service_FIB[service_name])
 
-                    if Verbose.level >= 1:
+                    if Verbose.level >= 2:
                         print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, neighbour))
                     self.send_packet_to_neighbour(packet, neighbour)
 
@@ -1394,7 +1395,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, best_replica))
 
                 if best_replica == None:
-                    if Verbose.level >= 1:
+                    if Verbose.level >= 2:
                         print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FIB ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
                 else:
                     packet.service = service_name
@@ -1411,7 +1412,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
                     # print forward info
                     neighbour = self.route_to(packet.dst)
-                    if Verbose.level >= 1:
+                    if Verbose.level >= 2:
                         print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, link_end.dst_node))
 
                     self.normal_forwarding_packet(packet, link_end)                
@@ -1499,7 +1500,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         # and remove it
         self.service_RIB.remove((searchR.replica == metric['replica']))
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print ("{:.3f}: {:5s} REMOVE_METRIC metric no {}".format(self.env.now, self.id(), metric) )
         
     # update the sent table
@@ -1634,10 +1635,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # this function should be called by the previous hop to send a packet to this router
         # packet_store is a simpy.Store(self.env, capacity=1)
         if packet.src == self._routerid:
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print("{:.3f}: {:5s} PACKET_CREATED {}.{} ({:.3f}) in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, self._routerid, (self.env.now - packet.time)))
         else:
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print("{:.3f}: {:5s} PACKET_ARRIVED {}.{} ({:.3f}) in {} from {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
 
         # add a tuple of (link_end, packet) to the packet store

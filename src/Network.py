@@ -229,7 +229,8 @@ class Network:
         if isinstance(n1, int):
             # we got a number
             r1 = self[n1]
-            print("Net: add_edge int " + r1.id() + " " + str(r1))
+            if Verbose.level >= 2:
+                print("Net: add_edge int " + r1.id() + " " + str(r1))
         else:
             if not self.contains_router(n1):
                 # new node
@@ -264,7 +265,8 @@ class Network:
         if isinstance(n2, int):
             # we got a number
             r2 = self[n2]
-            print("Net: add_edge int " + r2.id() + " " + str(r2))
+            if Verbose.level >= 2:
+                print("Net: add_edge int " + r2.id() + " " + str(r2))
         else:
             if not self.contains_router(n2):
                 # new node
@@ -913,7 +915,7 @@ class Network:
 
         load = self.replica_capacity_total["load"] / len(self.replica_capacity)
 
-        if Verbose.level >= 1:
+        if Verbose.level >= 2:
             print ("{:.3f}: {:5s} REPLICA_CAPACITY_NETWORK 'load': {} 'no_of_flows': {}  'capacity': {}  'slots': {}  (Update from {})".format(self.env.now, "Net ", round(load, 6) ,  self.replica_capacity_total["no_of_flows"],  self.replica_capacity_total["capacity"],  self.replica_capacity_total["slots"], replica ))
 
     # Get the load_utility for a replica
