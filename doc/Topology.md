@@ -40,7 +40,7 @@ Then convert the adjacency list into a Graph.
 
 ```
     # 1 - Get a GML file
-    gml_file = "gml/Dfn.gml"
+    gml_file = "topologies/gml/Dfn.gml"
 
     # 2 - build the graph -- read and convert the GML file
     graph = Graph.from_gml_file(gml_file)
@@ -119,7 +119,7 @@ The Network can be created in a number of ways:
     env = simpy.Environment()
 
     # 2 - Get a GML file
-    gml_file = "gml/Dfn.gml"
+    gml_file = "topologies/gml/Dfn.gml"
 
     # 3 - build the network -- read and convert the GML file
     network = Network.from_gml_file(gml_file, env)

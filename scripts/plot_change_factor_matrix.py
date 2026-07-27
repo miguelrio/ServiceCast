@@ -8,9 +8,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Ensure project path is in sys.path
-project_path = os.path.dirname(os.path.abspath(__file__))
-if project_path not in sys.path:
-    sys.path.insert(0, project_path)
+script_path = os.path.dirname(os.path.abspath(__file__))
+project_path = os.path.dirname(script_path)
+for _p in (script_path, os.path.join(project_path, "src")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 # Import defaults from Router and Network for CLI auto-detection
 from Router import Router

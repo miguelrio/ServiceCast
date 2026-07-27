@@ -1,3 +1,8 @@
+import os
+import sys
+# Ensure the simulator source in src/ is importable
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
+
 from Network import Network
 from Generator import Generator
 from Verbose import Verbose
