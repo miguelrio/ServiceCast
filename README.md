@@ -13,20 +13,20 @@ The routers in the network keep a table for the *metrics* sent from the servers.
 ## System variables
 
 The system variables which are used for configuring each experimental
-run are outlined [here](Variables.md)
+run are outlined [here](doc/Variables.md)
 
 
 ## Topology
 
-Information about building a topology are [here](Topology.md)
+Information about building a topology are [here](doc/Topology.md)
 
 
 ## Starting
 
-This shows [how to start](Starting.md) the experimental runs
+This shows [how to start](doc/Starting.md) the experimental runs
 
 
 
 ## Classes and Objects
 
-The Classes and Objects utilized are [here](Classes.md)
+The Classes and Objects utilized are [here](doc/Classes.md)
