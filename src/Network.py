@@ -7,7 +7,7 @@ from Client import Client
 from Verbose import Verbose
 from Utility import Utility
 from collections import OrderedDict
-from gml import read_gml, write_gml
+from Gml import read_gml, write_gml
 import sys
 
 

@@ -42,7 +42,7 @@ from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility
 from Link import LinkEnd
-from gml import read_gml
+from Gml import read_gml
 
 
 # --- Fixed experiment constants -------------------------------------------------

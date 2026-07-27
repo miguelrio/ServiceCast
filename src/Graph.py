@@ -95,7 +95,7 @@ class Graph:
     def from_gml_file(cls, gml_file):
         """ Add some neighbours from a GML file.
         """
-        from gml import read_gml
+        from Gml import read_gml
         graph = read_gml(gml_file)
 
         return graph
