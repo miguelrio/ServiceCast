@@ -5,8 +5,6 @@ import csv
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Ensure sibling imports work regardless of execution directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from log_to_csv import convert_log_to_csv
 

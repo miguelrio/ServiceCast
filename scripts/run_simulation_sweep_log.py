@@ -46,9 +46,6 @@ import simpy
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 project_path = os.path.dirname(script_path)
-for _p in (script_path, os.path.join(project_path, "src")):
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
 
 # Reuse the exact simulation setup + reductions from the probe sweep.
 from run_simulation_sweep import (

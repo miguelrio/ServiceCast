@@ -2,10 +2,6 @@
 # Uses simpy and grotto networking:
 # https://www.grotto-networking.com/DiscreteEventPython.html
 
-import os
-import sys
-# Ensure the simulator source in src/ is importable
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from Graph import Graph
 from Network import Network
