@@ -330,7 +330,7 @@ class Generator(object):
 
         env = network.env
 
-        if Verbose.level >= 2:
+        if Verbose.level >= 0:
             print(f"""Client multi_client_event_generator parameters:
     arrival_lambda = {arrival_lambda}
     size_lambda = {size_lambda}
