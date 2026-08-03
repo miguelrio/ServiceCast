@@ -54,95 +54,20 @@ A request whose packet never got a FIB decision has only the OUTCOME_GAP line; l
 the probe's fallback, its selection pair is then taken from the arrival pair.
 """
 
-import re
 import warnings
 from typing import Iterable, NamedTuple
 
-
-# --- The shared gap-line shape --------------------------------------------------
-# Mirrors Network._log_request_gap / _gap_section:
-#   "{ts}: Net   {TAG}[ (formula)] '{arrival_server}' [{client}.{pkt}]
-#    SELECTED: time[(note)]: T server[(note)]: S load: L latency: LAT utility[(note)]: U
-#    {BEST|ACTUAL}: time[(note)]: T server[(note)]: S load: L latency: LAT utility[(note)]: U
-#    [MINLOAD: time[(note)]: T server[(note)]: S load: L latency: LAT utility[(note)]: U]
-#    {KEYWORD} {gap}"
-# The MINLOAD section (lowest-loaded replica at t_arr) appears only on BLOCKED
-# OUTCOME_GAP lines; old logs simply don't have it.
-# The (note) annotations are the PDF notation, printed only at Verbose >= 1; every
-# annotation is optional here so both verbosity levels parse. load is printed via
-# str() and utility/gap via round(,5), so numbers may use scientific notation.
-_NUM = r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?"
-_NOTE = r"(?:\([^)]*\))?"
-
-
-def _side(prefix, label_pattern):
-    """Regex fragment for one `LABEL: time: .. server: .. load: .. latency: .. utility: ..` section."""
-    return (rf"(?P<{prefix}_label>{label_pattern}):\s+"
-            rf"time{_NOTE}:\s+(?P<{prefix}_t>{_NUM})\s+"
-            rf"server{_NOTE}:\s+(?P<{prefix}_s>\S+)\s+"
-            rf"load:\s+(?P<{prefix}_load>{_NUM})\s+"
-            rf"latency:\s+(?P<{prefix}_lat>{_NUM})\s+"
-            rf"utility{_NOTE}:\s+(?P<{prefix}_u>{_NUM})")
-
-
-GAP_LINE_RE = re.compile(
-    rf"(?P<ts>{_NUM}):\s+\S+\s+"
-    rf"(?P<tag>OUTCOME_GAP|DECISION_GAP|STALENESS_ERR)(?:\s+\([^)]*\))?\s+"
-    rf"'(?P<arrival>[^']+)'\s+\[(?P<client>[^.\]]+)\.(?P<pkt>\d+)\]\s+"
-    + _side("sel", "SELECTED") + r"\s+"
-    + _side("cmp", "BEST|ACTUAL") + r"\s+"
-    + rf"(?:{_side('min', 'MINLOAD')}\s+)?"
-    + rf"(?P<keyword>\S+)\s+(?P<gap>{_NUM})\s*$"
+from log_syntax import (
+    GapLine,
+    parse_event_header,
+    parse_fib_update_count,
+    parse_gap_line,
+    parse_log_header,
+    parse_server_metric_event,
 )
-
-# Lighter patterns for the counter lines (substring-prefiltered before use).
-RECV_SERVER_METRIC_RE = re.compile(r"RECV_PACKET\s+ServerMetric\s+(?P<op>\S+)")
-FIB_UPDATE_RE = re.compile(rf"(?P<ts>{_NUM}):\s+(?P<rid>\S+)\s+SERVICE_FIB\s+update_count:\s+(?P<count>\d+)")
 
 # Keywords meaning "the request was served" (anything else is a status like BLOCKED).
 _SERVED_KEYWORDS = frozenset({"SAME", "EQUAL", "DIFFERENT"})
-
-
-class GapLine(NamedTuple):
-    """Every field of one OUTCOME_GAP / DECISION_GAP / STALENESS_ERR line."""
-    ts: float
-    tag: str                # OUTCOME_GAP | DECISION_GAP | STALENESS_ERR
-    arrival: str            # server the request arrived at
-    client: str
-    pkt: int
-    sel_time: float         # SELECTED section (SEL_UTIL_ARR on B, SEL_UTIL_EST on A/C)
-    sel_server: str
-    sel_load: float
-    sel_latency: float
-    sel_utility: float
-    cmp_label: str          # BEST (B, A) | ACTUAL (C)
-    cmp_time: float         # compared section (BEST_UTIL_ARR / BEST_UTIL_SEL / SEL_UTIL_SEL)
-    cmp_server: str
-    cmp_load: float
-    cmp_latency: float
-    cmp_utility: float
-    keyword: str            # SAME | EQUAL | DIFFERENT | BLOCKED (B only) | future status words
-    gap: float              # signed, compared - selected, rounded to 5 dp
-
-
-def parse_gap_line(line):
-    """Parse one per-request metric line into a GapLine, or None."""
-    if "_GAP" not in line and "STALENESS_ERR" not in line:
-        return None
-    m = GAP_LINE_RE.search(line)
-    if not m:
-        return None
-    g = m.group
-    return GapLine(
-        ts=float(g("ts")), tag=g("tag"), arrival=g("arrival"),
-        client=g("client"), pkt=int(g("pkt")),
-        sel_time=float(g("sel_t")), sel_server=g("sel_s"), sel_load=float(g("sel_load")),
-        sel_latency=float(g("sel_lat")), sel_utility=float(g("sel_u")),
-        cmp_label=g("cmp_label"),
-        cmp_time=float(g("cmp_t")), cmp_server=g("cmp_s"), cmp_load=float(g("cmp_load")),
-        cmp_latency=float(g("cmp_lat")), cmp_utility=float(g("cmp_u")),
-        keyword=g("keyword"), gap=float(g("gap")),
-    )
 
 
 # --- Assembling one request from its gap lines ----------------------------------
@@ -238,28 +163,29 @@ def parse_log_lines(lines: Iterable[str]) -> LogMetrics:
         elif outcome is not None:
             records.append(outcome)
 
-    for line in lines:
-        if "PACKET_CREATED" in line:
-            if "ServerMetric" in line:
-                created += 1
+    _, event_lines = parse_log_header(lines)
+    for line in event_lines:
+        header = parse_event_header(line)
+        if header is None:
             continue
-        if "RECV_PACKET" in line:
-            if "ServerMetric" in line:
-                m = RECV_SERVER_METRIC_RE.search(line)
-                if m:
+        if header.keyword in {"PACKET_CREATED", "RECV_PACKET"}:
+            event = parse_server_metric_event(line, header)
+            if event is not None:
+                if event.kind == "created":
+                    created += 1
+                else:
                     recv_total += 1
-                    op = m.group("op")
-                    if op == "A":
+                    if event.operation == "A":
                         recv_announce += 1
-                    elif op == "W":
+                    elif event.operation == "W":
                         recv_withdraw += 1
             continue
-        if "SERVICE_FIB" in line and "update_count" in line:
-            m = FIB_UPDATE_RE.search(line)
-            if m:
-                fib_last[m.group("rid")] = int(m.group("count"))
+        if header.keyword == "SERVICE_FIB":
+            update = parse_fib_update_count(line, header)
+            if update is not None:
+                fib_last[update.router] = update.count
             continue
-        gl = parse_gap_line(line)
+        gl = parse_gap_line(line, header)
         if gl is None:
             continue
         key = (gl.client, gl.pkt)

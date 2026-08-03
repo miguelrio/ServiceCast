@@ -7,36 +7,20 @@ Usage:
 
 import argparse
 from collections import defaultdict
-import re
 import numpy as np
 
-LOG_LINE_RE = re.compile(r"\b(?P<status>SAME|EQUAL|DIFFERENT|BLOCKED)(?:\s+(?P<diff>-?\d+(?:\.\d+)?))?\s*$")
-ENTRY_TYPE_RE = re.compile(r"\b(?P<entry_type>OUTCOME_GAP|DECISION_GAP|STALENESS_ERR)\b")
-ENTRY_LINE_START_RE = re.compile(r"^\s*\d+(?:\.\d+)?:\s+\S+\s+(?:OUTCOME_GAP|DECISION_GAP|STALENESS_ERR)\b")
-MINLOAD_LOAD_RE = re.compile(r"\bMINLOAD:\s+.*?\bload:\s*([-+]?\d+(?:\.\d+)?)")
-CREATE_SERVER_METRIC_RE = re.compile(r"PACKET_CREATED.*ServerMetric")
-RECV_SERVER_METRIC_ANNOUNCEMENT_RE = re.compile(r"RECV_PACKET\s+ServerMetric A")
-RECV_SERVER_METRIC_WITHDRAWAL_RE = re.compile(r"RECV_PACKET\s+ServerMetric W")
-FIB_STABILITY_RE = re.compile(
-    r"^\s*\d+(?:\.\d+)?:\s+"
-    r"(?P<router>\S+)\s+"
-    r"(?P<action>SET_BEST_REPLICA|KEEP_BEST_REPLICA|CHANGED_BEST_REPLICA)\s+"
-    r"(?P<server>s\d+)\b"
+from log_syntax import (
+    parse_event_header,
+    parse_fib_stability_action,
+    parse_gap_line,
+    parse_log_header,
+    parse_server_metric_event,
 )
 
 
-def _consume_entry(entry, stats):
-    type_match = ENTRY_TYPE_RE.search(entry)
-    if not type_match:
-        return
-
-    entry_type = type_match.group("entry_type")
-    match = LOG_LINE_RE.search(entry)
-    if not match:
-        return
-
-    status = match.group("status")
-    diff_text = match.group("diff")
+def _consume_gap(gap_line, stats):
+    entry_type = gap_line.tag
+    status = gap_line.keyword
 
     if entry_type == "OUTCOME_GAP":
         stats["total"] += 1
@@ -48,15 +32,14 @@ def _consume_entry(entry, stats):
             stats["diffs"].append(0.0)
         elif status == "BLOCKED":
             stats["blocked"] += 1
-            minload_match = MINLOAD_LOAD_RE.search(entry)
-            if minload_match and float(minload_match.group(1)) < 1.0:
+            if gap_line.minload is not None and gap_line.minload[2] < 1.0:
                 stats["blocked_avoidable"] += 1
             else:
                 # Treat missing MINLOAD as unavoidable to keep counters additive.
                 stats["blocked_unavoidable"] += 1
         elif status == "DIFFERENT":
             stats["different"] += 1
-            diff_value = abs(float(diff_text)) if diff_text is not None else 0.0
+            diff_value = abs(gap_line.gap)
             stats["diffs"].append(diff_value)
             stats["different_diffs"].append(diff_value)
         return
@@ -66,15 +49,16 @@ def _consume_entry(entry, stats):
     if status == "BLOCKED":
         return
 
-    abs_value = abs(float(diff_text)) if diff_text is not None else 0.0
+    abs_value = abs(gap_line.gap)
     if entry_type == "DECISION_GAP":
         stats["decision_gap_values"].append(abs_value)
     elif entry_type == "STALENESS_ERR":
         stats["staleness_err_values"].append(abs_value)
 
 
-def parse_log_lines(lines):
+def parse_log_lines(lines, filename=None, warn_header=False):
     stats = {
+        "log_verbose_level": None,
         "total": 0,
         "equal": 0,
         "same": 0,
@@ -94,52 +78,41 @@ def parse_log_lines(lines):
         "fib_router_server_counts": defaultdict(lambda: defaultdict(lambda: {"SET": 0, "KEEP": 0, "CHANGED": 0})),
     }
 
-    pending_entry = None
+    parameters, event_lines = parse_log_header(
+        lines, filename, warn=warn_header
+    )
+    if parameters is not None:
+        verbose_level = parameters.get("Verbose.level")
+        if isinstance(verbose_level, int):
+            stats["log_verbose_level"] = verbose_level
 
-    for line in lines:
-        line = line.strip()
-        if not line:
+    for line in event_lines:
+        header = parse_event_header(line)
+        if header is None:
             continue
 
-        if CREATE_SERVER_METRIC_RE.search(line):
-            stats["server_updates_created"] += 1
-        if RECV_SERVER_METRIC_ANNOUNCEMENT_RE.search(line):
-            stats["server_metrics_announce"] += 1
-        elif RECV_SERVER_METRIC_WITHDRAWAL_RE.search(line):
-            stats["server_metrics_withdraw"] += 1
+        if header.keyword in {"PACKET_CREATED", "RECV_PACKET"}:
+            event = parse_server_metric_event(line, header)
+            if event is not None:
+                if event.kind == "created":
+                    stats["server_updates_created"] += 1
+                elif event.operation == "A":
+                    stats["server_metrics_announce"] += 1
+                elif event.operation == "W":
+                    stats["server_metrics_withdraw"] += 1
+            continue
 
-        fib_match = FIB_STABILITY_RE.search(line)
-        if fib_match:
-            router = fib_match.group("router")
-            server = fib_match.group("server")
-            action = fib_match.group("action")
-            action_key = action.split("_", 1)[0]
+        action = parse_fib_stability_action(line, header)
+        if action is not None:
+            action_key = action.action.split("_", 1)[0]
             stats["fib_totals"][action_key] += 1
-            stats["fib_router_counts"][router][action_key] += 1
-            stats["fib_router_server_counts"][router][server][action_key] += 1
-
-        is_entry_start = bool(ENTRY_LINE_START_RE.search(line))
-
-        if pending_entry is not None:
-            if is_entry_start:
-                _consume_entry(pending_entry, stats)
-                pending_entry = line
-            else:
-                pending_entry = f"{pending_entry} {line}"
-
-            if LOG_LINE_RE.search(pending_entry):
-                _consume_entry(pending_entry, stats)
-                pending_entry = None
+            stats["fib_router_counts"][action.router][action_key] += 1
+            stats["fib_router_server_counts"][action.router][action.server][action_key] += 1
             continue
 
-        if is_entry_start:
-            pending_entry = line
-            if LOG_LINE_RE.search(pending_entry):
-                _consume_entry(pending_entry, stats)
-                pending_entry = None
-
-    if pending_entry is not None:
-        _consume_entry(pending_entry, stats)
+        gap_line = parse_gap_line(line, header)
+        if gap_line is not None:
+            _consume_gap(gap_line, stats)
 
     return stats
 
@@ -159,7 +132,7 @@ def _format_fib_stability_summary(stats):
     )
 
 
-def format_stats(stats):
+def format_stats(stats, include_fib_stability=True):
     total = stats["total"]
     equal = stats["equal"]
     same = stats["same"]
@@ -191,12 +164,14 @@ def format_stats(stats):
         mean_diff = float(np.mean(different_diffs)) if different_diffs else 0.0
         mean_diff_including_zero = float(np.mean(diffs)) if diffs else 0.0
 
+    fib_stability_line = _format_fib_stability_summary(stats) if include_fib_stability else ""
+
     return (
         f"requests: {total:,}; SAME: {same:,}; EQUAL: {equal:,}; DIFFERENT: {different:,}; BLOCKED: {blocked:,}\n"
         f"accuracy: {accuracy * 100:.4g}%; blocked: {blocked_rate * 100:.4g}% (unavoidable: {blocked_unavoidable_rate * 100:.4g}%, avoidable: {blocked_avoidable_rate * 100:.4g}%); utility gap: max: {max_diff * 100:.4g}%; mean: {mean_diff_including_zero * 100:.4g}%; mean conditional: {mean_diff * 100:.4g}%\n"
         f"server update events: {updates:,}; "
         f"total update messages: {(announces + withdraws):,} ({announces:,} [{(announces/(announces + withdraws) * 100):.3g}%] announcements, {withdraws:,} [{(withdraws/(announces + withdraws) * 100):.3g}%] withdrawals)\n"
-        f"{_format_fib_stability_summary(stats)}"
+        f"{fib_stability_line}"
     )
 
 
@@ -229,7 +204,15 @@ def _fmt_metric_section(title, values):
 def _print_fib_router_table(stats):
     fib_router_counts = stats.get("fib_router_counts", {})
     print("FIB stability by router:")
-    header = f"{'router':<8} {'updates':>10} {'set':>10} {'changed':>10} {'kept':>10} {'total':>10} {'churn':>10}"
+    router_width = max(
+        len("router"),
+        len("TOTAL"),
+        *(len(router) for router in fib_router_counts),
+    ) if fib_router_counts else len("router")
+    header = (
+        f"{'router':<{router_width}} {'updates':>10} {'set':>10} {'changed':>10} "
+        f"{'kept':>10} {'total':>10} {'churn':>10}"
+    )
     print(header)
     if not fib_router_counts:
         print("(none)")
@@ -250,16 +233,16 @@ def _print_fib_router_table(stats):
         total_changed += changed_count
         total_kept += kept_count
         print(
-            f"{router:<8} {updates_count:>10,} {set_count:>10,} {changed_count:>10,} "
-            f"{kept_count:>10,} {total_count:>10,} {updated_pct:>9.4g}%"
+            f"{router:<{router_width}} {updates_count:>10,} {set_count:>10,} {changed_count:>10,} "
+            f"{kept_count:>10,} {total_count:>10,} {updated_pct:>9.2f}%"
         )
 
     grand_updates = total_set + total_changed
     grand_total = grand_updates + total_kept
     grand_updated_pct = (grand_updates / grand_total * 100) if grand_total else 0.0
     print(
-        f"{'TOTAL':<8} {grand_updates:>10,} {total_set:>10,} {total_changed:>10,} "
-        f"{total_kept:>10,} {grand_total:>10,} {grand_updated_pct:>9.4g}%"
+        f"{'TOTAL':<{router_width}} {grand_updates:>10,} {total_set:>10,} {total_changed:>10,} "
+        f"{total_kept:>10,} {grand_total:>10,} {grand_updated_pct:>9.2f}%"
     )
 
     
@@ -272,11 +255,20 @@ def main():
     show_filename = len(args.paths) > 1
     for index, path in enumerate(args.paths):
         with open(path, "r", encoding="utf-8") as fh:
-            stats = parse_log_lines(fh)
+            stats = parse_log_lines(fh, filename=path, warn_header=True)
+
+        log_verbose_level = stats.get("log_verbose_level")
+        log_is_low_verbosity = log_verbose_level is not None and log_verbose_level < 1
+        include_fib_stability = not (not args.verbose and log_is_low_verbosity)
 
         if show_filename:
             print(path)
-        print(format_stats(stats), end="")
+        if args.verbose and log_is_low_verbosity:
+            print(
+                f"The verbose level for {path} is less than 1 so FIB stability, "
+                "Decision gap, and Staleness error stats will not be calculated correctly."
+            )
+        print(format_stats(stats, include_fib_stability=include_fib_stability), end="")
         if args.verbose:
             gaps_all = stats.get("diffs", [])
             gaps_worse = [g for g in stats.get("different_diffs", []) if g > 0]

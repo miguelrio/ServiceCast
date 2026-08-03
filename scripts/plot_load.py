@@ -1,8 +1,9 @@
 import argparse
-import re
 import sys
 from pathlib import Path
 import matplotlib.pyplot as plt
+
+from log_syntax import parse_event_header, parse_gap_line, parse_log_header
 
 # plot_load.py parses one or more ServiceCast log files and extracts server
 # load values from OUTCOME_GAP entries. For each input file it prints a small
@@ -38,14 +39,6 @@ import matplotlib.pyplot as plt
 #
 #   -v, --verbose
 #     Print duplicate and overwrite detail lines to stderr.
-
-
-EVENT_PATTERN = re.compile(
-    r"(?:SELECTED|BEST):"
-    r"\s*time(?:\([^)]*\))?:\s*([-+]?[0-9]*\.?[0-9]+)\s+"
-    r"server(?:\([^)]*\))?:\s*([A-Za-z0-9_.-]+)\s+"
-    r"load:\s*([-+]?[0-9]*\.?[0-9]+)"
-)
 
 
 def almost_equal(a, b, eps=1e-9):
@@ -111,13 +104,14 @@ def parse_file(file_path, eps=1e-9, verbose=False, detail_limit=20):
     overwrite_detail_suppressed = False
 
     with open(file_path, "r", encoding="utf-8") as handle:
-        for line_num, line in enumerate(handle, 1):
-            # Plan scope: parse OUTCOME_GAP rows only.
-            if "OUTCOME_GAP" not in line:
+        _, event_lines = parse_log_header(handle, file_path, warn=True)
+        for line_num, line in enumerate(event_lines, 1):
+            header = parse_event_header(line)
+            if header is None or header.keyword != "OUTCOME_GAP":
                 continue
 
-            matches = EVENT_PATTERN.findall(line)
-            if not matches:
+            gap_line = parse_gap_line(line, header)
+            if gap_line is None:
                 parse_errors += 1
                 print(
                     f"[parse-warning] {file_path}:{line_num}: could not parse OUTCOME_GAP line",
@@ -125,17 +119,10 @@ def parse_file(file_path, eps=1e-9, verbose=False, detail_limit=20):
                 )
                 continue
 
-            for time_text, server_id, load_text in matches:
-                try:
-                    time_value = float(time_text)
-                    load_value = float(load_text)
-                except ValueError:
-                    parse_errors += 1
-                    print(
-                        f"[parse-warning] {file_path}:{line_num}: invalid numeric field",
-                        file=sys.stderr,
-                    )
-                    continue
+            for time_value, server_id, load_value in (
+                (gap_line.sel_time, gap_line.sel_server, gap_line.sel_load),
+                (gap_line.cmp_time, gap_line.cmp_server, gap_line.cmp_load),
+            ):
 
                 if file_max_time is None or time_value > file_max_time:
                     file_max_time = time_value
