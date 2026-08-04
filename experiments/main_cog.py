@@ -7,6 +7,7 @@ from Client import Client
 from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility
+from pathlib import Path
 import simpy
 import random
 
@@ -146,7 +147,12 @@ def topology_setup():
     
 
     # 8 - dump graphviz file to tmp
-    with open('/tmp/cog.gv', mode='w') as file_object:
+    # with open('/d/tmpfn.gv', mode='w') as file_object:
+    repo_root = Path(__file__).resolve().parents[1]
+    tmp_dir = repo_root / "tmp"
+    tmp_dir.mkdir(exist_ok=True)
+
+    with open(tmp_dir / "cog.gv", "w") as file_object:
         network.graphviz(file=file_object)
         
 
