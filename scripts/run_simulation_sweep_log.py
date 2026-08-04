@@ -40,21 +40,80 @@ import tempfile
 import contextlib
 import multiprocessing as mp
 from datetime import datetime
-
+from typing import NamedTuple
 import numpy as np
 import simpy
+
+import Router as RouterModule
+from tinydb.storages import MemoryStorage
+import tinydb
+
+class InMemoryTinyDB(tinydb.TinyDB):
+    def __init__(self, *args, **kwargs):
+        # Force MemoryStorage and discard the path argument since MemoryStorage is purely in-memory
+        super().__init__(storage=MemoryStorage)
+
+# Monkeypatch Router module's TinyDB to be in-memory
+RouterModule.TinyDB = InMemoryTinyDB
+
+from Graph import Graph
+from Network import Network
+from Server import Server
+from Router import Router
+from Generator import Generator
+from Verbose import Verbose
+from Utility import Utility
+from Link import LinkEnd
+from Gml import read_gml
+
+from log_metrics import parse_log_lines, parse_log_file
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 project_path = os.path.dirname(script_path)
 
-# Reuse the exact simulation setup + reductions from the probe sweep.
-from run_simulation_sweep import (
-    SIM_DURATION, SERVER_CFS, ROUTER_CFS,
-    _configure_globals, build_network, _close_router_dbs,
-    summarise_records, current_git_commit,
-)
-from log_metrics import parse_log_lines, parse_log_file
-from Verbose import Verbose
+
+
+
+# --- Fixed experiment constants -------------------------------------------------
+# These define the scenario every sweep cell shares; only the swept axes
+# (server_cf, router_cf, propagation_delay) vary between runs.
+SIM_DURATION = 360            # simulated seconds per run
+ALPHA = 0.50                  # Utility load/delay weighting
+SLOTS = 50                    # server capacity
+SEED = 15112022               # shared RNG seed for reproducibility
+SERVICE = "§a"                # the single service every client requests
+
+NUM_SERVERS = 5               # servers attached to core nodes
+NUM_CLIENTS = 5               # clients attached to local nodes
+
+SERVER_LOAD_LAMBDA = 55       # background-load inter-arrival; INERT here: we pass
+                              # background_load=False, and Generator.py:216 (the only
+                              # line that reads it) is commented out, so it has no effect
+CLIENT_ARRIVAL_LAMBDA = 0.4   # mean inter-arrival time (s) between client requests
+SESSION_SIZE_LAMBDA = 10      # mean session length (s)
+SESSION_SIZE_SCALE = 10       # session-length multiplier (effective session ~= lambda*scale)
+
+
+DELAYS = (0.1, 0.5, 1.0, 2.0, 4.0)  # A collection of delays for Links
+
+# Metric fields, in output order. Drives both the per-cell accumulation and the
+# JSON keys (matrix_<field>), so the seven metrics are named in exactly one place.
+METRIC_FIELDS = ["created", "hops", "accuracy",
+                 "mean_err_all", "mean_err_subopt", "max_err", "fib_updates",
+                 "blocked_rate", "accuracy_arrival", "mean_err_arrival",
+                 "hops_announce", "hops_withdraw"]
+
+# Swept axes, shared so the log-based collector samples the identical grid.
+# Ranges trimmed to the region where the metrics actually vary for this
+# configuration (Dfn topology, Server.slots=50, this request distribution).
+# Past Server.change_factor=0.32 no server ever clears its announcement
+# threshold (max observed |Δload| ~0.32 = ~16/50 slots), and past
+# Router.fib_utility_update_threshold=0.16 no replica's utility gap is ever
+# large enough to switch the FIB (U=1-0.5*load-0.5*delay on a compact graph),
+# so the upper ~two-thirds of the original axes were a flat dead zone.
+SERVER_CFS = [0.0, 0.1, 0.2, 0.3]
+ROUTER_CFS = [0.0, 0.1, 0.2, 0.3]
+
 
 # Output order for the log build. The 9 shared metrics keep the probe's names; the
 # 3 hop metrics are renamed to the honest RECV-based quantities the log provides.
@@ -66,6 +125,103 @@ LOG_METRIC_FIELDS = ["created", "recv_total", "accuracy",
 VERBOSE_LEVEL = 1   # minimum level that emits every needed line
                     # (DECISION_GAP/STALENESS_ERR and SERVICE_FIB all need >= 1)
 
+
+
+class RecordSummary(NamedTuple):
+    """Selection quality derived from a run's per-request utility records."""
+    accuracy: float          # % of requests that picked the optimal replica (selection time)
+    mean_err_all: float      # mean |optimal - selected| utility over all requests
+    mean_err_subopt: float   # mean error over suboptimal requests only
+    max_err: float           # worst-case error
+    accuracy_arrival: float  # % optimal judged by live state at arrival time
+    mean_err_arrival: float  # mean |optimal - selected| utility judged at arrival time
+
+
+def summarise_records(records):
+    """Reduce per-request utility records to accuracy/error statistics.
+
+    Each record is (selected_sel, best_sel, selected_arr, best_arr): the selected
+    and best utilities at selection time and at arrival time. Selection-time stats
+    measure the routing decision; arrival-time stats measure how good the pick
+    looks once propagation delay has passed (decision staleness).
+    """
+    if not records:
+        return RecordSummary(accuracy=100.0, mean_err_all=0.0, mean_err_subopt=0.0,
+                             max_err=0.0, accuracy_arrival=100.0, mean_err_arrival=0.0)
+
+    errors = [abs(best - sel) for sel, best, _, _ in records]
+    arrival_errors = [abs(best - sel) for _, _, sel, best in records]
+
+    subopt = [e for e in errors if e >= 1e-9]
+    correct = sum(1 for e in errors if e < 1e-9)
+    correct_arrival = sum(1 for e in arrival_errors if e < 1e-9)
+    return RecordSummary(
+        accuracy=correct / len(errors) * 100.0,
+        mean_err_all=float(np.mean(errors)),
+        mean_err_subopt=float(np.mean(subopt)) if subopt else 0.0,
+        max_err=float(np.max(errors)),
+        accuracy_arrival=correct_arrival / len(arrival_errors) * 100.0,
+        mean_err_arrival=float(np.mean(arrival_errors)),
+    )
+
+def _configure_globals(server_cf, router_cf, hop_by_hop, propagation_delay):
+    """Set the global knobs that define a single experiment. Verbose output is silenced."""
+    Verbose.level = -1
+    Verbose.table = 0
+
+    Router.hop_by_hop = hop_by_hop
+    Graph.default_propagation_delay = propagation_delay
+    Utility.alpha = ALPHA
+    Server.slots = SLOTS
+    Server.change_factor = server_cf
+    Router.fib_utility_update_threshold = router_cf
+
+
+def current_git_commit():
+    """Short hash of the code that produced the sweep data, for cache provenance."""
+    try:
+        result = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                                cwd=project_path, capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+    except Exception:
+        return "unknown"
+
+def build_network(env, propagation_delay):
+    """Build the Dfn network ready to run: graph -> network, attach servers and clients,
+    pre-compute forwarding tables, and install the load/request generators."""
+    gml_file = os.path.join(project_path, "topologies/gml/Dfn.gml")
+    network = Network.from_graph(read_gml(gml_file), env)
+
+    # Core nodes (degree > 3) host servers; local nodes (degree <= 3) host clients.
+    core = [r for r in network.network_nodes() if r.degree() > 3]
+    local = [r for r in network.network_nodes() if r.degree() <= 3]
+
+    servers = [f"s{s}" for s in range(1, NUM_SERVERS + 1)]
+    for s, name in enumerate(servers, start=1):
+        network.add_server(name, core[s], propagation_delay)
+
+    clients = [f"c{c}" for c in range(1, NUM_CLIENTS + 1)]
+    for c, name in enumerate(clients, start=1):
+        network.add_client(name, local[c], propagation_delay)
+
+    network.calculate_forwarding_tables()
+
+    for name in servers:
+        Generator.server_load_event_generator(
+            network, name, [SERVICE], exponential_lambda=SERVER_LOAD_LAMBDA,
+            seed=SEED, background_load=False)
+    Generator.multi_client_event_generator(
+        network, clients, SERVICE, arrival_lambda=CLIENT_ARRIVAL_LAMBDA,
+        size_lambda=SESSION_SIZE_LAMBDA, size_scale_factor=SESSION_SIZE_SCALE, seed=SEED)
+
+    return network
+
+
+def _close_router_dbs(network):
+    """Close router DBs to release file descriptors (avoids 'Too many open files')."""
+    for router in network.routers.values():
+        if getattr(router, 'db', None):
+            router.db.close()
 
 def recommended_jobs():
     """A sensible default worker count.
@@ -142,17 +298,16 @@ def _worker(task):
     line = (f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
             f"Created: {lm.created}, Recv: {lm.recv_total} "
             f"(A:{lm.recv_announce} W:{lm.recv_withdraw}), "
-            f"Acc-arr: {cell['accuracy_arrival']:.1f}%, Blocked: {cell['blocked_rate']:.1f}%, "
+            f"Acc: {cell['accuracy']:.1f}%, Blocked: {cell['blocked_rate']:.1f}%, "
             f"FIB updates: {lm.fib_updates}, served: {served}")
     return k, i, j, cell, line
 
 
-def run_sweep_log(hop_by_hop, output_path=None,
-                  delays=(0.1, 0.5, 1.0, 2.0, 4.0),
+def run_sweep_log(hop_by_hop, output_path=None, delays=DELAYS,
                   log_mode="file", keep_logs=False, jobs=1, log_dir=None):
     """Run the full sweep, collecting every metric purely from each run's log text."""
     delays = list(delays)
-    jobs = resolve_jobs(jobs)
+    jobs = resolve_jobs(jobs) 
     if log_dir is None:
         log_dir = os.path.join(project_path, "matrix_logs")
 
