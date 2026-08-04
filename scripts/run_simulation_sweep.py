@@ -10,6 +10,7 @@ home of the shared pieces both builds use: `build_network`, `_configure_globals`
 import os
 import sys
 import json
+import random
 import subprocess
 from contextlib import contextmanager, ExitStack
 from datetime import datetime
@@ -47,7 +48,7 @@ from Gml import read_gml
 # --- Fixed experiment constants -------------------------------------------------
 # These define the scenario every sweep cell shares; only the swept axes
 # (server_cf, router_cf, propagation_delay) vary between runs.
-SIM_DURATION = 3600           # simulated seconds per run
+SIM_DURATION = 360           # simulated seconds per run
 ALPHA = 0.50                  # Utility load/delay weighting
 SLOTS = 50                    # server capacity
 SEED = 15112022               # shared RNG seed for reproducibility
@@ -59,7 +60,7 @@ NUM_CLIENTS = 5               # clients attached to local nodes
 SERVER_LOAD_LAMBDA = 55       # background-load inter-arrival; INERT here: we pass
                               # background_load=False, and Generator.py:216 (the only
                               # line that reads it) is commented out, so it has no effect
-CLIENT_ARRIVAL_LAMBDA = 5     # mean inter-arrival time (s) between client requests
+CLIENT_ARRIVAL_LAMBDA = 0.4     # mean inter-arrival time (s) between client requests
 SESSION_SIZE_LAMBDA = 10      # mean session length (s)
 SESSION_SIZE_SCALE = 10       # session-length multiplier (effective session ~= lambda*scale)
 
@@ -78,8 +79,8 @@ METRIC_FIELDS = ["created", "hops", "accuracy",
 # Router.fib_utility_update_threshold=0.16 no replica's utility gap is ever
 # large enough to switch the FIB (U=1-0.5*load-0.5*delay on a compact graph),
 # so the upper ~two-thirds of the original axes were a flat dead zone.
-SERVER_CFS = [0.0, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34]
-ROUTER_CFS = [0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18]
+SERVER_CFS = [0.0, 0.1, 0.2, 0.3]
+ROUTER_CFS = [0.0, 0.1, 0.2, 0.3]
 
 
 def current_git_commit():
@@ -272,17 +273,44 @@ def build_network(env, propagation_delay):
     gml_file = os.path.join(project_path, "topologies/gml/Dfn.gml")
     network = Network.from_graph(read_gml(gml_file), env)
 
-    # Core nodes (degree > 3) host servers; local nodes (degree <= 3) host clients.
-    core = [r for r in network.network_nodes() if r.degree() > 3]
+    # old code that mirrored the client and server attachment logic in main_dfn.py
+    # # Core nodes (degree > 3) host servers; local nodes (degree <= 3) host clients.
+    # core = [r for r in network.network_nodes() if r.degree() > 3]
+    # local = [r for r in network.network_nodes() if r.degree() <= 3]
+    #
+    # servers = [f"s{s}" for s in range(1, NUM_SERVERS + 1)]
+    # for s, name in enumerate(servers, start=1):
+    #    network.add_server(name, core[s], propagation_delay)
+    #
+    # clients = [f"c{c}" for c in range(1, NUM_CLIENTS + 1)]
+    # for c, name in enumerate(clients, start=1):
+    #    network.add_client(name, local[c], propagation_delay)
+
+    # new code below here that mirrors the client and server attachment logic in main_dfn_2.py
+    
+    # Use only low-degree local nodes for both servers and clients, and choose
+    # them randomly so the sweep is not tied to the first nodes in the lists.
     local = [r for r in network.network_nodes() if r.degree() <= 3]
+    needed = NUM_SERVERS + NUM_CLIENTS
+    if len(local) < needed:
+        raise ValueError(
+            f"Not enough local nodes: need {needed}, found {len(local)}"
+        )
+
+    rng = random.Random(SEED)
+    chosen_local_nodes = rng.sample(local, needed)
+
+    server_nodes = chosen_local_nodes[:NUM_SERVERS]
+    client_nodes = chosen_local_nodes[NUM_SERVERS:]
 
     servers = [f"s{s}" for s in range(1, NUM_SERVERS + 1)]
-    for s, name in enumerate(servers, start=1):
-        network.add_server(name, core[s], propagation_delay)
+    for s, (name, node) in enumerate(zip(servers, server_nodes), start=1):
+        network.add_server(name, node, propagation_delay)
 
     clients = [f"c{c}" for c in range(1, NUM_CLIENTS + 1)]
-    for c, name in enumerate(clients, start=1):
-        network.add_client(name, local[c], propagation_delay)
+    for c, (name, node) in enumerate(zip(clients, client_nodes), start=1):
+        network.add_client(name, node, propagation_delay)
+    # end of main_dfn_2 client/server block
 
     network.calculate_forwarding_tables()
 
@@ -372,7 +400,7 @@ def run_sweep(hop_by_hop, output_path=None, delays=(0.1, 0.5, 1.0, 2.0, 4.0)):
                 print(f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
                       f"Created: {result.created}, Hops: {result.hops} "
                       f"(A:{result.hops_announce} W:{result.hops_withdraw}), "
-                      f"Acc: {summary.accuracy:.1f}%, Blocked: {blocked_rate:.1f}%, "
+                      f"Acc-arr: {summary.accuracy_arrival:.1f}%, Blocked: {blocked_rate:.1f}%, "
                       f"FIB updates: {result.fib_updates}")
 
     data = {

@@ -142,7 +142,7 @@ def _worker(task):
     line = (f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
             f"Created: {lm.created}, Recv: {lm.recv_total} "
             f"(A:{lm.recv_announce} W:{lm.recv_withdraw}), "
-            f"Acc: {cell['accuracy']:.1f}%, Blocked: {cell['blocked_rate']:.1f}%, "
+            f"Acc-arr: {cell['accuracy_arrival']:.1f}%, Blocked: {cell['blocked_rate']:.1f}%, "
             f"FIB updates: {lm.fib_updates}, served: {served}")
     return k, i, j, cell, line
 

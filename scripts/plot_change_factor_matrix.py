@@ -257,7 +257,7 @@ def plot_faceted_heatmap(data3d, delays, title, ylabel_cbar, filename, server_cf
     cbar.ax.tick_params(labelsize=10, colors=MUTED)
     cbar.outline.set_visible(False)
 
-    fig.suptitle(title, fontsize=16, fontweight='bold', color=INK, y=1.02)
+    fig.suptitle(title, fontsize=13, fontweight='bold', color=INK, y=1.2)
 
     _save_figure(filename, kind="Faceted plot")
 
@@ -325,8 +325,8 @@ def parse_args():
         "--hop-by-hop",
         type=str,
         choices=["true", "false"],
-        default=None,
-        help="Set Router.hop_by_hop (true or false). Defaults to auto-detected value from codebase."
+        default="false",
+        help="Set Router.hop_by_hop (true or false). Defaults to false."
     )
     parser.add_argument(
         "--delays",
