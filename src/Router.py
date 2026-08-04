@@ -6,6 +6,7 @@ from Verbose import Verbose
 from Utility import Utility
 from Server import ServerMetricMessageType
 from tinydb import TinyDB, Query
+from tinydb.storages import MemoryStorage
 from enum import Enum
 # importing "collections" for defaultdict
 import collections
@@ -93,7 +94,8 @@ class Router(object):
         self.set_env(network)
 
         # a database of metrics
-        self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
+        # self.db = TinyDB('/tmp/router-metrics-' + str(routerid) + '.json')
+        self.db = TinyDB(storage=MemoryStorage)
         
         # the table for metrics
         self.service_RIB = self.db.table('metrics')
