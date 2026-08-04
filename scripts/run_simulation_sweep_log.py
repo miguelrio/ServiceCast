@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
 """Log-only collector for the change-factor matrix (the default collector).
 
-Instead of monkey-patching the simulation and reading in-memory state (the legacy
-probe build in `run_simulation_sweep.py`, kept as a cross-check), it runs each
+Instead of monkey-patching the simulation and reading in-memory state it runs each
 cell with the simulation's own logging on (`Verbose.level = 1`), captures the log
 text, and derives every metric from it via `log_metrics.parse_log_lines`. Nothing
 in the simulation or any log line is changed.
-
-The simulation itself is *not* re-implemented: this module imports and reuses
-`build_network`, `_configure_globals`, `_close_router_dbs`, `summarise_records`,
-`current_git_commit`, `SIM_DURATION`, `SERVER_CFS`, and `ROUTER_CFS` from
-`run_simulation_sweep.py`, so each run is identical to the probe sweep and to
-`main_dfn.py` (which is left untouched as the human-readable reference).
 
 Per cell: run -> per-cell `.log` file -> parse -> delete (default `--log-mode file`,
 matching the requested write-then-delete design). `--log-mode stream` captures the
@@ -25,16 +18,13 @@ selection-time ground truth BEST_UTIL_SEL/SEL_UTIL_SEL. `log_metrics` assembles
 them into the probe's (selected_sel, best_sel, selected_arr, best_arr) records.
 Hence VERBOSE_LEVEL = 1: level 0 would lose A/C (no selection-time metrics) and
 the SERVICE_FIB update_count lines.
-
-The three hop metrics are named for what the log actually measures - router-side
-*receptions* (`recv_total`/`recv_announce`/`recv_withdraw`), not the probe's
-`LinkEnd.put` transmissions, which have no log line.
 """
 
 import os
 import sys
 import io
 import json
+import random
 import argparse
 import tempfile
 import contextlib
@@ -43,19 +33,7 @@ from datetime import datetime
 from typing import NamedTuple
 import numpy as np
 import simpy
-
 import Router as RouterModule
-from tinydb.storages import MemoryStorage
-import tinydb
-
-class InMemoryTinyDB(tinydb.TinyDB):
-    def __init__(self, *args, **kwargs):
-        # Force MemoryStorage and discard the path argument since MemoryStorage is purely in-memory
-        super().__init__(storage=MemoryStorage)
-
-# Monkeypatch Router module's TinyDB to be in-memory
-RouterModule.TinyDB = InMemoryTinyDB
-
 from Graph import Graph
 from Network import Network
 from Server import Server
@@ -63,9 +41,7 @@ from Router import Router
 from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility
-from Link import LinkEnd
 from Gml import read_gml
-
 from log_metrics import parse_log_lines, parse_log_file
 
 script_path = os.path.dirname(os.path.abspath(__file__))
@@ -95,13 +71,6 @@ SESSION_SIZE_SCALE = 10       # session-length multiplier (effective session ~= 
 
 
 DELAYS = (0.1, 0.5, 1.0, 2.0, 4.0)  # A collection of delays for Links
-
-# Metric fields, in output order. Drives both the per-cell accumulation and the
-# JSON keys (matrix_<field>), so the seven metrics are named in exactly one place.
-METRIC_FIELDS = ["created", "hops", "accuracy",
-                 "mean_err_all", "mean_err_subopt", "max_err", "fib_updates",
-                 "blocked_rate", "accuracy_arrival", "mean_err_arrival",
-                 "hops_announce", "hops_withdraw"]
 
 # Swept axes, shared so the log-based collector samples the identical grid.
 # Ranges trimmed to the region where the metrics actually vary for this
@@ -186,23 +155,62 @@ def current_git_commit():
     except Exception:
         return "unknown"
 
+def print_simulation_parameters():
+    print(f"""Simulation parameters:
+    Verbose.level = {Verbose.level}
+    Verbose.table = {Verbose.table}
+    Router.hop_by_hop = {Router.hop_by_hop}
+    Graph.default_propagation_delay = {Graph.default_propagation_delay}
+    Utility.alpha = {Utility.alpha}
+    Server.slots = {Server.slots}
+    Server.change_factor = {Server.change_factor}
+    Router.fib_utility_update_threshold = {Router.fib_utility_update_threshold}
+    """)
+
 def build_network(env, propagation_delay):
     """Build the Dfn network ready to run: graph -> network, attach servers and clients,
     pre-compute forwarding tables, and install the load/request generators."""
     gml_file = os.path.join(project_path, "topologies/gml/Dfn.gml")
     network = Network.from_graph(read_gml(gml_file), env)
 
-    # Core nodes (degree > 3) host servers; local nodes (degree <= 3) host clients.
-    core = [r for r in network.network_nodes() if r.degree() > 3]
+    # old code that mirrored the client and server attachment logic in main_dfn.py
+    # # Core nodes (degree > 3) host servers; local nodes (degree <= 3) host clients.
+    # core = [r for r in network.network_nodes() if r.degree() > 3]
+    # local = [r for r in network.network_nodes() if r.degree() <= 3]
+    #
+    # servers = [f"s{s}" for s in range(1, NUM_SERVERS + 1)]
+    # for s, name in enumerate(servers, start=1):
+    #    network.add_server(name, core[s], propagation_delay)
+    #
+    # clients = [f"c{c}" for c in range(1, NUM_CLIENTS + 1)]
+    # for c, name in enumerate(clients, start=1):
+    #    network.add_client(name, local[c], propagation_delay)
+
+    # new code block below here that mirrors the client and server attachment logic in main_dfn_2.py
+    
+    # Use only low-degree local nodes for both servers and clients, and choose
+    # them randomly so the sweep is not tied to the first nodes in the lists.
     local = [r for r in network.network_nodes() if r.degree() <= 3]
+    needed = NUM_SERVERS + NUM_CLIENTS
+    if len(local) < needed:
+        raise ValueError(
+            f"Not enough local nodes: need {needed}, found {len(local)}"
+        )
+
+    rng = random.Random(SEED)
+    chosen_local_nodes = rng.sample(local, needed)
+
+    server_nodes = chosen_local_nodes[:NUM_SERVERS]
+    client_nodes = chosen_local_nodes[NUM_SERVERS:]
 
     servers = [f"s{s}" for s in range(1, NUM_SERVERS + 1)]
-    for s, name in enumerate(servers, start=1):
-        network.add_server(name, core[s], propagation_delay)
+    for s, (name, node) in enumerate(zip(servers, server_nodes), start=1):
+        network.add_server(name, node, propagation_delay)
 
     clients = [f"c{c}" for c in range(1, NUM_CLIENTS + 1)]
-    for c, name in enumerate(clients, start=1):
-        network.add_client(name, local[c], propagation_delay)
+    for c, (name, node) in enumerate(zip(clients, client_nodes), start=1):
+        network.add_client(name, node, propagation_delay)
+    # end of main_dfn_2 client/server random attachment block
 
     network.calculate_forwarding_tables()
 
@@ -262,11 +270,12 @@ def run_single_experiment_log(server_cf, router_cf, hop_by_hop,
     Verbose.level = VERBOSE_LEVEL          # override the probe path's silent -1
 
     env = simpy.Environment()
-    network = build_network(env, propagation_delay)
 
     if log_mode == "stream":
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
+            print_simulation_parameters()
+            network = build_network(env, propagation_delay)
             network.start(until=SIM_DURATION)
         lm = parse_log_lines(buf.getvalue().splitlines())
     else:  # "file": write a real per-cell log, parse it, then delete (unless kept)
@@ -279,6 +288,8 @@ def run_single_experiment_log(server_cf, router_cf, hop_by_hop,
             os.close(fd)
         try:
             with open(path, "w") as fh, contextlib.redirect_stdout(fh):
+                print_simulation_parameters()
+                network = build_network(env, propagation_delay)
                 network.start(until=SIM_DURATION)
             lm = parse_log_file(path)
         finally:
@@ -298,7 +309,7 @@ def _worker(task):
     line = (f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
             f"Created: {lm.created}, Recv: {lm.recv_total} "
             f"(A:{lm.recv_announce} W:{lm.recv_withdraw}), "
-            f"Acc: {cell['accuracy']:.1f}%, Blocked: {cell['blocked_rate']:.1f}%, "
+            f"Acc-arr: {cell['accuracy_arrival']:.1f}%, Blocked: {cell['blocked_rate']:.1f}%, "
             f"FIB updates: {lm.fib_updates}, served: {served}")
     return k, i, j, cell, line
 
