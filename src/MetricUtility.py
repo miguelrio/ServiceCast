@@ -6,6 +6,8 @@
 # which one is used for each metric.  It knows nothing about how the
 # metric utilities are later combined -- see Utility.py.
 
+import math
+
 
 # Check a utility is in its defined range: 0 (useless) -> 1 (best).
 def check_in_range(value, what):
@@ -14,13 +16,31 @@ def check_in_range(value, what):
     return value
 
 
-# A metric utility function takes the raw value and that metric's 'scale' --
-# the raw value at which the metric is at its worst: a server with every
-# slot used (load), or the network diameter (delay).
-# More mapping techniques can be added here as they are needed.
-def lower_is_better(value, scale):
-    """The metric utility of a metric that is best at 0 and worst at 'scale'"""
+# ---------------------------------------------------------------------------
+# The mapping functions.
+#
+# They all agree at the two ends -- a raw value of 0 gives a metric utility
+# of 1, and a raw value of 'scale' gives 0 -- and differ only in the shape
+# between.  That shape is the modelling choice: it says how much a change in
+# the raw metric is worth.
+#
+# Add more here as they are needed.
+# ---------------------------------------------------------------------------
+
+#  Linear
+def linear(value, scale):
     return 1 - value / scale
+
+
+#   Logarithmic -- written and ready, but not used by any experiment yet.
+#    See metric_utility_fn below for the line that switches it on.
+def logarithmic(value, scale, k=9.0):
+    return 1 - math.log(1 + k * (value / scale)) / math.log(1 + k)
+
+
+#    Sigmoid -- NOT IMPLEMENTED YET.
+def sigmoid(value, scale):
+    raise NotImplementedError("MetricUtility.sigmoid: not implemented yet")
 
 
 class MetricUtility:
@@ -28,19 +48,28 @@ class MetricUtility:
     # to change the behaviour of the algorithms
 
     # one metric utility function per metric name
-    # plain functions, not staticmethods -- a dict lookup is not a descriptor lookup
+
     metric_utility_fn = {}
-    metric_utility_fn['load'] = lower_is_better
-    metric_utility_fn['delay'] = lower_is_better
+    metric_utility_fn['load'] = linear
+    metric_utility_fn['delay'] = linear
+
+    # To use a different metric utility function, point the metric at another function,
+    # either here or from an experiment's topology_setup().  For example,
+    # to make delay fall off logarithmically rather than in a straight line:
+    #
+    # metric_utility_fn['delay'] = logarithmic
 
     # the raw value at which each metric is at its worst
     metric_scale = {}
     metric_scale['load'] = 1.0     # a server with every slot used
-    metric_scale['delay'] = 1.0    # set to the network diameter by Network
+    metric_scale['delay'] = None   # no value yet: set to the network diameter
+                                   # by Network.calculate_forwarding_tables()
 
     # Map the raw metrics into metric utilities, each in range 0 -> 1.
-    # 'metrics' is a dict of raw values keyed by metric name -- typically a
-    # RIB entry; any key without a metric utility function is ignored.
+    # 'metrics' is a dict of raw values keyed by metric name: a RIB entry at
+    # the Router, or a Server's live payload at the Network.  Either way, a
+    # key with no metric utility function takes no part in the utility --
+    # though it may well be used elsewhere, as 'replica' and 'neighbour' are.
     @classmethod
     def evaluate(cls, metrics):
         """Map each raw metric into a metric utility in range 0 -> 1"""

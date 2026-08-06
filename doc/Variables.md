@@ -32,13 +32,27 @@ There is one function per metric name, in the
 that metric's *scale* -- the raw value at which the metric is at its
 worst -- and returns a metric utility in the range 0 &rarr; 1.
 
+`MetricUtility` holds a small library of named mapping techniques, which
+all agree at the two ends -- a raw value of 0 gives a metric utility of 1,
+and a raw value of *scale* gives 0 -- and differ in the shape between:
+
+- `linear` -- a straight line; every unit of the raw metric costs the same
+  amount of utility.  This is the default for both metrics.
+- `logarithmic` -- falls steeply at first, then flattens out.  Written and
+  ready, but not used by any experiment yet.
+- `sigmoid` -- an S-curve around a midpoint.  Not written.
+
 ```
 # the default for both metrics
-MetricUtility.metric_utility_fn['load'] = lambda value, scale: 1 - value / scale
-MetricUtility.metric_utility_fn['delay'] = lambda value, scale: 1 - value / scale
+MetricUtility.metric_utility_fn['load'] = linear
+MetricUtility.metric_utility_fn['delay'] = linear
+
+# or pick another technique for one metric
+MetricUtility.metric_utility_fn['delay'] = logarithmic
 ```
 
-or a version with a threshold:
+A technique can equally be written inline, for example a version with a
+threshold:
 
 ```
 # load:  raw 0 -> scale (a server with every slot used)
