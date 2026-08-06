@@ -48,6 +48,7 @@ import importlib.util
 import importlib.machinery
 
 
+config_module_name = 'config'
 
 # import a python file
 # as defined in importlib docs
@@ -224,8 +225,17 @@ def resolve_jobs(jobs):
 
 # Run a single experiment
 # The return value becomes one cell in the resulting matrix
-def run_single_experiment_log(server_cf, router_cf, propagation_delay, log_dir, log_mode="file", keep_logs=False):
+def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_delay, log_dir, log_mode="file", keep_logs=False):
     """Run one cell with logging on, parse its log, and return (cell_dict, LogMetrics)."""
+    # load module again - necessary for multiple workes
+    # and python's poor multiprocessing capabilities
+    
+    # config_dict looks like:  { 'module_name': module_name, 'path': dirname }
+
+    # print("Reloading module " + config_spec['module_name'], file=sys.stderr)
+    config = import_from_path(config_spec['module_name'], config_spec['path'])
+    globals()[config_module_name] = config
+
     _configure_globals(server_cf, router_cf, propagation_delay)
     Verbose.level = config.VERBOSE_LEVEL          # override the probe path's silent -1
 
@@ -264,10 +274,14 @@ def run_single_experiment_log(server_cf, router_cf, propagation_delay, log_dir, 
 
 # --- worker (top-level so it is picklable for multiprocessing) ------------------
 def worker(task):
-    (k, i, j, s_cf, r_cf, delay, hop_by_hop, log_dir, log_mode, keep_logs) = task
-    cell, lm = run_single_experiment_log(s_cf, r_cf, delay, log_dir, log_mode, keep_logs)
+    # unpack task values
+    (k, i, j, s_cf, r_cf, delay, hop_by_hop, log_dir, log_mode, keep_logs, config_spec) = task
+
+    # run a single experiment
+    cell, lm = run_single_experiment_log(config_spec, s_cf, r_cf, delay, log_dir, log_mode, keep_logs)
     served = len(lm.records)
-    line = (f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
+    line = (f"[{k},{i},{j}] "
+            f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
             f"Created: {lm.created}, Recv: {lm.recv_total} "
             f"(A:{lm.recv_announce} W:{lm.recv_withdraw}), "
             f"Acc-arr: {cell['accuracy_arrival']:.1f}%, Blocked: {cell['blocked_rate']:.1f}%, "
@@ -279,7 +293,7 @@ def worker(task):
 
 # Run a sweep
 # Called from main
-def run_sweep_log(output_root=None, jobs=1, log_mode="file", keep_logs=False, log_dir=None):
+def run_sweep_log(config_spec, output_root=None, jobs=1, log_mode="file", keep_logs=False, log_dir=None):
     """Run the full sweep, collecting every metric purely from each run's log text."""
     jobs = resolve_jobs(jobs) 
 
@@ -300,7 +314,7 @@ def run_sweep_log(output_root=None, jobs=1, log_mode="file", keep_logs=False, lo
 
     # generate a list of task parameters
     tasks = [
-        (k, i, j, s_cf, r_cf, delay, config.HOP_BY_HOP, log_dir, log_mode, keep_logs)
+        (k, i, j, s_cf, r_cf, delay, config.HOP_BY_HOP, log_dir, log_mode, keep_logs, config_spec)
         for k, delay in enumerate(config.DELAYS)
         for i, r_cf in enumerate(config.ROUTER_CFS)
         for j, s_cf in enumerate(config.SERVER_CFS)
@@ -386,8 +400,9 @@ def main():
     constants_to_import = args.config  # e.g 'scripts/setup/constants_v1.py'
 
     # allow imported data to be accessible via config.variable
-    global config
-    config = import_from_path('', constants_to_import)
+    # global config
+    config = import_from_path(config_module_name, constants_to_import)
+    globals()[config_module_name] = config
 
     #print("CONSTANTS = " + str(config))
 
@@ -417,7 +432,8 @@ def main():
     log_dir = os.path.join(output_root, "matrix_logs")
     
     # run a sweep and do logging
-    run_sweep_log(output_root=results_path, jobs=args.jobs, log_mode=args.log_mode, keep_logs=args.keep_logs, log_dir=log_dir)
+    config_dict = { 'module_name': config_module_name, 'path': constants_to_import }
+    run_sweep_log(config_dict, output_root=results_path, jobs=args.jobs, log_mode=args.log_mode, keep_logs=args.keep_logs, log_dir=log_dir)
 
 
 if __name__ == "__main__":
