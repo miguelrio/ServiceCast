@@ -117,6 +117,13 @@ def topology_setup():
     # now calculate all the forwarding tables
     network.calculate_forwarding_tables()
     
+    repo_root = Path(__file__).resolve().parents[1]
+    tmp_dir = repo_root / "tmp"
+    tmp_dir.mkdir(exist_ok=True)
+
+    with open(tmp_dir / "sm_cm.gv", "w") as file_object:
+        network.graphviz(file=file_object)
+
     # some test values
     print("Network = ")
     network.print()

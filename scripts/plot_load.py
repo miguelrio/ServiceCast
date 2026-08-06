@@ -354,8 +354,8 @@ def process_one_file(file_path, output_dir, verbose, detail_limit, save_plots):
 
     stem = Path(file_path).stem
     fig_specs = [
-        (make_time_series_plot(server_to_events), f"{stem}_load_vs_time.png"),
         (make_cdf_plot(server_to_events, max_time), f"{stem}_load_cdf_time_weighted.png"),
+        (make_time_series_plot(server_to_events), f"{stem}_load_vs_time.png"),
     ]
     if not save_plots:
         # Show the figures on screen before the save prompt so the user can inspect them.
