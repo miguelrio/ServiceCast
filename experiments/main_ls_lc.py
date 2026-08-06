@@ -7,6 +7,7 @@ from Client import Client
 from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility
+from MetricUtility import MetricUtility
 import simpy
 
 # sclayman:
@@ -31,15 +32,16 @@ def topology_setup():
     Server.slots = 20
 
 
-    # showing how to define sub functions for the forwarding_utility_fn
-    # load:  0 -> 1
-    utility_load = lambda load: (0.1 + (0.5*load)) if load < 0.8  else (1-(0.5*load))
-    # delay: 0 -> 1
-    utility_delay = lambda delay: (1-(0.1*delay)) if delay <= 10 else 0
+    # showing how to define the metric utility functions:
+    # each maps a raw metric into a metric utility, 0 (useless) -> 1 (best)
+    # load: raw 0 -> scale (a server with every slot used)
+    MetricUtility.metric_utility_fn['load'] = lambda load, scale: (0.1 + (0.5*load)) if load < 0.8  else (1-(0.5*load))
+    # delay: raw 0 -> scale (the network diameter)
+    # NB: delay/scale is always <= 1, so the `else 0` branch has never been reachable
+    MetricUtility.metric_utility_fn['delay'] = lambda delay, scale: (1-(0.1*(delay/scale))) if delay/scale <= 10 else 0
 
     # actual utility fn (lower = worse, higher = better)
-    # Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(utility_load(load / (2 * Server.slots)) * utility_delay(delay), 4))
-    Utility.forwarding_utility_fn =  staticmethod(lambda alpha, load, delay: round(utility_load(load) * utility_delay(delay), 4))
+    Utility.user_utility_fn =  staticmethod(lambda alpha, metric_utility: round(metric_utility['load'] * metric_utility['delay'], 4))
 
     # more slots per flow
     Server.slots_up_fn = staticmethod(lambda val: val + 1)

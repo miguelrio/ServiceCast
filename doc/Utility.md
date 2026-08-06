@@ -3,6 +3,11 @@
 Here we try to evaluate the range of the utility function values,
 given different inputs
 
+These are *user utility* functions -- step 3 of the pipeline described in
+[Variables](Variables.md).  They take the *load* and *delay* as badness
+values; in the current code they are combined from the metric utilities
+instead, so a `load` here corresponds to a `1 - metric_utility['load']`.
+
 
 ## 1/(1 + alpha * load + (1-alpha) * delay)
 

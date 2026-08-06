@@ -6,6 +6,7 @@ from Server import Server
 from Client import Client
 from Verbose import Verbose
 from Utility import Utility
+from MetricUtility import MetricUtility
 from collections import OrderedDict
 from Gml import read_gml, write_gml
 import sys
@@ -441,6 +442,11 @@ class Network:
             # tell the node its unicast_forwarding_table
             self[node].set_unicast_forwarding_table(table)
 
+        # the diameter is the delay at which a replica is at its worst.
+        # Set here, after an experiment's topology_setup() assignments, because
+        # the diameter is the Network's to know, not an experiment's.
+        MetricUtility.metric_scale['delay'] = self.network_diameter()
+
 
     # calculate a forwarding table for a router r
     # each entry is (destination, next_hop, weight)
@@ -665,15 +671,17 @@ class Network:
         all_latencies = {}
 
         for server in servers:
-            load = server.calculate_load()
             latency = self.latency_table[vantage_node][server.id()]
-            normalised_delay = self.get_normalised_delay(latency)
 
-            # call the forwarding_utility - pass in delay and normalised_delay
-            utility = Utility.eval_forwarding_utility(Utility.alpha, load, latency, normalised_delay)
+            # the raw metrics of this replica, live -- the payload's placeholder
+            # delay of 0 is replaced by the latency from the vantage node
+            metrics = dict(server.calculate_payload(), delay=latency)
+
+            # call the forwarding_utility on the raw metrics
+            utility = Utility.eval_forwarding_utility(metrics)
 
             all_utilities[server.id()] = utility
-            all_loads[server.id()] = load
+            all_loads[server.id()] = metrics['load']
             all_latencies[server.id()] = latency
 
         # Find maximum utility and list of optimal candidates
@@ -784,19 +792,23 @@ class Network:
         load_values = {}
 
         for server in servers:
-            # get load at server
-            load = server.calculate_load()
-            load_values[server.id()] = load
-
             # get latency from client to server
             latency = self.latency_table[server.id()][client_name]
+
+            # the raw metrics of this replica, live -- the payload's placeholder
+            # delay of 0 is replaced by the latency to the client
+            metrics = dict(server.calculate_payload(), delay=latency)
+
+            # get load at server
+            load = metrics['load']
+            load_values[server.id()] = load
 
             # Now we map the actual latency / delay into a normalised_delay
             # which is a value between 0 and 1
             normalised_delay = self.get_normalised_delay(latency)
 
-            # call the forwarding_utility - pass in delay and normalised_delay
-            utility = Utility.eval_forwarding_utility(Utility.alpha, load, latency, normalised_delay)
+            # call the forwarding_utility on the raw metrics
+            utility = Utility.eval_forwarding_utility(metrics)
 
             # save forwarding utility value for this server
             utility_values[server.id()] = utility

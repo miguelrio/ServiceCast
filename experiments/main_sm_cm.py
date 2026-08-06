@@ -6,6 +6,7 @@ from Client import Client
 from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility
+from MetricUtility import MetricUtility
 import simpy
 
 # sclayman:
@@ -26,13 +27,17 @@ def topology_setup():
     # Set alpha value
     Utility.alpha = 0.50
 
-    # load:  0 -> 1
-    utility_load = lambda load: (1-(0.12*load)) if load < 0.8  else (4.5-(4.5*load))
-    # delay: 0 -> 10
-    utility_delay = lambda delay: (1-(0.1*delay)) if delay <= 10 else 0
+    # NB: load is already normalised to 0 -> 1, so scaling it again by
+    # 2 * Server.slots leaves the load metric utility nearly constant.
+    # Kept as-is to preserve this experiment's existing results.
+    MetricUtility.metric_scale['load'] = 2 * Server.slots
+    MetricUtility.metric_utility_fn['load'] = lambda load, scale: (1-(0.12*(load/scale))) if (load/scale) < 0.8  else (4.5-(4.5*(load/scale)))
+    # delay: raw 0 -> scale (the network diameter)
+    # NB: delay/scale is always <= 1, so the `else 0` branch has never been reachable
+    MetricUtility.metric_utility_fn['delay'] = lambda delay, scale: (1-(0.1*(delay/scale))) if delay/scale <= 10 else 0
 
     # actual utility fn (lower = worse, higher = better)
-    Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(utility_load(load / (2 * Server.slots)) * utility_delay(delay), 4))
+    Utility.user_utility_fn = staticmethod(lambda alpha, metric_utility: round(metric_utility['load'] * metric_utility['delay'], 4))
 
     
 

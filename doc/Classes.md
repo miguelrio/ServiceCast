@@ -8,11 +8,22 @@ We use the Verbose class to adjust the logging output.
 The higher the level, the more logging output is produced.
 
 
+### MetricUtility
+
+A static class holding step 2 of the *utility* pipeline: it maps each raw
+metric of a replica into a *metric utility*, in the range 0 (useless) &rarr;
+1 (the best it can be).
+
+Can be set using ```  MetricUtility.metric_utility_fn['load'] = lambda value, scale: ...```
+
 ### Utility
 
-A static class to define and hold the *utility function*.
+A static class holding step 3 of the *utility* pipeline: it combines the
+metric utilities into the *user utility*, also in the range 0 &rarr; 1.
 
-Can be set using ```  Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: ...)```
+Can be set using ```  Utility.user_utility_fn = staticmethod(lambda alpha, metric_utility: ...)```
+
+See [Variables](Variables.md).
 
 
 ### Graph

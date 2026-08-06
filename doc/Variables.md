@@ -4,58 +4,82 @@ The system variables which are used for configuring each experimental
 run are outlined here.
 
 
-### Utility class
+### Utility and MetricUtility classes
 
-The are values for the *utility function*, called when forwarding a
-notification.  It allows the function and the coefficients to be set
-for each run.
+The *utility* of a replica, called when forwarding a notification, is
+calculated in 3 steps:
 
-Currently the utility function takes 3 arguments:  *alpha*, *load*,
-and *delay*.
+1. gather the raw metrics of the replica: *load* and *delay*
+2. map each raw metric into a **metric utility**, in the range
+   0 (useless) &rarr; 1 (the best it can be)
+3. combine the metric utilities into the **user utility**, also in the
+   range 0 &rarr; 1
 
-
-The *load* value is always passed to the function in the range: 0 &rarr; 1
-
-The *delay* value can be normalised to be in the range: 0 &rarr; 1
-or it can be passed in as the raw value, which should be &gt; 0.
+Step 2 is done by the `MetricUtility` class, step 3 by the `Utility`
+class.  Each can be set for a run, independently of the other.
 
 ##### Setting values
 
-Set alpha value for Utility function  
+Set alpha value, the weight of *load* against *delay* in the default
+user utility function  
 ```Utility.alpha = 0.50```
 
 
-To use normalised delay values in the range: 0 &rarr; 1, set:
-```Utility.use_normalised_delay = True```
+##### Step 2: metric utility functions
 
-or to use raw delay values set:
-```Utility.use_normalised_delay = False```
-
-
-
-We can set the utility forwarding function:
+There is one function per metric name, in the
+`MetricUtility.metric_utility_fn` dict.  Each takes the raw value and
+that metric's *scale* -- the raw value at which the metric is at its
+worst -- and returns a metric utility in the range 0 &rarr; 1.
 
 ```
-# actual utility fn
-Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: 1 - (alpha * load + (1-alpha) * delay))
+# the default for both metrics
+MetricUtility.metric_utility_fn['load'] = lambda value, scale: 1 - value / scale
+MetricUtility.metric_utility_fn['delay'] = lambda value, scale: 1 - value / scale
 ```
 
-
-or a more complex version with subfunctions:
-
-```
-# load function with load:  0 -> 1
-utility_support_load = lambda load: (1-(0.12*load)) if load <  else (4.5-(4.5*load))
-# delay function with delay: 0 -> 10
-utility_support_delay = lambda delay: (1-(0.1*delay)) if delay <= 10 else 0
-```
-
-being passed into the utility function:
+or a version with a threshold:
 
 ```
-# actual utility fn
-Utility.forwarding_utility_fn = staticmethod(lambda alpha, load, delay: round(utility_support_load(load) * utility_support_delay(delay), 4))
+# load:  raw 0 -> scale (a server with every slot used)
+MetricUtility.metric_utility_fn['load'] = lambda load, scale: (1-(0.12*load)) if load < 0.8 else (4.5-(4.5*load))
 ```
+
+The scales are held in `MetricUtility.metric_scale`.
+`metric_scale['load']` is 1.0, a server with every slot used.
+`metric_scale['delay']` is set to the network diameter by the Network
+when the forwarding tables are calculated, so it should not be set by
+an experiment.
+
+```
+MetricUtility.metric_scale['load'] = 2 * Server.slots
+```
+
+The returned value must be in the range 0 &rarr; 1.
+A value outside that range raises a `ValueError` naming the function
+at fault -- it is not silently clamped, because that would change the
+utility values being measured without any warning.
+
+
+##### Step 3: the user utility function
+
+It takes *alpha* and the dict of metric utilities, keyed by metric name.
+
+```
+# the default
+Utility.user_utility_fn = staticmethod(lambda alpha, metric_utility: alpha * metric_utility['load'] + (1-alpha) * metric_utility['delay'])
+```
+
+or combining the metric utilities as a product:
+
+```
+Utility.user_utility_fn = staticmethod(lambda alpha, metric_utility: round(metric_utility['load'] * metric_utility['delay'], 4))
+```
+
+The returned value must be in the range 0 &rarr; 1.
+A value outside that range raises a `ValueError` naming the function
+at fault -- it is not silently clamped, because that would change the
+utility values being measured without any warning.
 
 
 
@@ -116,10 +140,11 @@ server, and avoid sending on each small load change.
 
 ##### Better Than function
 
-A Router internal *better than* function, to determine if the metric arg2 is better than metric arg1
+A Router internal *better than* function, to determine if the metric arg2 is better than metric arg1.
+There is one per metric name.
 
 ```
-Router.better_than_fn = staticmethod(lambda x, y: x < y)
+Router.better_than_fn['load'] = staticmethod(lambda x, y: x < y)
 ```
 
 ##### FIB Utility Update Threshold

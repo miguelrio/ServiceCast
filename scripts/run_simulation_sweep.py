@@ -233,11 +233,9 @@ class SimulationProbes:
         # Live utilities for every replica, computed at arrival as the Network does.
         utility_values = {}
         for server in (r for r in network.network_nodes() if isinstance(r, Server)):
-            load = server.calculate_load()
             latency = network.latency_table[server.id()][client_name]
-            normalised_delay = network.get_normalised_delay(latency)
-            utility_values[server.id()] = Utility.eval_forwarding_utility(
-                Utility.alpha, load, latency, normalised_delay)
+            metrics = dict(server.calculate_payload(), delay=latency)
+            utility_values[server.id()] = Utility.eval_forwarding_utility(metrics)
 
         selected_arr = utility_values.get(requesting_server_id, 0)
         best_arr = max(utility_values.values()) if utility_values else 0

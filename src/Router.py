@@ -1095,28 +1095,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def displayMetrics2(self, label, metric):
         return "{} replica: {} load: {} delay: {}".format(label, metric['replica'], metric['load'], metric['delay'])
 
-    # Call the forwarding_utility_fn
-    # which is usually set as a lambda in forwarding_utility_fn
-    # load is already normalised in range 0 -> 1
-    # delay is actual link delay: 1 .. n
-    def call_forwarding_utility(self, alpha, load, delay):
-
-        # First we map the actual delay into a normalised_delay
-        # which is a value between 0 and 1
-        normalised_delay = self.network.get_normalised_delay(delay)
-
-        if Verbose.level >= 3:
-            print("{:.3f}: {:5s} normalised_delay = {} for delay {}".format(self.env.now, self.id(), normalised_delay, delay))
-        
-        # calculate the utility
-        # pass in the delay and the normalised_delay
-        forwarding_utility =  Utility.eval_forwarding_utility(alpha, load, delay, normalised_delay)
-
-        if Verbose.level >= 2:
-            print("{:.3f}: {:5s} forwarding_utility = {} for normalised_load {} delay {} normalised_delay {}".format(self.env.now, self.id(), forwarding_utility, load, delay, normalised_delay))
-        
-        return forwarding_utility
-
     #  Check if fw table needs changing
     # and update FIB
     def choose_best_forwarding_replica_update_fib(self):
@@ -1156,10 +1134,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # in order to find the one with the best utility
 
         for entry_no, entry in enumerate(entries):
-            # call call_forwarding_utility
-            # entry['load'] is normalised
-            # entry['delay'] is raw value which is normalised in call_forwarding_utility
-            utility_i = self.call_forwarding_utility(Utility.alpha, entry['load'], entry['delay'])
+            # run the utility pipeline: raw metrics -> metric utilities -> user utility
+            # the RIB entry is the dict of raw metrics -- extra keys are ignored
+            utility_i = Utility.eval_forwarding_utility(entry)
 
             # keep the calculated utility into the utility table
             utility[entry_no] = utility_i

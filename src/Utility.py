@@ -1,64 +1,42 @@
-# the first forwarding utility function
-# load should be normalised in range 0 -> 1
-# delay should be normalised in range 0 -> 1
-def forwarding_utility1(alpha, load, delay):
-    """ the utility function U=1/(1 + alpha*load + (1-alpha)*delay) """
-    # we define the utility function U=1/(1 + alpha*load + (1-alpha)*delay)
-    # so that 0 is the worst and 1 is the best, always in range (0, 1]
-    return 1 - ( alpha * load + (1-alpha) * delay)
-    
+# Utility -- the utility of a replica, as a 3 step pipeline
+#
+#   1. gather the raw metrics of a replica            (load, delay, ...)
+#      -- done by Server / Router / Network
+#   2. map each raw metric -> a metric utility        0 (useless) -> 1 (best)
+#      -- done by MetricUtility
+#   3. combine the metric utilities -> user utility   0 (useless) -> 1 (best)
+#      -- done here
+#
+# An experiment can replace the user utility function here, or any metric
+# utility function in MetricUtility, without touching the simulator.
+
+from MetricUtility import MetricUtility, check_in_range
+
+
+# Step 3 -- a user utility function: metric utilities -> the utility for the user
+def user_utility1(alpha, metric_utility):
+    """The weighted mean of the load and delay metric utilities"""
+    return alpha * metric_utility['load'] + (1 - alpha) * metric_utility['delay']
+
 
 class Utility:
-    # The following staticmethods can be reset from the outside
+    # The following can be reset from the outside
     # to change the behaviour of the algorithms
 
-    # forwarding_utility
-    forwarding_utility_fn = staticmethod(forwarding_utility1)
-
-    # should we use the normalised delay value
-    # or the actual delay value
-    use_normalised_delay = True
+    # combine the metric utilities into the utility for the user
+    user_utility_fn = staticmethod(user_utility1)
 
 
     # The following variables can be reassigned from the outside
 
-    # alpha
+    # alpha -- the weight of 'load' against 'delay' in user_utility1
     alpha = 0.5
 
-    # Ensure Utility value is in range 0 -> 1
+
+    # Run the pipeline: raw metrics -> metric utilities -> user utility
     @classmethod
-    def eval_forwarding_utility(cls, alpha, load, delay, normalised_delay = 0):
-
-        if cls.use_normalised_delay:
-            # we will use the normalised_delay value for the forwarding_utility
-            
-            if (load < 0 or load > 1):
-                raise ValueError("Utility: using use_normalised_delay -- load has not been normalised in range 0 -> 1")
-
-            if (normalised_delay < 0 or normalised_delay > 1):
-                raise ValueError("Utility: using use_normalised_delay -- delay has not been normalised in range 0 -> 1")
-
-            value = cls.forwarding_utility_fn(alpha, load, normalised_delay)
-
-        else:
-            # we will use the delay value for the forwarding_utility
-            
-            if (load < 0 or load > 1):
-                raise ValueError("Utility: using delay -- load has not been normalised in range 0 -> 1")
-
-            if (delay < 0):
-                raise ValueError("Utility: using delay -- delay < 0")
-
-            value = cls.forwarding_utility_fn(alpha, load, delay)
-
-            
-        # print("eval_forwarding_utility = {} for alpha {} load {} delay_utility {}".format(value, alpha, load, delay))
-
-        # check return value is in range 0 -> 1
-
-        if value < 0:
-            return 0
-        elif value > 1:
-            return 1
-        else:
-            return value
+    def eval_forwarding_utility(cls, metrics):
+        """The forwarding utility of a replica, in range 0 -> 1"""
+        metric_utility = MetricUtility.evaluate(metrics)
+        return check_in_range(cls.user_utility_fn(cls.alpha, metric_utility),
+                              "Utility: user utility")
