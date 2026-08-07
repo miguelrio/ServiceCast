@@ -7,26 +7,11 @@ from typing import NamedTuple
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Ensure project path is in sys.path
-script_path = os.path.dirname(os.path.abspath(__file__))
-project_path = os.path.dirname(script_path)
-
-# Import defaults from Router and Network for CLI auto-detection
-from Router import Router
 
 # Shared text colours for a consistent, muted look across every plot.
 INK = "#1e293b"      # titles, axis labels
 MUTED = "#475569"    # tick labels, colorbar ticks
 
-
-def current_git_commit():
-    """Short hash of the current code, to validate sweep cache provenance."""
-    try:
-        result = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                                cwd=project_path, capture_output=True, text=True, check=True)
-        return result.stdout.strip()
-    except Exception:
-        return "unknown"
 
 
 class MetricSpec(NamedTuple):
@@ -105,6 +90,19 @@ META_KEYS = ["hop_by_hop", "delays", "server_cfs", "router_cfs"]
 REQUIRED_KEYS = META_KEYS
 
 
+def current_git_commit():
+    """Short hash of the current code, to validate sweep cache provenance."""
+    project_path = os.path.dirname(os.path.abspath(__file__))
+
+    try:
+        result = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                                cwd=project_path, capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+    except Exception:
+        return "unknown"
+
+
+
 def _cell_labels(data, format_str, is_percentage):
     """Pre-render every cell's text; the widest one drives cell sizing/font."""
     n_rows, n_cols = data.shape
@@ -130,9 +128,9 @@ def _label_font_size(cell_in, max_chars, floor=4.0):
     return max(floor, min(9.0, cell_in * 72 / (max_chars * 0.95)))
 
 
-def _save_figure(filename, kind="Plot"):
+def _save_figure(data_file_dir, filename, kind="Plot"):
     """Write the current figure into matrix_plots/ at publication DPI and close it."""
-    plots_dir = os.path.join(project_path, "matrix_plots")
+    plots_dir = os.path.join(data_file_dir, "matrix_plots")
     os.makedirs(plots_dir, exist_ok=True)
     output_path = os.path.join(plots_dir, filename)
     plt.savefig(output_path, dpi=300, bbox_inches="tight")
@@ -181,7 +179,7 @@ def _draw_heatmap(ax, data, server_cfs, router_cfs, cmap, format_str, is_percent
     return im
 
 
-def plot_heatmap(data, title, ylabel_cbar, filename, server_cfs, router_cfs, cmap="YlGnBu", format_str="{:,}", is_percentage=False):
+def plot_heatmap(data_file_dir, data, title, ylabel_cbar, filename, server_cfs, router_cfs, cmap="YlGnBu", format_str="{:,}", is_percentage=False):
     n_cols, n_rows = len(server_cfs), len(router_cfs)
 
     labels, max_chars = _cell_labels(data, format_str, is_percentage)
@@ -205,10 +203,10 @@ def plot_heatmap(data, title, ylabel_cbar, filename, server_cfs, router_cfs, cma
     ax.set_title(title, fontsize=15, fontweight='bold', color=INK, pad=30)
 
     plt.tight_layout()
-    _save_figure(filename, kind="Plot")
+    _save_figure(data_file_dir, filename, kind="Plot")
 
 
-def plot_faceted_heatmap(data3d, delays, title, ylabel_cbar, filename, server_cfs, router_cfs,
+def plot_faceted_heatmap(data_file_dir, data3d, delays, title, ylabel_cbar, filename, server_cfs, router_cfs,
                          cmap="YlGnBu", format_str="{:,}", is_percentage=False):
     """Faceted small-multiples: one heatmap panel per propagation-delay value.
 
@@ -259,10 +257,10 @@ def plot_faceted_heatmap(data3d, delays, title, ylabel_cbar, filename, server_cf
 
     fig.suptitle(title, fontsize=13, fontweight='bold', color=INK, y=1.2)
 
-    _save_figure(filename, kind="Faceted plot")
+    _save_figure(data_file_dir, filename, kind="Faceted plot")
 
 
-def generate_matrix_plots(data, metrics):
+def generate_matrix_plots(data_file_dir, data, metrics):
     # Construct filenames and titles based on routing mode
     mode_str = "hop_by_hop" if data["hop_by_hop"] else "first_decide"
     mode_title = "Hop-by-Hop" if data["hop_by_hop"] else "First Decide"
@@ -279,19 +277,20 @@ def generate_matrix_plots(data, metrics):
     delays = data["delays"]
     server_cfs, router_cfs = data["server_cfs"], data["router_cfs"]
 
-    print(f"\nGenerating heatmaps for metrics: {metrics} across {len(delays)} delays {delays}...")
+    print(f"\nGenerating heatmaps for metrics: {metrics} across {len(delays)} delays {delays}...", file=sys.stderr)
 
     for metric in metrics:
         spec = METRIC_SPECS[metric]
         if spec.data_key not in data:
             # Probe and log builds carry different metric sets; skip ones this file lacks.
             print(f"  - skipping '{metric}': '{spec.data_key}' not in data "
-                  f"(source={data.get('source', 'probe')})")
+                  f"(source={data.get('source', 'probe')})", file=sys.stderr)
             continue
         data3d = np.array(data[spec.data_key])   # [delay][router_cf][server_cf]
 
         # Primary deliverable: faceted small-multiples, one panel per delay, shared scale.
         plot_faceted_heatmap(
+            data_file_dir,
             data3d, delays,
             spec.title + title_suffix, spec.cbar_label,
             f"change_factor_matrix_{spec.file_tag}_{suffix}_facet.png",
@@ -303,6 +302,7 @@ def generate_matrix_plots(data, metrics):
         for k, delay in enumerate(delays):
             delay_tag = f"{delay:g}".replace(".", "p")
             plot_heatmap(
+                data_file_dir,
                 data3d[k],
                 spec.title + title_suffix + f"\nPropagation delay = {delay}",
                 spec.cbar_label,
@@ -315,29 +315,14 @@ def generate_matrix_plots(data, metrics):
 def parse_args():
     parser = argparse.ArgumentParser(description="Sweep damping parameters and plot heatmaps.")
     parser.add_argument(
-        "--metrics",
+        "-m", "--metrics",
         nargs="+",
         choices=ALL_METRICS + ["all"],
         default=["all"],
         help="List of metrics to plot. Defaults to 'all'."
     )
     parser.add_argument(
-        "--hop-by-hop",
-        type=str,
-        choices=["true", "false"],
-        default="false",
-        help="Set Router.hop_by_hop (true or false). Defaults to false."
-    )
-    parser.add_argument(
-        "--delays",
-        nargs="+",
-        type=float,
-        default=[0.1, 0.5, 1.0, 2.0, 4.0],
-        help="Graph.default_propagation_delay values to sweep as the third axis. "
-             "Use a short list (e.g. --delays 0.1 1) for a quick smoke test."
-    )
-    parser.add_argument(
-        "--source",
+        "-s", "--source",
         type=str,
         choices=["log", "probe"],
         default="log",
@@ -345,43 +330,14 @@ def parse_args():
              "'log' (purely from log text, default) or 'probe' (legacy monkey-patch in-memory)."
     )
     parser.add_argument(
-        "--data-file",
+        "-d", "--data-file",
         type=str,
         default=None,
         help="Path to JSON results file to plot directly from."
     )
-    parser.add_argument(
-        "--rerun",
-        action="store_true",
-        help="Ignore any cached sweep data and run the simulation sweep again."
-    )
-    parser.add_argument(
-        "--jobs",
-        type=int,
-        default=1,
-        help="For --source log (the default): parallel worker processes for the sweep. "
-             "Use 0 for auto (cores-2)."
-    )
+
+    # -h prints help
     return parser.parse_args()
-
-
-def resolve_config(args):
-    """Resolve the routing mode and the cache file path, auto-detecting the mode
-    from the codebase when it is not given on the command line."""
-    if args.hop_by_hop is None:
-        hop_by_hop = Router.hop_by_hop
-        print(f"Auto-detected Router.hop_by_hop from codebase: {hop_by_hop}")
-    else:
-        hop_by_hop = args.hop_by_hop.lower() == "true"
-
-    if args.data_file:
-        data_file_path = args.data_file
-    else:
-        mode_str = "hop_by_hop" if hop_by_hop else "first_decide"
-        prefix = "sweep_data_log" if args.source == "log" else "sweep_data"
-        data_file_path = os.path.join(project_path, "matrix_data", f"{prefix}_{mode_str}.json")
-
-    return hop_by_hop, data_file_path
 
 
 def load_cached_sweep(path):
@@ -390,56 +346,70 @@ def load_cached_sweep(path):
     stale results are never plotted silently."""
     if not os.path.exists(path):
         return None
-
+        
     try:
-        print(f"Loading cached sweep data from: {path}")
+        print(f"Loading cached sweep data from: {os.path.abspath(path)}", file=sys.stderr)
         with open(path, "r") as f:
             data = json.load(f)
     except Exception as e:
-        print(f"Error loading cache: {e}")
+        print(f"Error loading cache: {e}", file=sys.stderr)
         return None
 
     if not all(k in data for k in REQUIRED_KEYS):
-        print("Cache data is in an outdated format. Discarding cache...")
+        print("Cache data is in an outdated format. Discarding cache...", file=sys.stderr)
         return None
 
     cached_commit = data.get("code_commit")
     generated_at = data.get("generated_at", "unknown time")
+
     if cached_commit is None:
         print("WARNING: cache has no code version recorded - "
-              "use --rerun if the simulation code has changed since it was generated.")
+              "use --rerun if the simulation code has changed since it was generated.", file=sys.stderr)
     elif cached_commit != current_git_commit():
         print(f"WARNING: cache was generated at {generated_at} from commit {cached_commit}, "
-              f"but the code is now at {current_git_commit()} - use --rerun for fresh data.")
+              f"but the code is now at {current_git_commit()} - use --rerun for fresh data.", file=sys.stderr)
     else:
-        print(f"Cache generated at {generated_at} from current commit {cached_commit}.")
+        print(f"Cache generated at {generated_at} from current commit {cached_commit}.", file=sys.stderr)
+
     return data
+
+def resolve_config(args):
+    """Resolve the cache file path, when it is given on the command line."""
+    
+    if args.data_file:
+        if args.data_file == "-":
+            # read file name from stdin
+            data_file_path = sys.stdin.readline().strip()
+        else:
+            data_file_path = args.data_file
+    else:
+        raise ValueError(f"Data file path not specified")
+
+
+    data_file_dir = os.path.normpath(os.path.join(os.path.dirname(data_file_path), ".."))
+    
+    return data_file_path, data_file_dir
+
 
 
 def main():
     args = parse_args()
-    hop_by_hop, data_file_path = resolve_config(args)
+    
+    data_file_path, data_file_dir  = resolve_config(args)
 
-    # Load from cache if valid, otherwise run the simulation sweep.
-    data = None
-    if args.rerun:
-        print("--rerun given: ignoring any cached sweep data.")
+    #print("data_file_path = " + str(data_file_path) + " data_file_dir = " + str(data_file_dir))
+
+    if not os.path.exists(data_file_path):
+        raise ValueError(f"Data file path does not exist '{data_file_path}'")
     else:
+
+        # Load from cache if valid
         data = load_cached_sweep(data_file_path)
 
-    if data is None:
-        if args.source == "log":
-            print("Running LOG-based simulation sweep...")
-            from run_simulation_sweep_log import run_sweep_log
-            data = run_sweep_log(hop_by_hop, data_file_path,
-                                 delays=args.delays, jobs=args.jobs)
-        else:
-            print("Running legacy monkey-patch (probe) simulation sweep...")
-            from run_simulation_sweep import run_sweep
-            data = run_sweep(hop_by_hop, data_file_path, delays=args.delays)
+        selected_metrics = ALL_METRICS if "all" in args.metrics else args.metrics
 
-    selected_metrics = ALL_METRICS if "all" in args.metrics else args.metrics
-    generate_matrix_plots(data, selected_metrics)
+        # generate plots
+        generate_matrix_plots(data_file_dir, data, selected_metrics)
 
 
 if __name__ == "__main__":
