@@ -45,7 +45,7 @@ class Router(object):
     fib_utility_update_threshold = 0.1
 
     # routing mode: True for hop-by-hop anycast, False for first-decide unicast
-    hop_by_hop = True
+    hop_by_hop = False
 
     # metric is better range
     # a way to accept one metric being the Same as another metric
