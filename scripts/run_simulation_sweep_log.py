@@ -28,7 +28,7 @@ import random
 import argparse
 import tempfile
 import contextlib
-import multiprocessing as mp
+import multiprocessing
 from datetime import datetime
 from typing import NamedTuple
 import numpy as np
@@ -61,12 +61,12 @@ def import_from_path(module_name, file_path):
 
 
 
-
+# Configure System Variables within the Simulation.
 # The values of Server.change_factor, Router.fib_utility_update_threshold,
 # and the Link propagation_delay are changed for each run
-def _configure_globals(server_cf, router_cf, propagation_delay):
+def configure_system_variables(server_cf, router_cf, propagation_delay):
     """Set the global knobs that define a single experiment. Verbose output is silenced."""
-    Verbose.level = -1
+    Verbose.level = config.VERBOSE_LEVEL 
     Verbose.table = 0
 
     Router.hop_by_hop = config.HOP_BY_HOP
@@ -236,7 +236,7 @@ def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_del
     config = import_from_path(config_spec['module_name'], config_spec['path'])
     globals()[config_module_name] = config
 
-    _configure_globals(server_cf, router_cf, propagation_delay)
+    configure_system_variables(server_cf, router_cf, propagation_delay)
     Verbose.level = config.VERBOSE_LEVEL          # override the probe path's silent -1
 
     env = simpy.Environment()
@@ -326,16 +326,16 @@ def run_sweep_log(config_spec, output_root=None, jobs=1, log_mode="file", keep_l
         k, i, j, cell, line = result
         for name in config.LOG_METRIC_FIELDS:
             matrices[name][k, i, j] = cell[name]
-        print(line)
+        print(line, file=sys.stderr)
 
     done = 0
     if jobs and jobs > 1:
-        with mp.Pool(processes=jobs) as pool:
+        with multiprocessing.Pool(processes=jobs) as pool:
             for result in pool.imap_unordered(worker, tasks):
                 _store(result)
                 done += 1
                 if done % 25 == 0:
-                    print(f"  ... {done}/{n} cells")
+                    print(f"  ... {done}/{n} cells", file=sys.stderr)
     else:
         for task in tasks:
             _store(worker(task))
@@ -366,6 +366,28 @@ def run_sweep_log(config_spec, output_root=None, jobs=1, log_mode="file", keep_l
         with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
         print(f"Log sweep results saved to: {output_path}", file=sys.stderr)
+
+        # now copy the config we used into the output_root
+        config_path = config_spec['path']
+        config_copy = os.path.join(output_root, "..", "config.py")
+
+        with open(config_path,'r') as firstfile, open(config_copy,'w') as secondfile:
+
+            secondfile.write(f"# Data from {config_path}\n\n")
+            
+            # read content from first file
+            for line in firstfile:             
+                # write content to second file
+                secondfile.write(line)
+
+        print(f"Config values saved to: {config_copy}", file=sys.stderr)
+
+        # This is the only output of the program
+        # output_path is sent to stdout so
+        # this can be used as an arg to another program
+        # or read from stdin by the next program in a pipeline
+        print(f"{output_path}")
+
 
     # tidy up
     if not keep_logs:
@@ -398,6 +420,9 @@ def main():
 
     # load these constants from config arg
     constants_to_import = args.config  # e.g 'scripts/setup/constants_v1.py'
+
+    if not os.path.exists(constants_to_import):
+        raise ValueError(f"Config file path does not exist")
 
     # allow imported data to be accessible via config.variable
     # global config
