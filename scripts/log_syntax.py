@@ -22,12 +22,14 @@ FIB_STABILITY_KEYWORDS = frozenset({
     "SET_BEST_REPLICA",
     "KEEP_BEST_REPLICA",
     "CHANGED_BEST_REPLICA",
+    "REMOVED_BEST_REPLICA_FROM_FIB",
 })
 EVENT_KEYWORDS = tuple(sorted(
     GAP_KEYWORDS | FIB_STABILITY_KEYWORDS | {
         "PACKET_CREATED",
         "RECV_PACKET",
         "SERVICE_FIB",
+        "REQUEST_NOT_FORWARDED",
     },
     key=len,
     reverse=True,
@@ -84,6 +86,12 @@ class FibStabilityAction(NamedTuple):
     action: str
     server: str
     neighbour: str | None
+
+
+class RequestNotForwarded(NamedTuple):
+    router: str
+    service: str
+    packet: int
 
 
 def _parse_parameter_value(value: str):
@@ -235,6 +243,27 @@ def parse_server_metric_event(
     return None
 
 
+def parse_not_forwarded_event(
+    line: str, header: EventHeader | None = None
+) -> RequestNotForwarded | None:
+    """Parse a request dropped because the receiving router has no FIB entry."""
+    header = header or parse_event_header(line)
+    if header is None or header.keyword != "REQUEST_NOT_FORWARDED":
+        return None
+    match = re.fullmatch(
+        r"(?:\[[^\.\]]+\.\d+\]\s+)?"
+        r"for service (?P<service>\S+) pkt:\s*(?P<packet>\d+)",
+        header.payload,
+    )
+    if not match:
+        return None
+    return RequestNotForwarded(
+        router=header.emitter,
+        service=match.group("service"),
+        packet=int(match.group("packet")),
+    )
+
+
 def parse_fib_update_count(
     line: str, header: EventHeader | None = None
 ) -> FibUpdateCount | None:
@@ -251,10 +280,20 @@ def parse_fib_update_count(
 def parse_fib_stability_action(
     line: str, header: EventHeader | None = None
 ) -> FibStabilityAction | None:
-    """Parse one SET/KEEP/CHANGED_BEST_REPLICA stability action."""
+    """Parse one FIB stability action, including a removed FIB entry."""
     header = header or parse_event_header(line)
     if header is None or header.keyword not in FIB_STABILITY_KEYWORDS:
         return None
+    if header.keyword == "REMOVED_BEST_REPLICA_FROM_FIB":
+        match = re.fullmatch(r"(?P<server>\S+)", header.payload)
+        if not match:
+            return None
+        return FibStabilityAction(
+            router=header.emitter,
+            action=header.keyword,
+            server=match.group("server"),
+            neighbour=None,
+        )
     match = re.match(
         r"(?P<server>\S+)\s+(?:direct|via best neighbour\s+(?P<neighbour>.+?))\s*$",
         header.payload,

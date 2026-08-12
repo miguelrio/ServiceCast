@@ -5,8 +5,10 @@ from Server import Server
 from Client import Client
 from Generator import Generator
 from Verbose import Verbose
+from Router import Router
 from Utility import Utility
-from MetricUtility import MetricUtility
+from pathlib import Path
+from MetricUtility import MetricUtility, linear, logarithmic, sigmoid
 import simpy
 
 # sclayman:
@@ -21,25 +23,9 @@ import simpy
 
 # Use a topology from an adjacency list
 def topology_setup():
-    Verbose.level = 2
+    Verbose.level = 3
     Verbose.table = 1
 
-    # Set alpha value
-    Utility.alpha = 0.50
-
-    # NB: load is already normalised to 0 -> 1, so scaling it again by
-    # 2 * Server.slots leaves the load metric utility nearly constant.
-    # Kept as-is to preserve this experiment's existing results.
-    MetricUtility.metric_scale['load'] = 2 * Server.slots
-    MetricUtility.metric_utility_fn['load'] = lambda load, scale: (1-(0.12*(load/scale))) if (load/scale) < 0.8  else (4.5-(4.5*(load/scale)))
-    # delay: raw 0 -> scale (the network diameter)
-    # NB: delay/scale is always <= 1, so the `else 0` branch has never been reachable
-    MetricUtility.metric_utility_fn['delay'] = lambda delay, scale: (1-(0.1*(delay/scale))) if delay/scale <= 10 else 0
-
-    # actual utility fn (lower = worse, higher = better)
-    Utility.user_utility_fn = staticmethod(lambda alpha, metric_utility: round(metric_utility['load'] * metric_utility['delay'], 4))
-
-    
 
     # 1 - Define the topology
     topo = {
@@ -54,49 +40,42 @@ def topology_setup():
     env = simpy.Environment()
 
     # 3 - build the network: topology -> graph -> network
-
-    print("SETUP ----------------------------------------------------------------")
+    if Verbose.level >= 2: 
+        print("SETUP ----------------------------------------------------------------")
 
     # adjacency list -> graph
     graph = Graph.from_dict(topo)
 
-    # test print
-    print("graph adjacency list = ")
-    graph.print()
-
-    # test dijkstra_algorithm
-    print ("graph nodes = " + str(graph.nodes()))
-
-    print("graph edges = " + str(graph.edges()))
-
-    print("graph edge b->c " + str(graph.contains_edge('b', 'c')) + " " + str(graph.edge('b', 'c')))
-
-    print("graph neighbours b = " + str(graph.neighbours('b')))
-
-    print("graph weight b->c = " + str(graph.weight('b', 'c')))
-
-    print("graph dijkstra from a = " + str(Graph.dijkstra_algorithm(graph, 'a')))
+    if Verbose.level >= 2: 
+        # test print
+        print("graph adjacency list = ")
+        graph.print()
+        # test dijkstra_algorithm
+        print ("graph nodes = " + str(graph.nodes()))
+        print("graph edges = " + str(graph.edges()))
+        print("graph edge b->c " + str(graph.contains_edge('b', 'c')) + " " + str(graph.edge('b', 'c')))
+        print("graph neighbours b = " + str(graph.neighbours('b')))
+        print("graph weight b->c = " + str(graph.weight('b', 'c')))
+        print("graph dijkstra from a = " + str(Graph.dijkstra_algorithm(graph, 'a')))
 
     # graph -> network
+    if Verbose.level >= 2:
+        print("--- Convert Graph to Network Begin ---")
 
-    print("--- Convert Graph to Network Begin ---")
-    
     network = Network.from_graph(graph, env)
-
-    print("--- Convert Graph to Network End ---")
+    
+    if Verbose.level >= 2:
+        print("--- Convert Graph to Network End ---")
     
     network.add_edge('c', 'f')
 
     # do some test prints
-    print("Network nodes = " + str(network.nodes()))
-    print("Network edges = " + str(network.edges()))
-
-    print("Network from a: " + str(network.links_from('a')))
-
-    print("Network to d: " + str(network.links_to('d')))
-
-
-    print("--- Add Servers and Clients to Network ---")
+    if Verbose.level >= 2:
+        print("Network nodes = " + str(network.nodes()))
+        print("Network edges = " + str(network.edges()))
+        print("Network from a: " + str(network.links_from('a')))
+        print("Network to d: " + str(network.links_to('d')))
+        print("--- Add Servers and Clients to Network ---")
 
     # add some servers
     # connected to 'a'
@@ -125,27 +104,52 @@ def topology_setup():
         network.graphviz(file=file_object)
 
     # some test values
-    print("Network = ")
-    network.print()
+    if Verbose.level >= 2:
+        print("Network = ")
+        network.print()
+        print("Network neighbours e: " + str(network.neighbours('e')))
+        print("Network degree e: " + str(network.degree('e')))
+        print("Network neighbours c1: " + str(network.neighbours('c1')))
+        print("Network degree c1: " + str(network.degree('c1')))
+        print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
+        print("Network: dijkstra from d = " + str(Graph.dijkstra_algorithm(network, 'd')))
+        print("Network: unicast forwarding table at d = " + str(network['d'].get_unicast_forwarding_table()))
+        print("Network: route from d to s1 = " + str(network['d'].route_to('s1')) +  "  distance: " + str(network['d'].distance_to('s1')) )
+        print("Network: route from s1 to c1  = " + str(network['s1'].route_to('c1')) +  "  distance: " + str(network['s1'].distance_to('c1')) )
+        print("diameter = " + str(network.network_diameter()))
 
-    print("Network neighbours e: " + str(network.neighbours('e')))
-    print("Network degree e: " + str(network.degree('e')))
+    # Set alpha value
+    Utility.alpha = 0.5
 
-    print("Network neighbours c1: " + str(network.neighbours('c1')))
-    print("Network degree c1: " + str(network.degree('c1')))
+    # NB: load is already normalised to 0 -> 1, so scaling it again by
+    # 2 * Server.slots leaves the load metric utility nearly constant.
+    # Kept as-is to preserve this experiment's existing results.
+    # MetricUtility.metric_scale['load'] = 1
+    # MetricUtility.metric_utility_fn['load'] = lambda load, scale: (1-(0.12*(load/scale))) if (load/scale) < 0.8  else (4.5-(4.5*(load/scale)))
+    # MetricUtility.metric_utility_fn['load'] = lambda load, scale: (1-(load/scale))
+    MetricUtility.metric_utility_fn['load'] = logarithmic
 
-    print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
-    print("Network: dijkstra from d = " + str(Graph.dijkstra_algorithm(network, 'd')))
 
-    print("Network: unicast forwarding table at d = " + str(network['d'].get_unicast_forwarding_table()))
-
-    print("Network: route from d to s1 = " + str(network['d'].route_to('s1')) +  "  distance: " + str(network['d'].distance_to('s1')) )
+    # delay: raw 0 -> scale (the network diameter)
+    # NB: delay/scale is always <= 1, so the `else 0` branch has never been reachable
     
-    print("Network: route from s1 to c1  = " + str(network['s1'].route_to('c1')) +  "  distance: " + str(network['s1'].distance_to('c1')) )
+    MetricUtility.metric_scale['delay'] = network.network_diameter()
+
+    # MetricUtility.metric_utility_fn['delay'] = lambda delay, scale: (1-(0.1*(delay/scale))) if delay/scale <= 10 else 0
+    # MetricUtility.metric_utility_fn['delay'] = lambda delay, scale: (1 if delay/scale <= 3/8 else 0)
+    # MetricUtility.metric_utility_fn['delay'] = lambda delay, scale: (1 - delay / scale)
+    # MetricUtility.metric_utility_fn['delay'] = logarithmic
+    MetricUtility.metric_utility_fn['delay'] = lambda delay, scale: ((1 - delay/scale) if delay/scale <= 5/8 else 0)
 
 
-    print("diameter = " + str(network.network_diameter()))
-    
+    # actual utility fn (lower = worse, higher = better)
+    # Utility.user_utility_fn = staticmethod(lambda alpha, metric_utility: 0)
+    # Utility.user_utility_fn = staticmethod(lambda alpha, metric_utility: round(metric_utility['load'] ** alpha * metric_utility['delay'] ** (1 - alpha), 4))
+    Utility.user_utility_fn = staticmethod(lambda alpha, metric_utility: round(metric_utility['load'] * alpha + metric_utility['delay'] * (1 - alpha), 4))
+
+
+    Router.remove_fib_entry_when_all_utilities_zero = True
+
     # 4 - Now we create the packet generator.
 
     # Services are not addresses -- they start with §
@@ -159,22 +163,14 @@ def topology_setup():
     generator_s5 = Generator.server_load_event_generator(network, "s5", ["§a"], exponential_lambda=55, seed=30072022)
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=2, size_lambda=6, seed=30072022)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=0.2, size_lambda=6, seed=30072022)
 
     # run
-    print("RUN ----------------------------------------------------------------")
+    if Verbose.level >= 2:
+        print("RUN ----------------------------------------------------------------")
 
-    network.start(until=3600)
-
-
-    
-
-
+    network.start(until=360)
 
 
 # go !
 topology_setup()
-
-
-
-

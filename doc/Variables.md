@@ -161,6 +161,15 @@ There is one per metric name.
 Router.better_than_fn['load'] = staticmethod(lambda x, y: x < y)
 ```
 
+##### Remove FIB Entry if all Replicas Have Zero Utility
+
+If the utility of all replicas is zero then remove the FIB entry for this service name, which results in a REQUEST_NOT_FORWARDED message in the log for that request. Defaults to True.
+
+```
+Router.remove_fib_entry_when_all_utilities_zero = True
+```
+
+
 ##### FIB Utility Update Threshold
 
 This is the amount by which the return value of calling the *utility

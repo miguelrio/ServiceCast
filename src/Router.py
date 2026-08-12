@@ -47,6 +47,9 @@ class Router(object):
     # routing mode: True for hop-by-hop anycast, False for first-decide unicast
     hop_by_hop = False
 
+    # Remove FIB if all replicas in the RIB have utility of zero 
+    remove_fib_entry_when_all_utilities_zero = True
+
     # metric is better range
     # a way to accept one metric being the Same as another metric
     # if the difference between the values is < range
@@ -1178,6 +1181,28 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             self.print_utility_info(entries, utility)
 
 
+        # if the option to remove FIB entries when all replicas have zero utility has been set then remove the existing FIB entry if all replicas in the RIB have zero utility
+        if self.remove_fib_entry_when_all_utilities_zero is True:
+            # check if all utilities are zero
+            if this_best_utility == 0:
+                # all replicas have utility 0 hence the FIB entry should be removed
+                # grab the service name from the best FIB entry. Note that this is a bit of a hack. The Router class has not been fully written for multiple service names in the FIB/RIB. We need to fix this in a future iteration.
+                service_name = this_best_entry['servicename']
+                previous_fib_entry = self.service_FIB.get(service_name)
+                if previous_fib_entry is not None:
+                    # there was a previous FIB entry. We are removing it so we need to increment the FIB update counter
+                    self.service_fib_updates += 1
+                # remove the FIB entry
+                self.service_FIB[service_name] = None
+                if Verbose.level >= 1:
+                    print("{:.3f}: {:5s} REMOVED_BEST_REPLICA_FROM_FIB {}".format(self.env.now, self.id(), self.best_replica))   
+                self.best_replica = None
+                self.best_utility = -0.0000000001
+                self.best_load = None
+                self.best_delay = None
+                self.best_update_time = None
+                # do no further processing
+                return
 
         # 5. Choose best replica for the forwarding plane/
         #
@@ -1286,7 +1311,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # update the FIB
         
         # keep track of best_neighbour, best_replica, best_utility for servicename
-        self.service_FIB[self.servicename] = { 'neighbour': self.best_neighbour,
+        if self.best_utility > 0:
+            # only update FIB if the best replica has utility > 0
+            self.service_FIB[self.servicename] = { 'neighbour': self.best_neighbour,
                                                'replica': self.best_replica,
                                                'utility': self.best_utility,
                                                'load': self.best_load,
@@ -1333,6 +1360,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # Destination is likely to be a service name: e.g. §a
         service_name = packet.dst
 
+        if self.service_FIB.get(service_name) is None:
+            print("{:.3f}: {:5s} REQUEST_NOT_FORWARDED [{}.{}] for service {} pkt: {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, service_name, packet.id))
+            return
+
         if Router.hop_by_hop:
             # --- Original Hop-by-Hop Anycast Routing ---
             if not service_name in self.service_FIB:
@@ -1347,7 +1378,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, neighbour))
 
                 if neighbour == None:
-                    if Verbose.level >= 2:
+                    if Verbose.level >= 0:
                         print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FIB ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
                 else:
                     # Record the forwarding decision at the deciding router
@@ -1374,7 +1405,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     print ("{:.3f}: {:5s} CLIENT_REQUEST_NEIGHBOUR ClientRequest  {}.{} = {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, best_replica))
 
                 if best_replica == None:
-                    if Verbose.level >= 2:
+                    if Verbose.level >= 0:
                         print("{:.3f}: {:5s} NO_VALUE_FOR SERVICE_FIB ENTRY ClientRequest for service {} pkt: {}".format(self.env.now, self.id(), packet.dst, packet.id))
                 else:
                     packet.service = service_name
