@@ -33,7 +33,6 @@ from datetime import datetime
 from typing import NamedTuple
 import numpy as np
 import simpy
-import Router as RouterModule
 from Graph import Graph
 from Network import Network
 from Server import Server
@@ -42,37 +41,16 @@ from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility
 from Gml import read_gml
+from Importer import Importer
 from log_metrics import parse_log_lines, parse_log_file
 
-import importlib.util
-import importlib.machinery
 
 
-config_module_name = 'config'
-
-# import a python file
-# as defined in importlib docs
-def import_from_path(module_name, file_path):
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-
-# Configure System Variables within the Simulation.
+# Configure Variables within the Simulation.
 # The values of Server.change_factor, Router.fib_utility_update_threshold,
-# and the Link propagation_delay are changed for each run
-def configure_system_variables(server_cf, router_cf, propagation_delay):
+# and the Link propagation_delay are changed for each sweep
+def configure_sweep_variables(server_cf, router_cf, propagation_delay):
     """Set the global knobs that define a single experiment. Verbose output is silenced."""
-    Verbose.level = config.VERBOSE_LEVEL 
-    Verbose.table = 0
-
-    Router.hop_by_hop = config.HOP_BY_HOP
-    Utility.alpha = config.ALPHA
-    Server.slots = config.SLOTS
-
     Server.change_factor = server_cf
     Router.fib_utility_update_threshold = router_cf
     Graph.default_propagation_delay = propagation_delay
@@ -104,13 +82,16 @@ def current_git_commit():
         return "unknown"
 
 # 
-def build_network(env, propagation_delay):
+def build_network(env, propagation_delay, output_root):
     """Build the Dfn network ready to run: graph -> network, attach servers and clients,
     pre-compute forwarding tables, and install the load/request generators."""
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     gml_file = os.path.join(project_path, config.GML_FILE)
     network = Network.from_graph(read_gml(gml_file), env)
+
+    # output graphviz
+    network.graphviz_to_file("network.gv", dir=output_root)
 
     # new code block below here that mirrors the client and server attachment logic in main_dfn_2.py
     
@@ -225,18 +206,19 @@ def resolve_jobs(jobs):
 
 # Run a single experiment
 # The return value becomes one cell in the resulting matrix
-def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_delay, log_dir, log_mode="file", keep_logs=False):
+def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_delay, log_mode="file", keep_logs=False):
     """Run one cell with logging on, parse its log, and return (cell_dict, LogMetrics)."""
     # load module again - necessary for multiple workes
     # and python's poor multiprocessing capabilities
     
-    # config_dict looks like:  { 'module_name': module_name, 'path': dirname }
+    # config_dict looks like:  { 'import_path': dirname }
+    output_root = config_spec['output_root']
+    log_dir = config_spec['log_dir']
 
-    # print("Reloading module " + config_spec['module_name'], file=sys.stderr)
-    config = import_from_path(config_spec['module_name'], config_spec['path'])
-    globals()[config_module_name] = config
+    # print("Reloading module " + config_spec['import_path'], file=sys.stderr)
+    config = Importer(globals()).import_from_path(config_spec['import_path'], auto_config=True)
 
-    configure_system_variables(server_cf, router_cf, propagation_delay)
+    configure_sweep_variables(server_cf, router_cf, propagation_delay)
     Verbose.level = config.VERBOSE_LEVEL          # override the probe path's silent -1
 
     env = simpy.Environment()
@@ -245,7 +227,7 @@ def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_del
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             print_simulation_parameters()
-            network = build_network(env, propagation_delay)
+            network = build_network(env, propagation_delay, output_root)
             network.start(until=config.SIM_DURATION)
         lm = parse_log_lines(buf.getvalue().splitlines())
 
@@ -260,7 +242,7 @@ def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_del
         try:
             with open(path, "w") as fh, contextlib.redirect_stdout(fh):
                 print_simulation_parameters()
-                network = build_network(env, propagation_delay)
+                network = build_network(env, propagation_delay, output_root)
                 network.start(until=config.SIM_DURATION)
             lm = parse_log_file(path)
         finally:
@@ -278,7 +260,7 @@ def worker(task):
     (k, i, j, s_cf, r_cf, delay, hop_by_hop, log_dir, log_mode, keep_logs, config_spec) = task
 
     # run a single experiment
-    cell, lm = run_single_experiment_log(config_spec, s_cf, r_cf, delay, log_dir, log_mode, keep_logs)
+    cell, lm = run_single_experiment_log(config_spec, s_cf, r_cf, delay, log_mode, keep_logs)
     served = len(lm.records)
     line = (f"[{k},{i},{j}] "
             f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
@@ -293,30 +275,35 @@ def worker(task):
 
 # Run a sweep
 # Called from main
-def run_sweep_log(config_spec, output_root=None, jobs=1, log_mode="file", keep_logs=False, log_dir=None):
+def run_sweep_log(config_spec, jobs=1, log_mode="file", keep_logs=False):
     """Run the full sweep, collecting every metric purely from each run's log text."""
-    jobs = resolve_jobs(jobs) 
+    jobs = resolve_jobs(jobs)
+
+    config_path = config_spec['import_path']
+    output_root = config_spec['output_root']
+    results_path = config_spec['results_path']
+    log_dir = config_spec['log_dir']
 
     if log_dir is None:
         raise ValueError(f"log_dir not specified")
 
-    mode_title = "Hop-by-Hop Anycast" if config.HOP_BY_HOP else "First Decide Unicast"
-    n = len(config.DELAYS) * len(config.SERVER_CFS) * len(config.ROUTER_CFS)
+    mode_title = "Hop-by-Hop Anycast" if config.ROUTER_HOP_BY_HOP else "First Decide Unicast"
+    n = len(config.GRAPH_DELAYS) * len(config.SERVER_CFS) * len(config.ROUTER_FIB_UPTS)
 
     # to stderr - not real data
     print(f"Starting LOG sweep ({mode_title}): "
-          f"{len(config.DELAYS)} delays x {len(config.SERVER_CFS)} cols x {len(config.ROUTER_CFS)} rows = {n} simulations "
+          f"{len(config.GRAPH_DELAYS)} delays x {len(config.SERVER_CFS)} cols x {len(config.ROUTER_FIB_UPTS)} rows = {n} simulations "
           f"[log-mode={log_mode}, jobs={jobs}]...", file=sys.stderr)
 
-    shape = (len(config.DELAYS), len(config.ROUTER_CFS), len(config.SERVER_CFS))
+    shape = (len(config.GRAPH_DELAYS), len(config.ROUTER_FIB_UPTS), len(config.SERVER_CFS))
     matrices = {name: np.zeros(shape) for name in config.LOG_METRIC_FIELDS}
 
 
     # generate a list of task parameters
     tasks = [
-        (k, i, j, s_cf, r_cf, delay, config.HOP_BY_HOP, log_dir, log_mode, keep_logs, config_spec)
-        for k, delay in enumerate(config.DELAYS)
-        for i, r_cf in enumerate(config.ROUTER_CFS)
+        (k, i, j, s_cf, r_cf, delay, config.ROUTER_HOP_BY_HOP, log_dir, log_mode, keep_logs, config_spec)
+        for k, delay in enumerate(config.GRAPH_DELAYS)
+        for i, r_cf in enumerate(config.ROUTER_FIB_UPTS)
         for j, s_cf in enumerate(config.SERVER_CFS)
     ]
 
@@ -346,10 +333,10 @@ def run_sweep_log(config_spec, output_root=None, jobs=1, log_mode="file", keep_l
         "code_commit": current_git_commit(),
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "source": "log",
-        "hop_by_hop": config.HOP_BY_HOP,
-        "delays": config.DELAYS,
+        "hop_by_hop": config.ROUTER_HOP_BY_HOP,
+        "delays": config.GRAPH_DELAYS,
         "server_cfs": config.SERVER_CFS,
-        "router_cfs": config.ROUTER_CFS,
+        "router_cfs": config.ROUTER_FIB_UPTS,
         **{f"matrix_{name}": matrices[name].tolist() for name in config.LOG_METRIC_FIELDS},
     }
 
@@ -357,19 +344,19 @@ def run_sweep_log(config_spec, output_root=None, jobs=1, log_mode="file", keep_l
     if output_root:
         # ensure directory exists
         os.makedirs(output_root, exist_ok=True)
+        os.makedirs(results_path, exist_ok=True)
         
-        # work out part of file name
-        mode_str = "hop_by_hop" if config.HOP_BY_HOP else "first_decide"
+        # work out part of file name for JSON file
+        mode_str = "hop_by_hop" if config.ROUTER_HOP_BY_HOP else "first_decide"
 
-        output_path = os.path.join(output_root, f"sweep_data_log_{mode_str}.json")
+        output_path = os.path.join(results_path, f"sweep_data_log_{mode_str}.json")
         
         with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
         print(f"Log sweep results saved to: {output_path}", file=sys.stderr)
 
         # now copy the config we used into the output_root
-        config_path = config_spec['path']
-        config_copy = os.path.join(output_root, "..", "config.py")
+        config_copy = os.path.join(output_root, "config.py")
 
         with open(config_path,'r') as firstfile, open(config_copy,'w') as secondfile:
 
@@ -419,15 +406,13 @@ def main():
     args = parse_args()
 
     # load these constants from config arg
-    constants_to_import = args.config  # e.g 'scripts/setup/constants_v1.py'
+    constant_file_to_import = args.config  # e.g 'scripts/setup/constants_v1.py'
 
-    if not os.path.exists(constants_to_import):
+    if not os.path.exists(constant_file_to_import):
         raise ValueError(f"Config file path does not exist")
 
     # allow imported data to be accessible via config.variable
-    # global config
-    config = import_from_path(config_module_name, constants_to_import)
-    globals()[config_module_name] = config
+    config = Importer(globals()).import_from_path(constant_file_to_import, auto_config=True)
 
     #print("CONSTANTS = " + str(config))
 
@@ -444,21 +429,24 @@ def main():
     if args.output:
         # use passed in output path
         output_root =  os.path.join(args.output, "sweep-" + datetime.now().strftime('%Y%m%d-%H%M%S'))
-        os.makedirs(output_root, exist_ok=True)
     else:
         # devise output root based on current path
         output_root =  os.path.join(project_path, "results", "sweep-" + datetime.now().strftime('%Y%m%d-%H%M%S'))
-        os.makedirs(output_root, exist_ok=True)
+
 
 
     # set the results path
     results_path = os.path.join(output_root, "matrix_data")
     # and log_dir
     log_dir = os.path.join(output_root, "matrix_logs")
-    
+
     # run a sweep and do logging
-    config_dict = { 'module_name': config_module_name, 'path': constants_to_import }
-    run_sweep_log(config_dict, output_root=results_path, jobs=args.jobs, log_mode=args.log_mode, keep_logs=args.keep_logs, log_dir=log_dir)
+    config_dict = { 'import_path': constant_file_to_import,
+                    'output_root': output_root,
+                    'results_path': results_path,
+                    'log_dir': log_dir }
+    
+    run_sweep_log(config_dict, jobs=args.jobs, log_mode=args.log_mode, keep_logs=args.keep_logs)
 
 
 if __name__ == "__main__":
