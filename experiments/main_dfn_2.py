@@ -128,11 +128,7 @@ def topology_setup():
     network.calculate_forwarding_tables()   
 
     # 8 - dump graphviz file to tmp
-    # with open('/d/tmpfn.gv', mode='w') as file_object:
-    tmp_dir = repo_root / "tmp"
-    tmp_dir.mkdir(exist_ok=True)
-    with open(tmp_dir / "dfn2.gv", "w") as file_object:
-        network.graphviz(file=file_object)
+    network.graphviz_to_file("dfn2.gv", dir="tmp")
 
     # some cross check print outs
     if Verbose.level >= 3:

@@ -1,3 +1,4 @@
+import os
 from Graph import Graph
 from Router import Router
 from Link import BidirectionalLink
@@ -976,6 +977,27 @@ class Network:
             print("  '{}' : {},".format(self.routers[router].id(), portStr ), end="\n")
         print("}")
 
+    # dump the graphviz file to a tmp directory
+    def graphviz_to_file(self,filename, dir="tmp"):
+
+        repo_root = None
+
+        if dir.startswith("/"):
+            # absolute path
+            repo_root = dir
+        else:
+            # relative path
+            repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        gv_file = os.path.join(repo_root, dir, filename)
+
+        os.makedirs(os.path.dirname(gv_file), exist_ok=True)
+    
+        with open(gv_file, "w") as file_object:
+            self.graphviz(file=file_object)
+            
+        
+    # send graphviz output to file stream
     def graphviz(self, file=sys.stdout):
         print("Graph G {", file=file)
         print("  splines=polyline", file=file)

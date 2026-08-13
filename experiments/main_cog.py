@@ -147,14 +147,8 @@ def topology_setup():
     
 
     # 8 - dump graphviz file to tmp
-    # with open('/d/tmpfn.gv', mode='w') as file_object:
-    repo_root = Path(__file__).resolve().parents[1]
-    tmp_dir = repo_root / "tmp"
-    tmp_dir.mkdir(exist_ok=True)
+    network.graphviz_to_file("cog.gv")
 
-    with open(tmp_dir / "cog.gv", "w") as file_object:
-        network.graphviz(file=file_object)
-        
 
     # some cross check print outs
     if Verbose.level >= 3:

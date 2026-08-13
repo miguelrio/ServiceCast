@@ -96,12 +96,9 @@ def topology_setup():
     # now calculate all the forwarding tables
     network.calculate_forwarding_tables()
     
-    repo_root = Path(__file__).resolve().parents[1]
-    tmp_dir = repo_root / "tmp"
-    tmp_dir.mkdir(exist_ok=True)
+    # 8 - dump graphviz file to tmp
+    network.graphviz_to_file("sm_cm.gv", dir="tmp")
 
-    with open(tmp_dir / "sm_cm.gv", "w") as file_object:
-        network.graphviz(file=file_object)
 
     # some test values
     if Verbose.level >= 2:
