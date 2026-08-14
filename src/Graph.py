@@ -342,7 +342,11 @@ class Graph:
             self.node_meta_data[node] = d
         
     # Get meta data
-    def get_node_meta_data(self):
+    def get_node_meta_data(self, node):
+        return self.node_meta_data[node]
+        
+    # Get meta data for all nodes
+    def get_all_node_meta_data(self):
         return self.node_meta_data
         
     # Print the graph
