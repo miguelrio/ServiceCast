@@ -38,10 +38,27 @@ def logarithmic(value, scale, k=9.0):
     return 1 - math.log(1 + k * (value / scale)) / math.log(1 + k)
 
 
-#    Sigmoid -- NOT IMPLEMENTED YET.
-def sigmoid(value, scale):
-    raise NotImplementedError("MetricUtility.sigmoid: not implemented yet")
+#    Sigmoid
+def sigmoid(value, scale, midpoint=0.5, exponent=5):
+    if scale <= 0:
+        raise ValueError("sigmoid: scale must be greater than zero")
+    if not 0 < midpoint < 1:
+        raise ValueError("sigmoid: midpoint must be between 0 and 1")
+    if exponent <= 0:
+        raise ValueError("sigmoid: exponent must be greater than zero")
 
+    fraction = value / scale
+
+    if fraction <= 0:
+        return 1.0
+    if fraction >= 1:
+        return 0.0
+
+    ratio = (
+        fraction * (1 - midpoint)
+        / (midpoint * (1 - fraction))
+    )
+    return 1 / (1 + ratio ** exponent)
 
 class MetricUtility:
     # The following can be reset from the outside
