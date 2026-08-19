@@ -40,6 +40,7 @@ from Graph import Graph
 from Verbose import Verbose
 import sys
 
+from math import radians, sin, cos, sqrt, atan2
 
 
 __all__ = ["read_gml", "parse_gml", "generate_gml", "write_gml"]
@@ -419,6 +420,35 @@ def parse_gml_lines(lines, label, destringizer):
         curr_token = consume(curr_token, Pattern.DICT_END, "']'")
         return curr_token, dct
 
+    # Distance in Km between 2 lat / longs
+    # Uses haversine formula
+    def distance_km(lat1, lon1, lat2, lon2):
+        # Earth's radius in kilometres
+        R = 6371.0
+
+        # Convert degrees to radians
+        lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+
+        # Differences
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        # Haversine formula
+        a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return R * c
+
+    # Does the node look like a GML external node
+    def gml_is_external(data):
+        """Pass in node meta data"""
+        if data == None:
+            return False
+        elif 'Internal' in data and data['Internal'] == 0:
+            return True
+        else:
+            return False
+
     def parse_graph():
         curr_token, dct = parse_kv(next(tokens))
         if curr_token.category is not None:  # EOF
@@ -465,7 +495,7 @@ def parse_gml_lines(lines, label, destringizer):
     for i, node in enumerate(nodes if isinstance(nodes, list) else [nodes]):
         id = pop_attr(node, "node", "id", i)
         if id in G:
-            msg = f"node id {id!r} is duplicated"
+            msg = f"gml error node id {id!r} is duplicated"
             # ORIG
             # raise ValueError(msg)
 
@@ -477,7 +507,7 @@ def parse_gml_lines(lines, label, destringizer):
         if label is not None and label != "id":
             node_label = pop_attr(node, "node", label, i)
             if node_label in node_labels:
-                msg = f"node label {node_label!r} is duplicated"
+                msg = f"gml error node label {node_label!r} is duplicated"
                 # ORIG
                 # raise ValueError(msg)
 
@@ -490,15 +520,27 @@ def parse_gml_lines(lines, label, destringizer):
 
             node_labels.add(node_label)
             mapping[id] = node_label
+
+            # print("Gml add node_label " + node_label
         # ORIG
         #G.add_node(id, **node)
-        if Verbose.level >= 2:
-            print("gml add_node " + node_label)
-        G.add_node(node_label)
 
-        if Verbose.level >= 2:
-            print("gml node meta_data = " + str(node))
-        G.update_node_meta_data(node_label, node)
+        if gml_is_external(node):
+            G.add_node(node_label)
+            # add External: 1 attribute
+            G.update_node_meta_data(node_label, node | {'External' : 1})
+
+            if Verbose.level >= 2:
+                print("gml added node -- Internal: 0 for " + node_label)
+            continue
+        else:
+            if Verbose.level >= 2:
+                print("gml add_node " + node_label)
+            G.add_node(node_label)
+
+            if Verbose.level >= 2:
+                print("gml node meta_data = " + str(node))
+            G.update_node_meta_data(node_label, node)
 
 
     edges = graph.get("edge", [])
@@ -506,15 +548,56 @@ def parse_gml_lines(lines, label, destringizer):
         source = pop_attr(edge, "edge", "source", i)
         target = pop_attr(edge, "edge", "target", i)
 
-        if source not in G:
-            raise ValueError(f"edge #{i} has undefined source {source!r}")
-        if target not in G:
-            raise ValueError(f"edge #{i} has undefined target {target!r}")
+        # added to use lat/long for weight
+        source_name = mapping[source]
+        target_name = mapping[target]
+        
+        # print("gml source = " + str(source_name) + " target = " + str(target_name))
+
+        meta_data = G.get_node_meta_data(source_name)
+        neighbour_meta_data = G.get_node_meta_data(target_name)
+        
+        # print("gml node_meta_data[" + source_name + "] = " + str(meta_data))
+        # print("gml node_meta_data[" + target_name + "] = " + str(neighbour_meta_data))
+
+        weight = Graph.default_propagation_delay
+        
+        if meta_data is None or gml_is_external(meta_data):
+            if Verbose.level >= 2:
+                print("gml error no edge distance -- Internal: 0 for " + source_name)
+
+        elif neighbour_meta_data is None or gml_is_external(neighbour_meta_data):
+            if Verbose.level >= 2:
+                print("gml error no edge distance -- Internal: 0 for " + target_name)
+
+        else: 
+            distance = distance_km(meta_data['Latitude'],
+                                       meta_data['Longitude'],
+                                       neighbour_meta_data['Latitude'],
+                                       neighbour_meta_data['Longitude'])
+
+            # RTT can be approximated by 0.018 ms per km of great circle distance
+            # one way is 0.009 ms per km
+
+            # reassign weight from calculated distance
+            weight = distance * 0.009
+
+
+            if Verbose.level >= 2:
+                print("gml distance " + source_name + " -> " + target_name + " = " + str(distance) + " weight = " + str(weight))
+
+
+
+        if source_name not in G:
+            raise ValueError(f"gml error edge #{i} has undefined source {source_name!r}")
+        if target_name not in G:
+            raise ValueError(f"gml error edge #{i} has undefined target {target_name!r}")
         if not multigraph:
             if not G.contains_edge(source, target):
                 if Verbose.level >= 2:
-                    print("gml add_edge " + str(source) + " " + str(target) + ((" " + str(G.default_propagation_delay)) if G.default_propagation_delay != 1 else ""))
-                G.add_edge(source, target, G.default_propagation_delay)
+                    print("gml add_edge " + str(source_name) + " " + str(target_name) + " " +  str(weight))
+
+                G.add_edge(source, target, weight)
             else:
                 arrow = "->" if directed else "--"
                 msg = f"edge #{i} ({source!r}{arrow}{target!r}) is duplicated"
@@ -528,14 +611,15 @@ def parse_gml_lines(lines, label, destringizer):
             key = edge.pop("key", None)
             if key is not None and G.contains_edge(source, target, key):
                 arrow = "->" if directed else "--"
-                msg = f"edge #{i} ({source!r}{arrow}{target!r}, {key!r})"
+                msg = f"gml error edge #{i} ({source!r}{arrow}{target!r}, {key!r})"
                 msg2 = 'Hint: If multigraph add "multigraph 1" to file header.'
                 raise ValueError(msg + " is duplicated\n" + msg2)
             # ORIG
             # G.add_edge(source, target, key, **edge)
             if Verbose.level >= 2:
-                print("gml add_edge " + str(source) + " " + str(target) + ((" " + str(G.default_propagation_delay)) if G.default_propagation_delay != 1 else ""))
-            G.add_edge(source, target, G.default_propagation_delay)
+                print("gml add_edge " + str(source_name) + " " + str(target_name) + " " + str(weight))
+
+            G.add_edge(source, target, weight)
 
     #if label is not None and label != "id":
     #    G = nx.relabel_nodes(G, mapping)

@@ -67,27 +67,46 @@ class Network:
         self.network_diameter_val = 0
 
 
-        
+    # Convert from a graph to a network
+    #
+    # Options:
+    # use_default_weights=False -- (default) use value of weight from graph
+    # use_default_weights=True  -- use Graph.default_propagation_delay for weight
+    #
+    # drop_external=True  -- (default) drop nodes which are labelled External
+    # drop_external=False -- keep nodes which are labelled External
     @classmethod
-    def from_graph(cls, graph, env):
+    def from_graph(cls, graph, env, use_default_weights=False, drop_external=True):
         """ Create a network from a Graph representation of an adjacency list
         """
 
         # create the Network
         # add a handle to the simpy Environment
         network = Network(env)
+
+        graph_meta_data = graph.get_meta_data()
         
+        # print("G. meta_data = " + str(graph_meta_data), file=sys.stderr)
+
         # first we create the list of Routers
         for i in range(len(graph)):
             # convert number to name
             name = graph.name_of(i)
 
-            # print("name_of " + str(i) + " = " + name)
+            meta_data = graph.get_node_meta_data(name)
             
-            # create a Router
-            router = Router(name, network)
-            # now add it to the routers
-            network.routers[name] = router
+            # print("name_of " + str(i) + " = " + name)
+            # print("G. node_meta_data[" + name + "] = " + str(meta_data), file=sys.stderr)
+
+            if drop_external and graph.node_is_external(meta_data):
+                if Verbose.level >= 2:
+                    print("Network: Not added node -- External for " + name)
+                continue
+            else:
+                # create a Router
+                router = Router(name, network)
+                # now add it to the routers
+                network.routers[name] = router
 
         # now add the links
         for i in range(len(graph)):
@@ -95,25 +114,56 @@ class Network:
             name = graph.name_of(i)
             # get the adjacency list
             nodes = graph.adjacency(i)
-
+            # get meta data
+            meta_data = graph.get_node_meta_data(name)
+            
             # try all nodes at 'name'
-            #print("from_graph: nodes at " + name + " = " + str(nodes))
+            # print("from_graph: nodes at " + name + " = " + str(nodes))
+            # print("E. node_meta_data[" + name + "] = " + str(meta_data), file=sys.stderr)
 
-            for node in nodes:
-                # skip through [ ('b', 1), ('c', 4)]
-                (node_name, weight) = node
-                
-                current = network.routers[name]
-                neighbour_obj = network.routers[node_name]
+            if drop_external and graph.node_is_external(meta_data):
+                if Verbose.level >= 2:
+                    print("Network: Not added in nodes -- External for " + name)
+                continue
 
-                # add the neighbours for current to neighbour_obj
-                # and neighbour_obj to current
-                (status1, link1) = current.add_neighbour(neighbour_obj, weight)
-                (status2, link2) = neighbour_obj.add_neighbour(current, weight)
+            else:
+                for neighbour in nodes:
+                    # skip through [ ('b', 1), ('c', 4)]
+                    (neighbour_name, weight) = neighbour
 
-                # create the BidirectionalLink
-                if status1 == "create" or status2 == "create":
-                    network.links.append(BidirectionalLink(link1, link2))
+                    neighbour_meta_data = graph.get_node_meta_data(neighbour_name)
+
+                    # print("   node_meta_data[" + neighbour_name + "] = " + str(neighbour_meta_data), file=sys.stderr)
+
+                    if drop_external and graph.node_is_external(neighbour_meta_data):
+                        if Verbose.level >= 2:
+                            print("Network: Not added edge -- External for " + neighbour_name)
+                        continue
+
+                    else: 
+                        # setup edge
+                        current = network.routers[name]
+                        neighbour_obj = network.routers[neighbour_name]
+
+                        actual_weight = weight
+
+                        # double check weight
+                        if use_default_weights:
+                            actual_weight = Graph.default_propagation_delay
+                        else:
+                            # check if weight is 0
+                            if weight == 0:
+                                actual_weight = Graph.default_propagation_delay
+
+
+                        # add the neighbours for current to neighbour_obj
+                        # and neighbour_obj to current
+                        (status1, link1) = current.add_neighbour(neighbour_obj, actual_weight)
+                        (status2, link2) = neighbour_obj.add_neighbour(current, actual_weight)
+
+                        # create the BidirectionalLink
+                        if status1 == "create" or status2 == "create":
+                            network.links.append(BidirectionalLink(link1, link2))
 
         return network
             
@@ -125,7 +175,7 @@ class Network:
         graph = read_gml(gml_file)
 
         return Network.from_graph(graph, env)
-    
+
     def start(self, until=1000):
         """Start the Network processing.
         Calls back to the simpy env to start elements"""
@@ -1017,9 +1067,10 @@ class Network:
         # collect router names
         for router in self.routers:
             node = self.node(router)
+
             for neighbour in node.neighbours():
                 if router < neighbour:
-                    print("\"" + router + "\" -- \"" + neighbour + "\";", file=file)
+                    print("\"" + router + "\" -- \"" + neighbour + "\""  + " [label=\"" + str(round(node.weight_edge(neighbour), 3)) + "\"];" , file=file)
 
 
         print("}", file=file)

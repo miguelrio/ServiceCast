@@ -100,6 +100,17 @@ class Graph:
 
         return graph
     
+    # Does the node look like an external node
+    # Has attribute 'External': 1
+    def node_is_external(self, data):
+        """Pass in node meta data"""
+        if data == None:
+            return False
+        elif 'External' in data and data['External'] == 1:
+            return True
+        else:
+            return False
+        
     # Add node
     def add_node(self, s):
         if self.contains_node(s):
@@ -131,16 +142,16 @@ class Graph:
     # Add edges
     def add_edge(self, s, d, weight=1):
         if Verbose.level >= 2:
-            print("graph add_edge " + str(s) + " " + str(d))
+            print("graph add_edge " + str(self.name_of(s)) + " " + str(self.name_of(d)) + " " + str(weight))
 
         if not self.contains_node(s):
             if Verbose.level >= 2:
-                print("graph add_node " + str(s))
+                print("graph add_node " + str(self.name_of(s)))
             self.add_node(s)
 
         if not self.contains_node(d):
             if Verbose.level >= 2:
-                print("graph add_node " + str(d))
+                print("graph add_node " + str(self.name_of(d)))
             self.add_node(d)
 
         if not self.contains_edge(s, d):
@@ -343,7 +354,10 @@ class Graph:
         
     # Get meta data
     def get_node_meta_data(self, node):
-        return self.node_meta_data[node]
+        if node in self.node_meta_data:
+            return self.node_meta_data[node]
+        else:
+            return None
         
     # Get meta data for all nodes
     def get_all_node_meta_data(self):
