@@ -1673,9 +1673,22 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
     def weight_edge(self, dest):
         """What is the weight of the edge from this router to dest"""
-        if (dest.id() in self.outgoing_ports):
-            link =  self.outgoing_ports[dest.id()].out
-            return link.propagation_delay
+        if isinstance(dest, str):
+            # dest is string
+            if (dest in self.outgoing_ports):
+                link =  self.outgoing_ports[dest].out
+                return link.propagation_delay
+            else:
+                return 0
+
+        elif isinstance(dest, Router):
+            # dest is Router
+            if (dest.id() in self.outgoing_ports):
+                link =  self.outgoing_ports[dest.id()].out
+                return link.propagation_delay
+            else:
+                return 0
+
         else:
             return 0
         
