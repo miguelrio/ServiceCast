@@ -17,7 +17,7 @@ import random
 # Use a topology from the DFN gml file
 def topology_setup():
     Verbose.level = 0
-    Verbose.table = 2
+    Verbose.table = 0
 
     # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
     Router.hop_by_hop = False
@@ -76,7 +76,7 @@ def topology_setup():
 
     # 4 - graph -> network
 
-    network = Network.from_graph(graph, env)
+    network = Network.from_graph(graph, env)  # use_default_weights=False,  drop_external=True)
 
     if Verbose.level >= 3:
         print("Network nodes = " + str(network.nodes()))

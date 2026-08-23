@@ -449,6 +449,21 @@ def parse_gml_lines(lines, label, destringizer):
         else:
             return False
 
+    # Does the node look like a GML hyperedge
+    # and have no lat / long
+    def gml_is_hyperedge(data):
+        """Pass in node meta data"""
+        if data == None:
+            return False
+        elif 'hyperedge' in data and data['hyperedge'] == 1:
+            # check if there is a lat / long
+            if 'Latitude' in data and 'Longitude' in data:
+                return false
+            else:
+                return True
+        else:
+            return False
+
     def parse_graph():
         curr_token, dct = parse_kv(next(tokens))
         if curr_token.category is not None:  # EOF
@@ -500,7 +515,7 @@ def parse_gml_lines(lines, label, destringizer):
             # raise ValueError(msg)
 
             # no need to drop out on duplicates
-            if Verbose.level >= 2:
+            if Verbose.level >= 3:
                 print(msg)
             continue
 
@@ -512,7 +527,7 @@ def parse_gml_lines(lines, label, destringizer):
                 # raise ValueError(msg)
 
                 # no need to drop out on duplicates
-                if Verbose.level >= 2:
+                if Verbose.level >= 3:
                     print(msg)
 
                 # create a modified version of the name to avoid duplicates
@@ -538,7 +553,7 @@ def parse_gml_lines(lines, label, destringizer):
                 print("gml add_node " + node_label)
             G.add_node(node_label)
 
-            if Verbose.level >= 2:
+            if Verbose.level >= 3:
                 print("gml node meta_data = " + str(node))
             G.update_node_meta_data(node_label, node)
 
@@ -570,8 +585,11 @@ def parse_gml_lines(lines, label, destringizer):
             if Verbose.level >= 2:
                 print("gml error no edge distance -- Internal: 0 for " + target_name)
 
-        else: 
-            distance = distance_km(meta_data['Latitude'],
+        else:
+            if gml_is_hyperedge(meta_data) or gml_is_hyperedge(neighbour_meta_data):
+                distance = Graph.default_propagation_delay
+            else:
+                distance = distance_km(meta_data['Latitude'],
                                        meta_data['Longitude'],
                                        neighbour_meta_data['Latitude'],
                                        neighbour_meta_data['Longitude'])
@@ -583,7 +601,7 @@ def parse_gml_lines(lines, label, destringizer):
             weight = distance * 0.009
 
 
-            if Verbose.level >= 2:
+            if Verbose.level >= 3:
                 print("gml distance " + source_name + " -> " + target_name + " = " + str(distance) + " weight = " + str(weight))
 
 

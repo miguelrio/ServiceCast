@@ -20,7 +20,7 @@ import random
 # Use a topology from the DFN gml file
 def topology_setup():
     Verbose.level = 2
-    Verbose.table = 2
+    Verbose.table = 0
 
     # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
     Router.hop_by_hop = False

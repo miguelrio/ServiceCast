@@ -531,7 +531,7 @@ class Network:
         latency_table_r = self.dijkstra_to_latency(dijkstra_r)
         self.latency_table.update(latency_table_r)
 
-        if Verbose.level >= 2:
+        if Verbose.level >= 3:
             print("Net: latency_table: " + router + " = " + str(latency_table_r[router]))
 
         return table
@@ -559,27 +559,40 @@ class Network:
         # visit the shortest_path dict and work out which is the
         # directly connected node to send to
         for node, weight in shortest_path.items():
-            if node == router:
-                # found myself - nothing to do
-                pass
-            else:
-                # now find the directly connected node
-                connected = None
-                lookup = node
+            # looks like: 'Name': number
 
-                while True:
-                    # find lookup in previous_nodes
-                    connected = previous_nodes[lookup]
+            # print("router -> (node, weight) = " + str(router) + " -> (" + str(node) + " " + str(weight) + ")")
 
-                    if connected == router:
-                        # next is directly connected to router
-                        break
-                    else:
-                        lookup = connected
-
-                tuple = (node, lookup, weight) 
-
+            if weight == float('inf'):
+                tuple = (node, router, weight)
                 table.append(tuple)
+
+            else:
+                if node == router:
+                    # found myself - nothing to do
+                    pass
+                else:
+                    # now find the directly connected node
+                    connected = None
+                    lookup = node
+
+                    while True:
+                        # find lookup in previous_nodes
+                        if lookup in previous_nodes:
+                            connected = previous_nodes[lookup]
+
+                        else:
+                            if Verbose.level >= 4:
+                                print("dijkstra_to_routing_fn: dropped: " + str(lookup))
+
+                        if connected == router:
+                            # next is directly connected to router
+                            break
+                        else:
+                            lookup = connected
+
+                    tuple = (node, lookup, weight)
+                    table.append(tuple)
 
         return table
 
@@ -621,19 +634,25 @@ class Network:
                 # skip through all nodes until we reach router
                 while True:
                     # find lookup in previous_nodes
-                    connected = previous_nodes[lookup]
+                    if lookup in previous_nodes:
+                        connected = previous_nodes[lookup]
 
-                    # get the link weight of connected to lookup
-                    link_weight = self.weight(connected, lookup)
+                        # get the link weight of connected to lookup
+                        link_weight = self.weight(connected, lookup)
 
-                    path_latency += link_weight
+                        path_latency += link_weight
 
-                    if Verbose.level >= 5:
-                        print("Net: dijkstra_to_latency_fn: link_weight: " + connected + " -> " + lookup + " = " + str(link_weight))
+                        if Verbose.level >= 4:
+                            print("Net: dijkstra_to_latency_fn: link_weight: " + connected + " -> " + lookup + " = " + str(link_weight))
 
+                    else:
+                        connected = None
+                        
                     if connected == router:
                         # next we have reached router
                         # so the path is complete
+                        break
+                    elif connected == None:
                         break
                     else:
                         lookup = connected
