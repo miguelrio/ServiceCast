@@ -24,6 +24,40 @@ The current log syntax is documented in `../doc/Logging.md`. The matrix metrics
 and the distinction between the log and probe collectors are documented in
 `../doc/matrix_metrics_log_mode_explained.md`.
 
+## Scaling Benchmark
+
+Measures how the simulator's cost (runtime, log size, peak memory) and workload
+behaviour (requests served, blocked rate) scale with each configuration knob.
+
+| Script | Purpose |
+| --- | --- |
+| `setup/constants_scaling.py` | Declares the experiment: baseline config, factorial core, one-at-a-time axes, confirmation points, and repeat counts. Pure data, no logic. |
+| `run_scaling_benchmark.py` | Enumerates the matrix from the constants and runs one `measure_one.py` subprocess per cell. Writes `scaling_runtime.csv`, `manifest.json`, and a copy of the config into `results/scaling-<timestamp>/`. |
+| `measure_one.py` | Runs exactly one simulation from a JSON knob set and prints one CSV row as JSON on stdout. Spawned by the runner; can also be called directly. |
+| `placement.py` | Chooses the server and client nodes so that changing either count never moves the other's nodes. Library module used by `measure_one.py`. |
+| `quick_look.py` | Reads only `scaling_runtime.csv` and draws self-describing first-look plots into `<csv_dir>/quick_plots/`. |
+
+Unlike the scripts above, these run from the repository root — the runner
+starts `scripts/measure_one.py` by relative path and sets `PYTHONPATH=src`.
+Use an interpreter with the simulator's dependencies (simpy, tinydb, numpy)
+plus matplotlib, and check the matrix before committing to a full run:
+
+```bash
+python3 scripts/run_scaling_benchmark.py --dry-run
+python3 scripts/run_scaling_benchmark.py
+python3 scripts/quick_look.py -d results/scaling-<timestamp>/scaling_runtime.csv
+```
+
+`--axes` and `--repeats` narrow a run, `--timeout` bounds each cell so one slow
+configuration cannot stall the matrix, and `-c/--config` loads an alternative
+experiment declaration — any module defining the same attributes as
+`setup/constants_scaling.py`. A custom config may vary the matrix (baseline,
+axes, repeats, timeout) but must keep the fixed invariants `SERVICE` and
+`SERVER_LOAD_LAMBDA` at their default values: the benchmark wires exactly one
+service, and the runner refuses a config that changes them. Failed or
+unplaceable cells stay in the CSV with a `status` column rather than being
+dropped.
+
 
 ## Running the scripts
 

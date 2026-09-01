@@ -1,2 +1,10 @@
 *~
 __pycache__/
+
+# --- Generated benchmark artifacts (scaling benchmark) ---------------------
+# The benchmark writes results/scaling-<timestamp>/ (scaling_runtime.csv,
+# manifest.json, config.py) and plots under <csv_dir>/quick_plots/. Ignore the
+# output directories wholesale, plus any flat result files at results/ root.
+results/scaling-*/
+results/scaling_*.csv
+results/scaling_*.png

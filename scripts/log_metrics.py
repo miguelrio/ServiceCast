@@ -21,7 +21,7 @@ Which log lines feed which metric (all emitted at `Verbose.level >= 1`):
   fib_updates                  <- `SERVICE_FIB update_count: N`       (Router.py)  [last N per router, summed]
   records, blocked             <- the three per-request gap lines     (Network.py)
 
-The per-request lines (see Logging.md and GAP_NOTATIONS in Network.py). One request
+The per-request lines (see GAP_NOTATIONS in Network.py). One request
 `[client.pkt]` prints, in order, at the same timestamp:
 
   tag           lvl  SELECTED utility  compared utility        keyword compares
@@ -110,7 +110,7 @@ def _finish_request(parts):
         # read the selection pair from the same live state as the arrival pair.
         return (selected_arr, best_arr, selected_arr, best_arr)
 
-    # Producer drift tripwires (see plan §4): A and C carry the same estimate
+    # Producer drift tripwires: A and C carry the same estimate
     # section, and C's ACTUAL server is the arrival server (SEL_ID == arrival).
     if (a.sel_server, a.sel_utility) != (c.sel_server, c.sel_utility):
         _warn_once("DECISION_GAP/STALENESS_ERR estimate sections differ", f"pkt={b.client}.{b.pkt}")
@@ -137,6 +137,7 @@ class LogMetrics(NamedTuple):
     fib_updates: int        # sum of last SERVICE_FIB update_count per router
     blocked: int            # BLOCKED client requests (excluded from records)
     records: list           # (selected_sel, best_sel, selected_arr, best_arr) per served request
+    per_server_served: dict # server_id -> count of served requests (from OUTCOME_GAP.sel_server)
 
 
 def parse_log_lines(lines: Iterable[str]) -> LogMetrics:
@@ -153,6 +154,7 @@ def parse_log_lines(lines: Iterable[str]) -> LogMetrics:
     blocked = 0
     fib_last = {}          # router id -> last update_count seen
     records = []
+    per_server_served = {} # server_id -> count of served requests
     pending = {}           # (client, pkt) -> {tag: GapLine}, insertion-ordered
 
     def finalize(parts):
@@ -162,6 +164,10 @@ def parse_log_lines(lines: Iterable[str]) -> LogMetrics:
             blocked += 1
         elif outcome is not None:
             records.append(outcome)
+            # track which server handled this served request
+            b = parts.get("OUTCOME_GAP")
+            if b is not None and b.sel_server:
+                per_server_served[b.sel_server] = per_server_served.get(b.sel_server, 0) + 1
 
     _, event_lines = parse_log_header(lines)
     for line in event_lines:
@@ -204,7 +210,7 @@ def parse_log_lines(lines: Iterable[str]) -> LogMetrics:
     return LogMetrics(
         created=created, recv_total=recv_total, recv_announce=recv_announce,
         recv_withdraw=recv_withdraw, fib_updates=sum(fib_last.values()),
-        blocked=blocked, records=records,
+        blocked=blocked, records=records, per_server_served=per_server_served,
     )
 
 
