@@ -59,6 +59,39 @@ unplaceable cells stay in the CSV with a `status` column rather than being
 dropped.
 
 
+## Topology Scaling Probe
+
+Static (no-traffic) scaling measurements on generated Internet-like
+topologies: how the cost of building the network and its forwarding tables
+grows with the number of routers. These run from the repository root with the
+simulator's interpreter (simpy, tinydb) plus numpy/matplotlib/networkx for the
+figures.
+
+| Script | Purpose |
+| --- | --- |
+| `../src/synth.py` | Deterministic topology generator: `n_as` ASes of `routers_per_as` fully-meshed routers, AS ring + random stubs (~5 AS neighbours). Same parameters + seed always regenerate the identical graph; nothing is written to disk. |
+| `probe_static.py` | Runs one build (and optionally the forwarding tables) in a fresh subprocess, verifies structure/tables, and reports per-phase time and peak memory as JSON. `--sweep` re-executes itself per size into a JSONL. `--selftest` proves the generator equals the public `Graph` API. |
+| `plot_probe_l0.py` | Reads `results/probe-l0a.jsonl` and `results/probe-l0b.jsonl` and draws the growth figures (log-log and linear, with an embedded data table). |
+| `plot_topology_explainer.py` | Draws the six-panel topology-explainer figure (no measurement data needed). |
+| `show_topology.py` | Regenerates any probe topology from its parameters, prints structure stats (degrees, hop distances), and renders small ones. |
+
+A full run reproducing the five figures on your machine:
+
+```bash
+python3 scripts/probe_static.py --sweep 250,500,1000,2000,4000,8000,16000,32000,64000,128000,256000,400000 --timeout 900 -o results/probe-l0a.jsonl   # ~3 min
+python3 scripts/probe_static.py --sweep 250,500,1000,2000,4000,8000 --with-tables --timeout 1500 -o results/probe-l0b.jsonl                          # ~50 min (8K point stops at the 25-min limit by design)
+python3 scripts/plot_probe_l0.py
+python3 scripts/plot_topology_explainer.py
+python3 scripts/show_topology.py --n-routers 100 --render
+```
+
+Times and memory in the two growth figures are properties of the machine you
+run on (the footer records it); the topology-derived values (structure checks,
+hop distances) are identical everywhere for the same seed. The memory guard
+defaults to 80% of the local RAM (capped at 20 GB) and the per-point timeout
+bounds each sweep cell; runs that exceed either stay in the JSONL with a
+`censored:`/`error:` status rather than being dropped.
+
 ## Running the scripts
 
 ### Running a sweep
