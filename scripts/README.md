@@ -70,20 +70,34 @@ figures.
 | Script | Purpose |
 | --- | --- |
 | `../src/synth.py` | Deterministic topology generator: `n_as` ASes of `routers_per_as` fully-meshed routers, AS ring + random stubs (~5 AS neighbours). Same parameters + seed always regenerate the identical graph; nothing is written to disk. |
-| `probe_static.py` | Runs one build (and optionally the forwarding tables) in a fresh subprocess, verifies structure/tables, and reports per-phase time and peak memory as JSON. `--sweep` re-executes itself per size into a JSONL. `--selftest` proves the generator equals the public `Graph` API. |
-| `plot_probe_l0.py` | Reads `results/probe-l0a.jsonl` and `results/probe-l0b.jsonl` and draws the growth figures (log-log and linear, with an embedded data table). |
+| `probe_static.py` | Runs one build (and optionally the forwarding tables) in a fresh subprocess, verifies structure/tables, and reports per-phase time and peak memory as JSON. `--sweep` re-executes itself per size into a JSONL. `--selftest` proves the generator equals the public `Graph` API. `--dijkstra {old,python}` selects the Dijkstra engine (see `../src/dijkstra_fast.py`) and is passed through sweeps and recorded in every row. |
+| `plot_probe_static.py` | Reads `results/probe-static-build.jsonl` and `results/probe-static-tables.jsonl` and draws the growth figures (log-log and linear, with an embedded data table). `--version old|python --build ... --tables ...` renders the same pair for one engine into `probe-static-plots-{mode}--{version}.png`; `--compare` renders both engines side by side into `probe-static-compare-{mode}.png`. |
 | `plot_topology_explainer.py` | Draws the six-panel topology-explainer figure (no measurement data needed). |
 | `show_topology.py` | Regenerates any probe topology from its parameters, prints structure stats (degrees, hop distances), and renders small ones. |
 
 A full run reproducing the five figures on your machine:
 
 ```bash
-python3 scripts/probe_static.py --sweep 250,500,1000,2000,4000,8000,16000,32000,64000,128000,256000,400000 --timeout 900 -o results/probe-l0a.jsonl   # ~3 min
-python3 scripts/probe_static.py --sweep 250,500,1000,2000,4000,8000 --with-tables --timeout 1500 -o results/probe-l0b.jsonl                          # ~50 min (8K point stops at the 25-min limit by design)
-python3 scripts/plot_probe_l0.py
+python3 scripts/probe_static.py --sweep 250,500,1000,2000,4000,8000,16000,32000,64000,128000,256000,400000 --timeout 900 -o results/probe-static-build.jsonl   # ~3 min
+python3 scripts/probe_static.py --sweep 250,500,1000,2000,4000,8000 --with-tables --timeout 3600 --dijkstra python -o results/probe-static-tables.jsonl    # ~15 min; the python engine's 8K-router tables take a few minutes
+python3 scripts/plot_probe_static.py
 python3 scripts/plot_topology_explainer.py
 python3 scripts/show_topology.py --n-routers 100 --render
 ```
+
+## Dijkstra engines
+
+`Graph.dijkstra_algorithm` dispatches on `Graph.dijkstra_backend` (or the
+`SC_DIJKSTRA` env var): `"old"` is the original min-scan (default, unchanged
+behaviour), `"python"` is a binary-heap engine from `../src/dijkstra_fast.py`.
+Both settle equal distances in the same order, so routing tables come out
+identical.
+
+Together with computing the network diameter once per build
+(`Network.calculate_forwarding_tables`, replacing a full re-scan after every
+router), the 4,000-router forwarding-table build drops from ~30 minutes to
+under a minute (MacBook M4 Pro); the growth rate drops from ~7x to ~4x per
+doubling of routers.
 
 Times and memory in the two growth figures are properties of the machine you
 run on (the footer records it); the topology-derived values (structure checks,

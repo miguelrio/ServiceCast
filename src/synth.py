@@ -1,4 +1,4 @@
-"""Minimal seeded synthetic topology generator for the L0 scaling probe.
+"""Minimal seeded synthetic topology generator for the scaling probe.
 
 Structure (identical family at every size, so fitted slopes reflect size):
   * n_as autonomous systems, each a clique of `routers_per_as` routers

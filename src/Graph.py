@@ -1,3 +1,5 @@
+import os
+
 from Verbose import Verbose
 
 # A Graph
@@ -388,7 +390,16 @@ class Graph:
 
     # simple Dijkstra algorithm - adapted
     # from https://www.udacity.com/blog/2021/10/implementing-dijkstras-algorithm-in-python.html
-    
+    #
+    # A faster drop-in engine lives behind this method. Set
+    # Graph.dijkstra_backend (or the SC_DIJKSTRA env var) to one of:
+    #   "old"     the original min-scan implementation below -- the default,
+    #             byte-for-byte unchanged behaviour
+    #   "python"  pure-Python binary-heap version    (src/dijkstra_fast.py)
+    # Both engines return the same dicts with the same tie-breaks, so routing
+    # tables come out identical either way.
+    dijkstra_backend = os.environ.get("SC_DIJKSTRA", "old")
+
     @classmethod
     def dijkstra_algorithm(cls, graph, start_node, use_weights=False):
         """Dijkstra algorithm which returns 3 values:
@@ -396,7 +407,15 @@ class Graph:
         the 'previous_nodes' for other nodes. An example:
         {'source': 'a', 'shortest_path': {'a': 0, 'b': 1, 'c': 4,
         'd': 3, 'e': 3}, 'previous_nodes': {'b': 'a', 'c': 'a', 'd': 'b', 'e': 'b'}}"""
-        
+
+        backend = Graph.dijkstra_backend
+        if backend == "python":
+            import dijkstra_fast
+            return dijkstra_fast.dijkstra(graph, start_node, use_weights)
+        if backend != "old":
+            raise ValueError(
+                "dijkstra_backend must be 'old' or 'python', got %r" % (backend,))
+
         unvisited_nodes = list(graph.nodes())
 
         # We'll use this dict to save the cost of visiting each node and update it as we move along the graph   

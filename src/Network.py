@@ -487,7 +487,7 @@ class Network:
     # calculate the forwarding table for every node
     def calculate_forwarding_tables(self):
         """Calculate the forwarding tables for all nodes"""
-        for node in self.nodes():            
+        for node in self.nodes():
             # calculate the forwarding table for node
             table = self.forwarding_table(node)
             # tell the node its unicast_forwarding_table
@@ -496,6 +496,14 @@ class Network:
         # the diameter is the delay at which a replica is at its worst.
         # Set here, after an experiment's topology_setup() assignments, because
         # the diameter is the Network's to know, not an experiment's.
+        #
+        # The diameter only depends on the finished latency_table, so it is
+        # computed ONCE here instead of after every router's table (which
+        # re-scanned the whole table built so far, N times in total).
+        # The final value is identical.
+        self.network_diameter_val = self.network_diameter_fn()
+        if Verbose.level >= 3:
+            print("Net: network_diameter = " + str(self.network_diameter_val))
         MetricUtility.metric_scale['delay'] = self.network_diameter()
 
 
@@ -659,15 +667,9 @@ class Network:
 
                 if Verbose.level >= 4:
                     print("Net: dijkstra_to_latency_fn: latency " + router + " --> " + node + " = " + str(path_latency))
-                    
+
                 latency_table[router][node] = path_latency
 
-        # before we return, calculate the network diameter
-        # it uses the latency_table values
-        self.network_diameter_val = self.network_diameter_fn()
-        if Verbose.level >= 3:
-            print("Net: network_diameter = " + str(self.network_diameter_val))
-        
         return latency_table
 
 

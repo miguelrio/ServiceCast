@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""L0 probe: static (no-traffic) cost of building a ServiceCast network.
+"""Static scaling probe: the no-traffic cost of building a ServiceCast
+network, and with --with-tables its forwarding tables.
 
 Phases (each timed; rss_mb_hwm is the cumulative ru_maxrss high-water mark):
   gen         synth.generate -> Graph          (or --gml Name -> read_gml)
@@ -27,6 +28,11 @@ RSS isolation, per-point --timeout), appending JSONL rows to -o. Costs are
 monotone in N, so after --max-censor-stops (default 2) consecutive
 censored:timeout/memguard/killed points the sweep stops extending and only
 reports the remaining points in the summary.
+
+--dijkstra {old,python} selects the Dijkstra engine used to build the
+forwarding tables (see src/dijkstra_fast.py); "old" is the original
+min-scan. Sweeps pass the choice through to every child point and record
+it in each JSONL row.
 """
 
 import os
@@ -263,6 +269,7 @@ def selftest():
 # --- one probe run -------------------------------------------------------------
 
 def run_probe(args):
+    Graph.dijkstra_backend = args.dijkstra
     row = {
         "commit": current_git_commit(),
         "python": sys.version.split()[0],
@@ -271,6 +278,7 @@ def run_probe(args):
         "as_degree": args.as_degree,
         "seed": args.seed,
         "mem_guard_gb": args.mem_guard_gb,
+        "dijkstra": args.dijkstra,
         "status": "ok",
     }
     STATE["row"] = row
@@ -340,7 +348,9 @@ def run_probe(args):
 # --- sweep ---------------------------------------------------------------------
 
 def run_sweep(args, points):
-    tag = "l0b" if args.with_tables else "l0a"
+    tag = "static-tables" if args.with_tables else "static-build"
+    if args.dijkstra != "old":
+        tag += f"-{args.dijkstra}"
     out_path = args.output or os.path.join(
         PROJECT, "results", f"probe-{tag}-{time.strftime('%Y%m%d-%H%M%S')}.jsonl")
     censors = 0
@@ -352,7 +362,8 @@ def run_sweep(args, points):
                    "--as-degree", str(args.as_degree),
                    "--seed", str(args.seed),
                    "--mem-guard-gb", str(args.mem_guard_gb),
-                   "--verify-max", str(args.verify_max)]
+                   "--verify-max", str(args.verify_max),
+                   "--dijkstra", args.dijkstra]
             if args.with_tables:
                 cmd.append("--with-tables")
             t0 = time.perf_counter()
@@ -410,6 +421,10 @@ def parse_args():
     p.add_argument("--timeout", type=float, default=1200.0,
                    help="per-point subprocess timeout in sweep mode")
     p.add_argument("--max-censor-stops", type=int, default=2)
+    p.add_argument("--dijkstra", default=os.environ.get("SC_DIJKSTRA", "old"),
+                   choices=["old", "python"],
+                   help="Dijkstra engine for --with-tables (default: old, "
+                        "the original min-scan; see src/dijkstra_fast.py)")
     p.add_argument("--output", "-o", default=None, help="JSONL path (sweep)")
     p.add_argument("--selftest", action="store_true")
     return p.parse_args()
