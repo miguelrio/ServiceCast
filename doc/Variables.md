@@ -158,8 +158,22 @@ A Router internal *better than* function, to determine if the metric arg2 is bet
 There is one per metric name.
 
 ```
-Router.better_than_fn['load'] = staticmethod(lambda x, y: x < y)
+Router.better_than_fn_load = lambda x, y: x < y  
 ```
+
+##### Same As function
+
+A Router internal *same as* function, to determine if the metric arg2
+is the same as metric arg1.   The current implementation uses: ```==```.
+There is one per metric name.
+
+```
+Router.same_as_fn_load = lambda x, y: abs(x - y) < 0.05
+```
+
+This implementation says that if the difference between the two
+metrics is less than 0.05, they are essentially the same.
+This means that one is not *better than* the other.
 
 ##### Remove FIB Entry if all Replicas Have Zero Utility
 

@@ -14,7 +14,7 @@ from MetricUtility import MetricUtility, check_in_range
 
 
 # Step 3 -- a user utility function: metric utilities -> the utility for the user
-def user_utility1(alpha, metric_utility):
+def user_utility_default(alpha, metric_utility):
     """The weighted mean of the load and delay metric utilities"""
     return alpha * metric_utility['load'] + (1 - alpha) * metric_utility['delay']
 
@@ -24,7 +24,7 @@ class Utility:
     # to change the behaviour of the algorithms
 
     # combine the metric utilities into the utility for the user
-    user_utility_fn = staticmethod(user_utility1)
+    user_utility_fn = staticmethod(user_utility_default)
 
 
     # The following variables can be reassigned from the outside

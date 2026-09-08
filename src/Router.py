@@ -50,31 +50,23 @@ class Router(object):
     # Remove FIB if all replicas in the RIB have utility of zero 
     remove_fib_entry_when_all_utilities_zero = True
 
-    # metric is better range
-    # a way to accept one metric being the Same as another metric
-    # if the difference between the values is < range
-    metric_is_better_range = 0
-
     # The following staticmethods can be reset from the outside
     # to change the behaviour of the algorithms
 
     # default better than fn
     
-    # dict of better than fns
-    better_than_fn = {}
     # the default better for load is less_than
-    better_than_fn['load'] = staticmethod(less_than)
+    better_than_fn_load = staticmethod(less_than)
     # the default better for delay is less_than
-    better_than_fn['delay'] = staticmethod(less_than)
+    better_than_fn_delay = staticmethod(less_than)
 
-    # dict of same as fns
-    same_as_fn = {}
+    # default same as fn
+
     # the default same as for load is less_than
-    same_as_fn['load'] = staticmethod(same_as)
+    same_as_fn_load = staticmethod(same_as)
     # the default same as for delay is less_than
-    same_as_fn['delay'] = staticmethod(same_as)
+    same_as_fn_delay = staticmethod(same_as)
 
-    # better_than_fn = staticmethod(less_than)
 
 
 
@@ -146,15 +138,15 @@ class Router(object):
             # specify the metric functions for 'load'
             # currently get them from the class variables
             { 'name': 'load',
-              'same': Router.same_as_fn['load'],
-              'better': Router.better_than_fn['load']
+              'same': Router.same_as_fn_load,
+              'better': Router.better_than_fn_load
 
              },
             # specify the metric functions for 'delay'
             # currently get them from the class variables
             { 'name': 'delay',
-              'same': Router.same_as_fn['delay'],
-              'better': Router.better_than_fn['delay']
+              'same': Router.same_as_fn_delay,
+              'better': Router.better_than_fn_delay
              }
         ]
     
@@ -961,6 +953,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
     # is the metric arg2 is better than arg1
     def metric_is_better(self, arg1, arg2, same_fn, better_fn):
+        print("metric_is_better arg1 = " + str(arg1) + " arg2 = " + str(arg2) +
+              " same = " + str(same_fn(arg1, arg2)) +
+              " better = " + str(better_fn(arg2, arg1)))
+
         if same_fn(arg1, arg2):
             # arg2 is same as arg1
             return Compare.Same

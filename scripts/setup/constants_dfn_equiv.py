@@ -27,7 +27,7 @@ GML_FILE = "topologies/gml/Dfn.gml"     # The topology file of the network to us
 
 ALPHA = 0.50                  # Utility load/delay weighting
 
-VERBOSE_LEVEL = 0             # minimum level that emits every needed line
+VERBOSE_LEVEL = 1             # minimum level that emits every needed line
                               # (DECISION_GAP/STALENESS_ERR and SERVICE_FIB all need >= 1)
 
 ROUTER_HOP_BY_HOP = False     # Do routers to hop_by_hop forwarding
@@ -35,12 +35,15 @@ ROUTER_HOP_BY_HOP = False     # Do routers to hop_by_hop forwarding
 SERVER_SLOTS = 50             # server capacity
 
 
-GRAPH_DELAY = 1               # Value for Graph.default_propagation_delay
+GRAPH_DELAY = 0.1               # Value for Graph.default_propagation_delay
 
-SERVER_CF = 0.01
-ROUTER_FIB_UPT = 0.001
+SERVER_CF = 0.0                 # Server change factor damping
+ROUTER_FIB_UPT = 0.0            # Router FIB change factor damping
                               
 
 # --- END of constants -------------------------------------------------
 
-UTILITY_USER_UTILITY_FN = staticmethod(lambda alpha, metric_utility: round(metric_utility['load'] ** alpha * metric_utility['delay'] ** (1 - alpha), 4))
+# Lambdas
+
+# Router equivalence
+ROUTER_SAME_AS_FN_LOAD = lambda x, y: abs(x - y) < 0.05

@@ -18,7 +18,13 @@ mappings = [    ("Utility.alpha", "ALPHA"),
                 ("Router.hop_by_hop", "ROUTER_HOP_BY_HOP"),
                 ("Router.fib_utility_update_threshold", "ROUTER_FIB_UPT"),
                 ("Server.slots", "SERVER_SLOTS"),
-                ("Server.change_factor", "SERVER_CF")
+                ("Server.change_factor", "SERVER_CF"),
+                # lambdas
+                ("Router.better_than_fn_load", "ROUTER_BETTER_THAN_FN_LOAD"),
+                ("Router.better_than_fn_delay", "ROUTER_BETTER_THAN_FN_DELAY"),
+                ("Router.same_as_fn_load", "ROUTER_SAME_AS_FN_LOAD"),
+                ("Router.same_as_fn_delay", "ROUTER_SAME_AS_FN_DELAY"),
+                ("Utility.user_utility_fn", "UTILITY_USER_UTILITY_FN")
             ]
 
 # Import some values from a .py file
