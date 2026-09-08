@@ -17,6 +17,53 @@ class Graph:
         self.meta_data = {}             # a dict of meta data
         self.node_meta_data = {}        # a dict of meta data for each node
 
+        self._index = {}                # name -> position in labels
+        self._index_len = 0             # len(labels) when _index was built
+
+    # ------------------------------------------------------------------
+    # Label index.
+    #
+    # The old code called self.labels.index(name) everywhere, which is a
+    # linear scan.  These methods keep a dict alongside labels so the same
+    # lookup is O(1).  The index is rebuilt lazily if anything appends to
+    # self.labels without going through here (e.g. a direct-construction
+    # loader), so it can never go stale.
+    # ------------------------------------------------------------------
+
+    def _rebuild_index(self):
+        index = {}
+        for i, label in enumerate(self.labels):
+            # first occurrence wins, matching list.index()
+            if label not in index:
+                index[label] = i
+        self._index = index
+        self._index_len = len(self.labels)
+
+    def index_of(self, val):
+        """Position of val in labels.  val may already be an int."""
+        if type(val) == int:
+            return val
+
+        if self._index_len != len(self.labels):
+            self._rebuild_index()
+
+        try:
+            return self._index[val]
+        except KeyError:
+            # match the ValueError that labels.index() used to raise
+            raise ValueError("{!r} is not in graph".format(val))
+
+    # register a new label, keeping the index in step
+    def _add_label(self, name):
+        if self._index_len != len(self.labels):
+            self._rebuild_index()
+
+        if name not in self._index:
+            self._index[name] = len(self.labels)
+
+        self.labels.append(name)
+        self._index_len = len(self.labels)
+
     # index into graph by index or node name
     # returns a name
     def __getitem__(self, val):
@@ -45,7 +92,7 @@ class Graph:
         # and create a list of node names
         for node in neighbours.keys():
             # and create entries in labels
-            graph.labels.append(node)
+            graph._add_label(node)
             
         # print ("labels: {}\n".format(graph.labels))
         
@@ -53,7 +100,7 @@ class Graph:
         for node in neighbours.keys():
 
             # get index of node
-            index = graph.labels.index(node)
+            index = graph.index_of(node)
             # print ("index {} = {}\n".format( node, index))
             
             # get the next links  {'b', 'c'}
@@ -77,7 +124,7 @@ class Graph:
 
 
                 # get index of next
-                nextIndex = graph.labels.index(name)
+                nextIndex = graph.index_of(name)
                 # print ("nextIndex {} = {}\n".format(next, nextIndex))
 
                 # add the edge, if it doesn't exist
@@ -120,7 +167,7 @@ class Graph:
             pass
         else:
             self.V += 1
-            self.labels.append(s)
+            self._add_label(s)
             self.graph.append(None)
 
     # Contains node
@@ -128,9 +175,12 @@ class Graph:
         # s can be int or value
         if type(val) == int:
             # it's an int -- check size
-            return val < self.V
-        else:
-            return val in self.labels
+            return 0 <= val < self.V
+
+        if self._index_len != len(self.labels):
+            self._rebuild_index()
+
+        return val in self._index
 
         # if type(s) == int:
         #     s = self.labels[s]
@@ -156,24 +206,16 @@ class Graph:
                 print("graph add_node " + str(self.name_of(d)))
             self.add_node(d)
 
+        # resolve both ends once
+        s = self.index_of(s)
+        d = self.index_of(d)
+
         if not self.contains_edge(s, d):
-            node = AdjNode(d,weight)
-            if type(s) == int:
-                pass
-            else:
-                # label to number
-                s = self.labels.index(s)
-                
+            node = AdjNode(d, weight)
             node.next = self.graph[s]
             self.graph[s] = node
 
-            node = AdjNode(s,weight)
-            # d can be int or value
-            if type(d) == int:
-                pass
-            else:
-                # label to number
-                d = self.labels.index(d)
+            node = AdjNode(s, weight)
             node.next = self.graph[d]
             self.graph[d] = node
             
@@ -184,20 +226,9 @@ class Graph:
     
     # Contains an edge
     def contains_edge(self, s, d):
-        # s can be int or value
-        if type(s) == int:
-            pass
-        else:
-            # label to number
-            s = self.labels.index(s)
-        
-        # d can be int or value
-        if type(d) == int:
-            pass
-        else:
-            # label to number
-            d = self.labels.index(d)
-        
+        s = self.index_of(s)
+        d = self.index_of(d)
+
         # get head of the adjacency
         node = self.graph[s]
 
@@ -212,20 +243,11 @@ class Graph:
     # Get an edge
     def edge(self, s, d):
         """Returns a 3-tuple (src, dst, weight)  or None"""
-        # s can be int or value
-        if type(s) == int:
-            pass
-        else:
-            s = self.labels.index(s)
-        
-        # d can be int or value
-        if type(d) == int:
-            pass
-        else:
-            d = self.labels.index(d)
-        
+        s = self.index_of(s)
+        d = self.index_of(d)
+
         # get head of the adjacency
-        node = self.node(s)
+        node = self.graph[s]
         head = node
 
         # Skip through all the nodes
@@ -238,33 +260,29 @@ class Graph:
 
     # get a list of edges
     def edges(self):
-        nodes = self.labels
-
         edges = []
+        seen = set()            # was a list membership test -- that made this O(E^2)
 
-        for label in nodes:
+        for index, label in enumerate(self.labels):
             # get head of the adjacency
-            node = self.node(label)
-
+            node = self.graph[index] if index < len(self.graph) else None
 
             # Skip through all the nodes
-            if node != None:   # None means no edges
-                while True:
-                    weight = node.weight
-                    dst = self.name_of(node.vertex)
+            while node != None:
+                dst_index = node.vertex
+                weight = node.weight
 
-                    if  (label, dst, weight) in edges:
-                        pass
-                    elif (dst, label, weight) in edges:
-                        pass
-                    else:
-                        edges.append( (label, dst, weight) )
+                # normalise so a-b and b-a collapse to one entry
+                if index <= dst_index:
+                    key = (index, dst_index, weight)
+                else:
+                    key = (dst_index, index, weight)
 
-                    # end
-                    if (node.next == None):
-                        break
-                    else:
-                        node = node.next            
+                if key not in seen:
+                    seen.add(key)
+                    edges.append((label, self.name_of(dst_index), weight))
+
+                node = node.next
 
         return edges
         
@@ -277,19 +295,11 @@ class Graph:
     def node(self, val):
         """Get the node represented by val.
            Can be an int or a name"""
-        if type(val) == int:
-            node = self.graph[val]
-            return node
-        else:
-            index = self.labels.index(val)
-            node = self.graph[index]
-            return node
+        return self.graph[self.index_of(val)]
 
     # Label for node
     def name_of(self, i):
-        if type(i) == str:
-            i = self.labels.index(i)
-            
+        i = self.index_of(i)
 
         if len(self.labels) > i:
             # we have a list of labels
@@ -300,19 +310,19 @@ class Graph:
 
     # adjacency at val
     def adjacency(self, val):
-        if type(val) == int:
-            node = self.graph[val]
-            if node == None:
-                return []
-            else:
-                return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
-        else:
-            index = self.labels.index(val)
-            node = self.graph[index]
-            if node == None:
-                return []
-            else:
-                return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
+        node = self.graph[self.index_of(val)]
+
+        if node == None:
+            return []
+
+        labels = self.labels
+        result = []
+
+        while node != None:
+            result.append((labels[node.vertex], node.weight))
+            node = node.next
+
+        return result
 
     # neighbours of s
     def neighbours(self, s):
@@ -478,6 +488,8 @@ class Graph:
 
 # Adjacency nodes are linked together
 class AdjNode:
+    __slots__ = ('vertex', 'next', 'weight')
+
     def __init__(self, value, weight=1):
         self.vertex = value     # the value of this node
         self.next = None        # a link to the next node
@@ -495,6 +507,10 @@ class AdjNode:
         
 
     def __str__(self):
-        return "AdjNode value: " + str(self.vertex) + " weight: " + str(self.weight) + " next: (" + "None" if self.next == None else str(self.next.vertex) + ")"
+        # the original was missing brackets around the conditional, so it
+        # returned just "None" whenever next was None
+        return ("AdjNode value: " + str(self.vertex) +
+                " weight: " + str(self.weight) +
+                " next: (" + ("None" if self.next == None else str(self.next.vertex)) + ")")
 
 
