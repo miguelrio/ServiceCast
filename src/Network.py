@@ -50,6 +50,9 @@ class Network:
         self.env = env            # an Environment
         self.latency_table = {}
 
+        # dropped nodes
+        self.dropped = []
+
         # aggregate of replica capacity
         # gives a total view over the network
         # replica name -> dict of values like replica_capacity_total 
@@ -101,6 +104,8 @@ class Network:
             if drop_external and graph.node_is_external(meta_data):
                 if Verbose.level >= 2:
                     print("Network: Not added node -- External for " + name)
+
+                network.dropped.append(name)
                 continue
             else:
                 # create a Router
@@ -165,6 +170,9 @@ class Network:
                         if status1 == "create" or status2 == "create":
                             network.links.append(BidirectionalLink(link1, link2))
 
+        if Verbose.level >= 3:
+            print("dropped = " + str(network.dropped))
+        
         return network
             
     # Build a graph from a GML file
@@ -350,7 +358,7 @@ class Network:
         (status1, link1) = r1.add_neighbour(r2, weight)
         (status2, link2) = r2.add_neighbour(r1, weight)
 
-
+        
         # create the BidirectionalLink
         if status1 == "create" or status2 == "create":
             edge = BidirectionalLink(link1, link2)
@@ -484,6 +492,10 @@ class Network:
             
         return list(filter(lambda l: name in l.links(), self.links))
 
+    # Get dijkstra values from a node
+    def dijkstra_algorithm(self, router):
+        return Graph.dijkstra_algorithm(self, router)
+
     # calculate the forwarding table for every node
     def calculate_forwarding_tables(self):
         """Calculate the forwarding tables for all nodes"""
@@ -497,7 +509,6 @@ class Network:
         # Set here, after an experiment's topology_setup() assignments, because
         # the diameter is the Network's to know, not an experiment's.
         MetricUtility.metric_scale['delay'] = self.network_diameter()
-
 
     # calculate a forwarding table for a router r
     # each entry is (destination, next_hop, weight)
@@ -518,6 +529,7 @@ class Network:
         # this returns a dict of 3 values
         # the 'source' node, the 'shortest_path' to other nodes,
         # the 'previous_nodes' for other nodes. 
+
         dijkstra_r = Graph.dijkstra_algorithm(self, router)
 
         # we combine shortest_path and previous_nodes to
@@ -529,6 +541,9 @@ class Network:
         # convert shortest_path and previous_nodes dicts into 
         # a list of path latencies
         latency_table_r = self.dijkstra_to_latency(dijkstra_r)
+
+        print("latency_table for " + str(router) + " = " + str(latency_table_r))
+        
         self.latency_table.update(latency_table_r)
 
         if Verbose.level >= 3:
@@ -637,13 +652,18 @@ class Network:
                     if lookup in previous_nodes:
                         connected = previous_nodes[lookup]
 
-                        # get the link weight of connected to lookup
-                        link_weight = self.weight(connected, lookup)
+                        # print("connected = " + str(lookup) + " -> " + str(connected))
+                        
+                        if (lookup in self.dropped):
+                            print("skip " + str(lookup))
+                        else:
+                            # get the link weight of connected to lookup
+                            link_weight = self.weight(connected, lookup)
 
-                        path_latency += link_weight
+                            path_latency += link_weight
 
-                        if Verbose.level >= 4:
-                            print("Net: dijkstra_to_latency_fn: link_weight: " + connected + " -> " + lookup + " = " + str(link_weight))
+                            if Verbose.level >= 4:
+                                print("Net: dijkstra_to_latency_fn: link_weight: " + lookup + " -> " + connected + " = " + str(link_weight))
 
                     else:
                         connected = None

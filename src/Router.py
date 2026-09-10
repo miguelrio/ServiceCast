@@ -953,10 +953,6 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
     # is the metric arg2 is better than arg1
     def metric_is_better(self, arg1, arg2, same_fn, better_fn):
-        print("metric_is_better arg1 = " + str(arg1) + " arg2 = " + str(arg2) +
-              " same = " + str(same_fn(arg1, arg2)) +
-              " better = " + str(better_fn(arg2, arg1)))
-
         if same_fn(arg1, arg2):
             # arg2 is same as arg1
             return Compare.Same
