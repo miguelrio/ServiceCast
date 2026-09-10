@@ -587,18 +587,28 @@ def parse_gml_lines(lines, label, destringizer):
 
         else:
             if gml_is_hyperedge(meta_data) or gml_is_hyperedge(neighbour_meta_data):
+                # don't use hyperedges
                 distance = Graph.default_propagation_delay
             else:
-                distance = distance_km(meta_data['Latitude'],
-                                       meta_data['Longitude'],
-                                       neighbour_meta_data['Latitude'],
-                                       neighbour_meta_data['Longitude'])
+                # a normal edge
 
-            # RTT can be approximated by 0.018 ms per km of great circle distance
-            # one way is 0.009 ms per km
+                # check delayMs attribute
+                # this is output by Miguel's topology tool
+                if (edge['delayMs']):
+                    # found delayMs
+                    weight = float(edge['delayMs'])
+                else:
+                    # use latitude / longitude
+                    distance = distance_km(meta_data['Latitude'],
+                                           meta_data['Longitude'],
+                                           neighbour_meta_data['Latitude'],
+                                           neighbour_meta_data['Longitude'])
 
-            # reassign weight from calculated distance
-            weight = distance * 0.009
+                    # RTT can be approximated by 0.018 ms per km of great circle distance
+                    # one way is 0.009 ms per km
+
+                    # reassign weight from calculated distance
+                    weight = distance * 0.009
 
 
             if Verbose.level >= 3:

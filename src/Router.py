@@ -214,7 +214,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # no need to add a link
 
             if Verbose.level >= 2:
-                print("LinkEnd Exists "  + str(self.id()) + " --> " + str(neighbour) + " Cancel " +  str(self.id()) + " --> " + str(neighbour) )
+                print("LinkEnd Exists "  + str(self.id()) + " --> " + str(neighbour) + " No Duplicate " +  str(self.id()) + " --> " + str(neighbour) )
 
             return ("exists", self.outgoing_ports[neighbour_obj.id()])
 

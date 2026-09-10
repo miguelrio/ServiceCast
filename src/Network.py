@@ -47,6 +47,8 @@ class Network:
         """
         self.routers = OrderedDict()         # a dictionary of routers
         self.links = []           # a list of links
+        self.servers = OrderedDict()         # a dictionary of servers
+        self.clients = OrderedDict()         # a dictionary of clients
         self.env = env            # an Environment
         self.latency_table = {}
 
@@ -108,10 +110,33 @@ class Network:
                 network.dropped.append(name)
                 continue
             else:
-                # create a Router
-                router = Router(name, network)
-                # now add it to the routers
-                network.routers[name] = router
+                # check type attribute
+                # this is output by Miguel's topology tool
+                if meta_data['type'] == 'router':
+                    # create a Router
+                    router = Router(name, network)
+                    # now add it to the routers
+                    network.routers[name] = router
+                elif meta_data['type'] == 'server':
+                    # create a Server
+                    server = Server(name, network)
+                    # now add it to the routers
+                    network.routers[name] = server
+                    # now add it to the servers
+                    network.servers[name] = server
+                elif meta_data['type'] == 'client':
+                    # create a Client
+                    client = Client(name, network)
+                    # now add it to the routers
+                    network.routers[name] = client
+                    # now add it to the clients
+                    network.clients[name] = client
+                else:
+                    # default - add a Router
+                    # create a Router
+                    router = Router(name, network)
+                    # now add it to the routers
+                    network.routers[name] = router
 
         # now add the links
         for i in range(len(graph)):
@@ -248,11 +273,14 @@ class Network:
         if isinstance(host, Client):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
+            network.clients[host.id()] = host
 
         elif isinstance(host, str):
             # got a name
             # create Client and pass in Network
-            self.add_edge(Client(host, self), router, weight)
+            client = Client(host, self)
+            self.add_edge(client, router, weight)
+            network.clients[host] = client
         else:
             raise TypeError("host must be a Client or a name")
 
@@ -265,11 +293,14 @@ class Network:
         if isinstance(host, Server):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
+            network.servers[host.id()] = host
 
         elif isinstance(host, str):
             # got a name
             # create Server and pass in Network
-            self.add_edge(Server(host, self), router, weight)
+            server = Server(host, self)
+            self.add_edge(server, router, weight)
+            network.servers[host] = server
         else:
             raise TypeError("host must be a Server or a name")
 
@@ -434,6 +465,14 @@ class Network:
     # get router ids
     def nodes(self):
         return [ r.id()  for r in self.routers.values() ]
+
+    # get server ids
+    def server_names(self):
+        return [ s.id()  for s in self.servers.values() ]
+
+    # get client ids
+    def client_names(self):
+        return [ c.id()  for c in self.clients.values() ]
 
     # get routers
     def network_nodes(self):

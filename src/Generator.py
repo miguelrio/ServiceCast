@@ -201,7 +201,7 @@ class Generator(object):
         # We first define our random number generator so that we can reproduce results
         gen = np.random.RandomState(seed=seed)
 
-        gen2 = np.random.RandomState(seed=int(idstr[1]))
+        gen2 = np.random.RandomState(seed=0)
 
         # genA is an iterator 0 and infinity
         genA = iter([0, np.inf])
