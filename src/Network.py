@@ -542,8 +542,6 @@ class Network:
         # a list of path latencies
         latency_table_r = self.dijkstra_to_latency(dijkstra_r)
 
-        print("latency_table for " + str(router) + " = " + str(latency_table_r))
-        
         self.latency_table.update(latency_table_r)
 
         if Verbose.level >= 3:
@@ -655,7 +653,8 @@ class Network:
                         # print("connected = " + str(lookup) + " -> " + str(connected))
                         
                         if (lookup in self.dropped):
-                            print("skip " + str(lookup))
+                            if Verbose.level >= 4:
+                                print("  dropped " + str(lookup))
                         else:
                             # get the link weight of connected to lookup
                             link_weight = self.weight(connected, lookup)
