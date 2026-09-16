@@ -100,8 +100,8 @@ class Network:
 
             meta_data = graph.get_node_meta_data(name)
             
-            print("name_of " + str(i) + " = " + name)
-            print("G. node_meta_data[" + name + "] = " + str(meta_data), file=sys.stderr)
+            #print("name_of " + str(i) + " = " + name)
+            #print("G. node_meta_data[" + name + "] = " + str(meta_data), file=sys.stderr)
 
             if drop_external and graph.node_is_external(meta_data):
                 if Verbose.level >= 2:
