@@ -366,6 +366,19 @@ def parse_gml_lines(lines, label, destringizer):
                     except ValueError:
                         pass
                 curr_token = next(tokens)
+                # Non-standard two-values-per-line form, written by the
+                # topology tool's precomputed routing tables:
+                #     nextHop "srv_001" "AS1-p2"
+                #     delayMs "srv_001" 78.09
+                # In standard GML the only legal continuations after a value
+                # are another key or ']', so a string/number token here is
+                # absorbed as a second value of the same key.
+                if curr_token.category in (Pattern.STRINGS, Pattern.REALS, Pattern.INTS):
+                    second = curr_token.value
+                    if curr_token.category == Pattern.STRINGS:
+                        second = unescape(second[1:-1])
+                    value = (value, second)
+                    curr_token = next(tokens)
             elif category == Pattern.DICT_START:
                 curr_token, value = parse_dict(curr_token)
             else:

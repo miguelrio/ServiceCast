@@ -52,6 +52,10 @@ class Network:
         self.env = env            # an Environment
         self.latency_table = {}
 
+        # per-router routing tables precomputed in the GML file
+        # (topology tool output): name -> {server_label: (next_hop, delay)}
+        self.precomputed_tables = {}
+
         # dropped nodes
         self.dropped = []
 
@@ -110,6 +114,11 @@ class Network:
                 network.dropped.append(name)
                 continue
             else:
+                # collect any precomputed routing-table attributes
+                # (nextHop "<server>" "<hop>" / delayMs "<server>" <ms>)
+                # before the node is turned into an entity
+                network._capture_precomputed(name, meta_data)
+
                 # check type attribute
                 # this is output by Miguel's topology tool
                 if meta_data != None and 'type' in meta_data:
@@ -545,13 +554,100 @@ class Network:
         return Graph.dijkstra_algorithm(self, router)
 
     # calculate the forwarding table for every node
+    def _capture_precomputed(self, name, meta_data):
+        """Collect per-router routing tables precomputed in the GML file.
+
+        The topology tool writes two attribute lines per server into each
+        router node:
+            nextHop "<server label>" "<next hop label>"
+            delayMs "<server label>" <total delay ms>
+        The Gml parser surfaces these as lists of (server, value) pairs in
+        the node meta data. Routers with neither attribute are skipped.
+        """
+        if meta_data is None:
+            return
+
+        hops = meta_data.get('nextHop')
+        delays = meta_data.get('delayMs')
+        if not hops and not delays:
+            return
+
+        # a single entry comes back as a bare pair, several as a list
+        if isinstance(hops, tuple):
+            hops = [hops]
+        if isinstance(delays, tuple):
+            delays = [delays]
+
+        hop_map = dict(hops) if hops else {}
+        delay_map = dict(delays) if delays else {}
+
+        entries = {}
+        for server, hop in hop_map.items():
+            if server in delay_map:
+                entries[server] = (hop, float(delay_map[server]))
+
+        if entries:
+            self.precomputed_tables[name] = entries
+
+    def install_precomputed_tables(self):
+        """Install the routing/latency tables precomputed in the GML file.
+
+        Replaces calculate_forwarding_tables()'s per-router Dijkstra pass.
+        The tables hold, per router and per server, the next hop and total
+        delay of the delay-shortest path, so each router's FIB and latency
+        row toward the servers is filled in directly. Client and server
+        latency rows are derived from the client's access router row plus
+        the attachment link weight. Requests are one-way (client -> server)
+        and every live table lookup is toward a server or from a server to
+        a client, so no router -> router or router -> client entries are
+        needed.
+        """
+        # router rows: FIB entries + latency toward every server
+        for name, entries in self.precomputed_tables.items():
+            fib = [(server, hop, delay) for server, (hop, delay) in entries.items()]
+            self[name].set_unicast_forwarding_table(fib)
+            self.latency_table[name] = {
+                server: delay for server, (hop, delay) in entries.items()
+            }
+
+        # client rows: access router's table + the attachment link weight
+        for client in self.clients.values():
+            cname = client.id()
+            neigh = client.neighbours()
+            if not neigh:
+                continue
+            ar_name = neigh[0]
+            ar_table = self.latency_table.get(ar_name, {})
+            stub = self.weight(cname, ar_name)
+            self.latency_table[cname] = {
+                server: stub + delay for server, delay in ar_table.items()
+            }
+
+        # server rows: the utility machinery reads latency_table[server][client];
+        # distances are symmetric, so mirror the client rows
+        for server in self.servers.values():
+            sname = server.id()
+            row = {}
+            for cname in self.clients:
+                client_row = self.latency_table.get(cname, {})
+                if sname in client_row:
+                    row[cname] = client_row[sname]
+            self.latency_table[sname] = row
+
+        # the diameter becomes the max entry of the installed table
+        self.network_diameter_val = self.network_diameter_fn()
+
     def calculate_forwarding_tables(self):
         """Calculate the forwarding tables for all nodes"""
-        for node in self.nodes():            
-            # calculate the forwarding table for node
-            table = self.forwarding_table(node)
-            # tell the node its unicast_forwarding_table
-            self[node].set_unicast_forwarding_table(table)
+        if self.precomputed_tables:
+            # the tables were precomputed in the GML file
+            self.install_precomputed_tables()
+        else:
+            for node in self.nodes():
+                # calculate the forwarding table for node
+                table = self.forwarding_table(node)
+                # tell the node its unicast_forwarding_table
+                self[node].set_unicast_forwarding_table(table)
 
         # the diameter is the delay at which a replica is at its worst.
         # Set here, after an experiment's topology_setup() assignments, because
