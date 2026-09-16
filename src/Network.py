@@ -112,25 +112,34 @@ class Network:
             else:
                 # check type attribute
                 # this is output by Miguel's topology tool
-                if meta_data['type'] == 'router':
-                    # create a Router
-                    router = Router(name, network)
-                    # now add it to the routers
-                    network.routers[name] = router
-                elif meta_data['type'] == 'server':
-                    # create a Server
-                    server = Server(name, network)
-                    # now add it to the routers
-                    network.routers[name] = server
-                    # now add it to the servers
-                    network.servers[name] = server
-                elif meta_data['type'] == 'client':
-                    # create a Client
-                    client = Client(name, network)
-                    # now add it to the routers
-                    network.routers[name] = client
-                    # now add it to the clients
-                    network.clients[name] = client
+                if 'type' in meta_data:
+                    if meta_data['type'] == 'router':
+                        # create a Router
+                        router = Router(name, network)
+                        # now add it to the routers
+                        network.routers[name] = router
+                    elif meta_data['type'] == 'server':
+                        # create a Server
+                        server = Server(name, network)
+                        # now add it to the routers
+                        network.routers[name] = server
+                        # now add it to the servers
+                        network.servers[name] = server
+                    elif meta_data['type'] == 'client':
+                        # create a Client
+                        client = Client(name, network)
+                        # now add it to the routers
+                        network.routers[name] = client
+                        # now add it to the clients
+                        network.clients[name] = client
+                    else:
+                        # unknown type 
+                        # Assume the default
+                        # create a Router
+                        router = Router(name, network)
+                        # now add it to the routers
+                        network.routers[name] = router
+
                 else:
                     # default - add a Router
                     # create a Router
@@ -280,7 +289,7 @@ class Network:
             # create Client and pass in Network
             client = Client(host, self)
             self.add_edge(client, router, weight)
-            network.clients[host] = client
+            self.clients[host] = client
         else:
             raise TypeError("host must be a Client or a name")
 
@@ -300,7 +309,7 @@ class Network:
             # create Server and pass in Network
             server = Server(host, self)
             self.add_edge(server, router, weight)
-            network.servers[host] = server
+            self.servers[host] = server
         else:
             raise TypeError("host must be a Server or a name")
 

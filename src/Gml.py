@@ -594,7 +594,7 @@ def parse_gml_lines(lines, label, destringizer):
 
                 # check delayMs attribute
                 # this is output by Miguel's topology tool
-                if (edge['delayMs']):
+                if ('delayMs' in edge):
                     # found delayMs
                     weight = float(edge['delayMs'])
                 else:
