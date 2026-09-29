@@ -1046,6 +1046,9 @@ function asciiSafe(str){
   }).join("");
 }
 function escGml(v){ return asciiSafe(v).replace(/\\/g,"\\\\").replace(/"/g,'\\"'); }
+// Values are written in seconds even though the field is still named delayMs (per request) —
+// keep enough decimal precision that sub-millisecond figures don't round to 0.
+function msToSecLabel(ms){ return (ms/1000).toFixed(6); }
 
 // GML with three node kinds (router/PoP, server, client hub) and typed edges, so the
 // exported graph is import-ready for Gephi/yEd/NetworkX while keeping router-to-router
@@ -1071,7 +1074,7 @@ function toGML(popNodesOut, edgesOut, servers, clients){
     lines.push(`    tier "${escGml(n.tier||"")}"`);
     lines.push(`    city "${escGml(n.city||"")}"`);
     lines.push(`    continent "${escGml(n.continent||"")}"`);
-    lines.push(`    internalDelayMs ${n.internal_delay_ms!=null?n.internal_delay_ms:0}`);
+    lines.push(`    internalDelayMs ${msToSecLabel(n.internal_delay_ms!=null?n.internal_delay_ms:0)}`);
     lines.push("  ]");
     nextId++;
   });
@@ -1115,20 +1118,17 @@ function toGML(popNodesOut, edgesOut, servers, clients){
     lines.push(`    source ${s}`);
     lines.push(`    target ${t}`);
     lines.push(`    type "${escGml(e.rel||"")}"`);
-    if(e.delay_ms!==null && e.delay_ms!==undefined) lines.push(`    delayMs ${e.delay_ms}`);
+    if(e.delay_ms!==null && e.delay_ms!==undefined) lines.push(`    delayMs ${msToSecLabel(e.delay_ms)}`);
     lines.push("  ]");
   });
   servers.forEach(s=>{
     const a = idMap.get("srv:"+s.id), b = idMap.get("pop:"+s.hosting_pop_id);
     if(a===undefined||b===undefined) return;
-    lines.push("  edge [", `    source ${a}`, `    target ${b}`, `    type "hosts"`, `    delayMs ${s.hosting_delay_ms!=null?s.hosting_delay_ms:0}`, "  ]");
+    lines.push("  edge [", `    source ${a}`, `    target ${b}`, `    type "hosts"`, `    delayMs ${msToSecLabel(s.hosting_delay_ms!=null?s.hosting_delay_ms:0)}`, "  ]");
   });
   clients.forEach(c=>{
     const a = idMap.get(c.__gmlId), b = idMap.get("pop:"+c.access_pop_id);
-    if(a!==undefined && b!==undefined) lines.push("  edge [", `    source ${a}`, `    target ${b}`, `    type "access"`, `    delayMs ${c.access_delay_ms!=null?c.access_delay_ms:0}`, "  ]");
-    const srv = servers.find(s=>s.id===c.nearest_server_id);
-    const sId = srv ? idMap.get("srv:"+srv.id) : undefined;
-    if(a!==undefined && sId!==undefined) lines.push("  edge [", `    source ${a}`, `    target ${sId}`, `    type "demand"`, `    delayMs ${c.est_delay_ms}`, "  ]");
+    if(a!==undefined && b!==undefined) lines.push("  edge [", `    source ${a}`, `    target ${b}`, `    type "access"`, `    delayMs ${msToSecLabel(c.access_delay_ms!=null?c.access_delay_ms:0)}`, "  ]");
   });
 
   lines.push("]");
