@@ -31,10 +31,24 @@ def topology_setup():
     until = float(sys.argv[2]) if len(sys.argv) > 2 else 360
     Verbose.level = int(sys.argv[3]) if len(sys.argv) > 3 else 1
     Verbose.table = 0
-    # optional 4th argument "weighted": engine Dijkstra with use_weights=True
-    # (delay-shortest) instead of the default min-hop; ignored when the GML
-    # carries precomputed tables
-    weighted = len(sys.argv) > 4 and sys.argv[4] == "weighted"
+    # optional trailing arguments (any order after the first three):
+    #   "weighted"  engine Dijkstra with use_weights=True (delay-shortest)
+    #               instead of the default min-hop; ignored when the GML
+    #               carries precomputed tables
+    #   a float     Server.change_factor damping threshold (default 0.01);
+    #               bigger values mean load must drift further before a
+    #               ServerMetric announcement is sent
+    weighted = False
+    floats = []
+    for arg in sys.argv[4:]:
+        if arg == "weighted":
+            weighted = True
+        else:
+            floats.append(float(arg))
+    # optional trailing floats: [server_change_factor [router_fib_threshold]]
+    change_factor = float(os.environ.get("SERVER_CF",
+                       floats[0] if len(floats) > 0 else 0.01))
+    fib_threshold = floats[1] if len(floats) > 1 else 0.001
 
     # Set client request forwarding mode: hop-by-hop anycast (True) or
     # first-decide unicast (False)
@@ -47,14 +61,14 @@ def topology_setup():
     # Set alpha value
     Utility.alpha = 0.50
 
-    # Set slots
-    Server.slots = 50
+    # Set slots (SERVER_SLOTS overrides; all servers share one global value)
+    Server.slots = int(os.environ.get("SERVER_SLOTS", "50"))
 
     # Server change factor damping
-    Server.change_factor = 0.01
+    Server.change_factor = change_factor
 
     # Router change factor damping
-    Router.fib_utility_update_threshold = 0.001
+    Router.fib_utility_update_threshold = fib_threshold
 
     print(f"""Simulation parameters:
     gml_file = {gml_file}
@@ -64,6 +78,8 @@ def topology_setup():
     Graph.default_propagation_delay = {Graph.default_propagation_delay}
     Utility.alpha = {Utility.alpha}
     Server.slots = {Server.slots}
+    Server.change_factor = {Server.change_factor}
+    Router.fib_utility_update_threshold = {Router.fib_utility_update_threshold}
     """)
 
     # 1 - create the simpy environment
@@ -104,11 +120,27 @@ def topology_setup():
         Generator.server_load_event_generator(network, server_name, ["§a"],
                                               seed=15112022, background_load=False)
 
-    # arrival_lambda is the mean inter-request time per client (seconds);
-    # session length averages size_lambda * size_scale_factor (seconds)
-    Generator.multi_client_event_generator(network, clients, "§a",
-                                           arrival_lambda=0.4, size_lambda=10,
-                                           size_scale_factor=10, seed=15112022)
+    # NOCLIENTS=1: 0-client control run — skip the client request generator
+    # entirely so the only control traffic is the servers' initial load=0
+    # announcements (multi_client_event_generator would crash on an empty
+    # client list anyway: sources_dist does gen.choice([])).
+    # Mirrors the Stanford server copy.
+    if os.environ.get("NOCLIENTS") == "1":
+        print("NOCLIENTS=1: 0-client run, client request generator skipped")
+    else:
+        _tu = os.environ.get("TAU", os.environ.get("ARRIVAL_LAMBDA"))
+        if _tu is not None:
+            print(f"TAU override: arrival_lambda={float(_tu)}")
+        if os.environ.get("NCLIENTS_USE") is not None:
+            _nall = len(clients)
+            clients = clients[:int(os.environ.get("NCLIENTS_USE"))]
+            print(f"NCLIENTS_USE: using first {len(clients)} of {_nall} clients")
+        # arrival_lambda is the mean inter-request time per client (seconds);
+        # session length averages size_lambda * size_scale_factor (seconds)
+        _lam = float(_tu) if _tu is not None else 0.4
+        Generator.multi_client_event_generator(network, clients, "§a",
+                                               arrival_lambda=_lam, size_lambda=10,
+                                               size_scale_factor=10, seed=15112022)
 
     # 5 - run
     print("RUN ----------------------------------------------------------------")
