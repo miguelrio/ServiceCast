@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenario Explorer — Global Routing Evaluation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<style>
+  :root{
+    --bg:#061420;
+    --panel:rgba(12,31,48,0.86);
+    --panel-border:#1c3852;
+    --grid:#123049;
+    --land:#0f2a3d;
+    --land-stroke:#1c4562;
+    --server:#ffb454;
+    --server-dim:#8a5a24;
+    --client:#5eead4;
+    --client-dim:#2c6e64;
+    --danger:#ff6b6b;
+    --text:#eaf4fb;
+    --muted:#7ea3bd;
+    --mono:'JetBrains Mono', monospace;
+    --sans:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;}
+  #app{position:relative;width:100vw;height:100vh;}
+  svg#map{width:100%;height:100%;display:block;background:radial-gradient(ellipse at 50% 40%, #0a1f30 0%, #061420 70%);cursor:grab;}
+  svg#map:active{cursor:grabbing;}
+  .graticule{stroke:var(--grid);stroke-width:1;fill:none;vector-effect:non-scaling-stroke;}
+  .land{fill:var(--land);stroke:var(--land-stroke);stroke-width:1;vector-effect:non-scaling-stroke;}
+  .link{fill:none;stroke-width:1;opacity:0.55;}
+  .as-edge{fill:none;stroke:#a78bfa;vector-effect:non-scaling-stroke;}
+  .as-edge.p2p{stroke-opacity:0.4;stroke-dasharray:2,2;}
+  .as-edge.c2p{stroke-opacity:0.16;}
+  .as-edge.internal{stroke-opacity:0.55;stroke-width:1.6;stroke-dasharray:none;}
+  .as-node{stroke:none;}
+  .as-node.tier1{fill:#c4b5fd;filter:url(#glow);}
+  .as-node.transit{fill:#a78bfa;opacity:0.85;}
+  .as-node.stub{fill:#6d5a99;opacity:0.6;}
+  .client-node{fill:var(--client);stroke:#04211c;stroke-width:0.5;vector-effect:non-scaling-stroke;opacity:0.85;cursor:pointer;}
+  .server-node{fill:var(--server);stroke:#2b1a02;stroke-width:0.7;vector-effect:non-scaling-stroke;cursor:pointer;filter:url(#glow);}
+  .server-node.pulse{animation:pulse 3s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.55;}}
+  @media (prefers-reduced-motion: reduce){ .server-node.pulse{animation:none;} }
+
+  /* Top bar */
+  #topbar{position:absolute;top:0;left:0;right:0;padding:14px 20px;display:flex;align-items:baseline;justify-content:space-between;pointer-events:none;background:linear-gradient(to bottom, rgba(6,20,32,0.85), transparent);}
+  #topbar h1{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:0.04em;margin:0;color:var(--text);text-transform:uppercase;}
+  #topbar .sub{font-family:var(--sans);font-size:11px;color:var(--muted);margin-top:2px;}
+  #stats{display:flex;gap:18px;pointer-events:none;flex-wrap:wrap;max-width:62vw;justify-content:flex-end;}
+  .stat{text-align:right;}
+  .stat .val{font-family:var(--mono);font-size:17px;font-weight:700;}
+  .stat .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;}
+
+  /* Control panel */
+  #panel{position:absolute;top:70px;left:16px;bottom:16px;width:298px;background:var(--panel);border:1px solid var(--panel-border);border-radius:10px;backdrop-filter:blur(6px);overflow-y:auto;padding:16px;}
+  #panel::-webkit-scrollbar{width:6px;}
+  #panel::-webkit-scrollbar-thumb{background:var(--panel-border);border-radius:3px;}
+  .group{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--panel-border);}
+  .group:last-child{border-bottom:none;}
+  .group h2{font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--client);margin:0 0 10px 0;}
+  .group.servers h2{color:var(--server);}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;}
+  label span.v{color:var(--text);font-family:var(--mono);float:right;}
+  select,input[type=number],input[type=file]{width:100%;background:#081a29;border:1px solid var(--panel-border);color:var(--text);padding:6px 8px;border-radius:5px;font-family:var(--sans);font-size:12px;}
+  input[type=file]{font-size:10.5px;padding:5px;}
+  input[type=range]{width:100%;accent-color:var(--client);}
+  .group.servers input[type=range]{accent-color:var(--server);}
+  .checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+  .checks label{display:flex;align-items:center;gap:5px;font-size:11px;margin:0;background:#081a29;border:1px solid var(--panel-border);padding:4px 8px;border-radius:12px;cursor:pointer;}
+  .checks input{margin:0;}
+  button{font-family:var(--mono);font-size:12px;letter-spacing:0.03em;text-transform:uppercase;padding:9px 12px;border-radius:6px;border:1px solid var(--panel-border);cursor:pointer;width:100%;margin-top:8px;transition:filter 0.15s;}
+  button:hover{filter:brightness(1.2);}
+  #regenBtn{background:#0e2438;color:var(--text);}
+  #exportBtn{background:linear-gradient(90deg,var(--server),#e08f2b);color:#1c1204;font-weight:700;border:none;}
+  #exportGmlBtn{background:linear-gradient(90deg,var(--client),#3aa89a);color:#04211c;font-weight:700;border:none;}
+  .note{font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:14px;}
+  .hidden{display:none !important;}
+
+  /* Legend */
+  #legend{position:absolute;bottom:16px;left:330px;background:var(--panel);border:1px solid var(--panel-border);border-radius:8px;padding:10px 14px;font-size:11px;display:flex;gap:16px;backdrop-filter:blur(6px);}
+  .leg-item{display:flex;align-items:center;gap:6px;}
+  .swatch{width:10px;height:10px;border-radius:50%;}
+
+  /* Zoom controls */
+  #zoomctl{position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px;}
+  #zoomctl button{width:36px;height:36px;padding:0;font-size:16px;background:var(--panel);color:var(--text);border-radius:6px;margin:0;}
+
+  /* Tooltip */
+  #tooltip{position:absolute;pointer-events:none;background:#08121cf0;border:1px solid var(--panel-border);border-radius:6px;padding:8px 10px;font-size:11px;font-family:var(--mono);opacity:0;transform:translate(-50%,-115%);white-space:nowrap;z-index:10;}
+  #tooltip b{color:var(--server);}
+  #tooltip .c{color:var(--client);}
+</style>
+</head>
+<body>
+<div id="app">
+  <svg id="map">
+    <defs>
+      <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation="2.2" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <g id="viewport">
+      <g id="landLayer"></g>
+      <g id="graticuleLayer"></g>
+      <g id="asEdgeLayer"></g>
+      <g id="asNodeLayer"></g>
+      <g id="linkLayer"></g>
+      <g id="clientLayer"></g>
+      <g id="serverLayer"></g>
+    </g>
+  </svg>
+
+  <div id="topbar">
+    <div>
+      <h1>Scenario Explorer</h1>
+      <div class="sub">server / client placement — global routing evaluation</div>
+    </div>
+    <div id="stats">
+      <div class="stat"><div class="val" id="statAS">–</div><div class="lbl">AS nodes</div></div>
+      <div class="stat"><div class="val" id="statPoP">–</div><div class="lbl">Router/PoP nodes</div></div>
+      <div class="stat"><div class="val" id="statASEdges">–</div><div class="lbl">Router links</div></div>
+      <div class="stat"><div class="val" id="statServers">–</div><div class="lbl">Servers</div></div>
+      <div class="stat"><div class="val" id="statClients">–</div><div class="lbl">Clients</div></div>
+      <div class="stat"><div class="val" id="statHubs">–</div><div class="lbl">Client hubs</div></div>
+      <div class="stat"><div class="val" id="statAvgDelay">–</div><div class="lbl">Avg est. delay</div></div>
+      <div class="stat"><div class="val" id="statMaxDelay">–</div><div class="lbl">Worst est. delay</div></div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div class="group servers">
+      <h2>Server replicas</h2>
+      <label>Replica count <span class="v" id="serverCountV">100</span></label>
+      <input type="range" id="serverCount" min="1" max="300" step="1" value="100">
+      <label>Placement basis</label>
+      <select id="serverScenario">
+        <option value="hyperscaler" selected>Hyperscaler-baseline (AWS/GCP/Azure regions)</option>
+        <option value="cdn">CDN-edge-dense (broad edge footprint)</option>
+        <option value="sparse">Regional-sparse (2–3 regions only)</option>
+      </select>
+      <div id="sparseRegionsWrap" class="hidden">
+        <label>Regions included</label>
+        <div class="checks" id="sparseRegions"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Client population</h2>
+      <label>Total clients</label>
+      <input type="number" id="clientCount" min="1000" max="5000000" step="1000" value="1000000">
+      <label>Distribution</label>
+      <select id="clientScenario">
+        <option value="realistic" selected>Realistic (population-weighted)</option>
+        <option value="skew">Regional skew</option>
+        <option value="uniform">Uniform / random (control)</option>
+      </select>
+      <div id="skewWrap" class="hidden">
+        <label>Skew region</label>
+        <select id="skewRegion"></select>
+        <label>Skew intensity <span class="v" id="skewIntensityV">6×</span></label>
+        <input type="range" id="skewIntensity" min="1" max="15" step="1" value="6">
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Network topology</h2>
+      <label style="margin-top:0;">Topology source</label>
+      <select id="topoSource">
+        <option value="synthetic" selected>Synthetic (generated)</option>
+        <option value="caida">Real CAIDA AS-relationships file</option>
+      </select>
+
+      <div id="synthWrap">
+        <label>AS node count <span class="v" id="asCountV">500</span></label>
+        <input type="range" id="asCount" min="50" max="2000" step="50" value="500">
+        <label>Graph seed (blank = random each time) <span class="v" id="seedV">random</span></label>
+        <input type="number" id="graphSeed" placeholder="e.g. 42">
+      </div>
+
+      <div id="caidaWrap" class="hidden">
+        <label>as-rel file (.txt, plain or .gz)</label>
+        <input type="file" id="caidaFile" accept=".txt,.gz">
+        <label>AS → geo mapping (optional .json: {"asn":[lat,lon]})</label>
+        <input type="file" id="caidaGeoFile" accept=".json">
+        <label>Max AS nodes rendered <span class="v" id="renderCapV">3000</span></label>
+        <input type="range" id="renderCap" min="200" max="20000" step="200" value="3000">
+        <div class="note" id="caidaStatus">No file loaded yet. Get a file from
+          <span style="color:var(--text)">publicdata.caida.org/datasets/as-relationships/serial-1/</span> —
+          it downloads as <b>.bz2</b>, which browsers can't decompress, so run
+          <span style="color:var(--text)">bunzip2 YYYYMMDD.as-rel.txt.bz2</span> (or 7-Zip on Windows)
+          first, then upload the resulting .txt here.</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Layers</h2>
+      <div class="checks" style="flex-direction:column;align-items:stretch;">
+        <label><input type="checkbox" id="layerASNodes" checked> AS / router nodes</label>
+        <label><input type="checkbox" id="layerASEdges" checked> AS / router links</label>
+        <label><input type="checkbox" id="layerServers" checked> Servers</label>
+        <label><input type="checkbox" id="layerClients" checked> Clients</label>
+        <label><input type="checkbox" id="layerClientLinks" checked> Client → server links</label>
+      </div>
+      <div class="note">Rendering is capped for browser performance — the exported JSON always contains the full topology you loaded (or generated), never just the on-screen subset or hidden layers.</div>
+    </div>
+
+    <div class="group">
+      <h2>Delay model</h2>
+      <label>Path inefficiency factor <span class="v" id="ineffV">1.40</span></label>
+      <input type="range" id="ineff" min="1.0" max="2.0" step="0.05" value="1.4">
+      <label>Per-hop processing (ms) <span class="v" id="hopV">0.20</span></label>
+      <input type="range" id="hop" min="0" max="1" step="0.05" value="0.2">
+      <label>Stub AS default (ms) <span class="v" id="stubV">1.5</span></label>
+      <input type="range" id="stub" min="0" max="5" step="0.1" value="1.5">
+    </div>
+
+    <div class="group">
+      <h2>Actions</h2>
+      <button id="regenBtn">↻ Regenerate</button>
+      <button id="exportBtn">⇩ Export scenario JSON</button>
+      <button id="exportGmlBtn">⇩ Export topology GML</button>
+      <div class="note">Cities and rough populations are real-world reference points for parameter exploration. Swap in the real CAIDA / PeeringDB / APNIC pipeline output for production evaluation — the exported JSON follows the same schema either way.</div>
+    </div>
+  </div>
+
+  <div id="legend">
+    <div class="leg-item"><div class="swatch" style="background:#c4b5fd"></div>Tier-1 AS</div>
+    <div class="leg-item"><div class="swatch" style="background:#a78bfa"></div>Transit AS</div>
+    <div class="leg-item"><div class="swatch" style="background:#6d5a99"></div>Stub AS</div>
+    <div class="leg-item"><div class="swatch" style="background:var(--server)"></div>Server replica</div>
+    <div class="leg-item"><div class="swatch" style="background:var(--client)"></div>Client hub (size = demand)</div>
+    <div class="leg-item">AS/client link color = delay (green→red)</div>
+  </div>
+
+  <div id="zoomctl">
+    <button id="zoomIn">+</button>
+    <button id="zoomOut">−</button>
+    <button id="zoomReset">⤾</button>
+  </div>
+
+  <div id="tooltip"></div>
+</div>
+
+<script>
+/* ---------------- Reference city dataset ---------------- */
+/* pop = approx metro population in millions. aws/gcp/azure = has a real hyperscaler region there. */
+const CITIES = [
+{name:"Ashburn",country:"USA",continent:"North America",lat:39.04,lon:-77.49,pop:0.9,aws:1,gcp:1,azure:1},
+{name:"New York",country:"USA",continent:"North America",lat:40.71,lon:-74.01,pop:8.3,aws:0,gcp:0,azure:1},
+{name:"Chicago",country:"USA",continent:"North America",lat:41.88,lon:-87.63,pop:2.7,aws:0,gcp:1,azure:1},
+{name:"Dallas",country:"USA",continent:"North America",lat:32.78,lon:-96.80,pop:1.3,aws:1,gcp:0,azure:1},
+{name:"Portland",country:"USA",continent:"North America",lat:45.52,lon:-122.68,pop:0.65,aws:1,gcp:1,azure:0},
+{name:"San Francisco",country:"USA",continent:"North America",lat:37.77,lon:-122.42,pop:0.87,aws:0,gcp:1,azure:0},
+{name:"Los Angeles",country:"USA",continent:"North America",lat:34.05,lon:-118.24,pop:3.9,aws:0,gcp:1,azure:0},
+{name:"Seattle",country:"USA",continent:"North America",lat:47.61,lon:-122.33,pop:0.75,aws:0,gcp:0,azure:0},
+{name:"Miami",country:"USA",continent:"North America",lat:25.76,lon:-80.19,pop:0.47,aws:0,gcp:0,azure:0},
+{name:"Denver",country:"USA",continent:"North America",lat:39.74,lon:-104.99,pop:0.72,aws:0,gcp:0,azure:0},
+{name:"Atlanta",country:"USA",continent:"North America",lat:33.75,lon:-84.39,pop:0.5,aws:0,gcp:0,azure:0},
+{name:"Boston",country:"USA",continent:"North America",lat:42.36,lon:-71.06,pop:0.69,aws:0,gcp:0,azure:0},
+{name:"Toronto",country:"Canada",continent:"North America",lat:43.65,lon:-79.38,pop:2.9,aws:0,gcp:0,azure:1},
+{name:"Montreal",country:"Canada",continent:"North America",lat:45.50,lon:-73.57,pop:1.8,aws:1,gcp:1,azure:0},
+{name:"Mexico City",country:"Mexico",continent:"North America",lat:19.43,lon:-99.13,pop:9.2,aws:1,gcp:0,azure:0},
+{name:"São Paulo",country:"Brazil",continent:"South America",lat:-23.55,lon:-46.63,pop:12.3,aws:1,gcp:1,azure:1},
+{name:"Rio de Janeiro",country:"Brazil",continent:"South America",lat:-22.91,lon:-43.17,pop:6.7,aws:0,gcp:0,azure:0},
+{name:"Buenos Aires",country:"Argentina",continent:"South America",lat:-34.60,lon:-58.38,pop:3.1,aws:0,gcp:0,azure:0},
+{name:"Santiago",country:"Chile",continent:"South America",lat:-33.45,lon:-70.67,pop:6.7,aws:1,gcp:1,azure:0},
+{name:"Bogotá",country:"Colombia",continent:"South America",lat:4.71,lon:-74.07,pop:7.4,aws:0,gcp:0,azure:0},
+{name:"Lima",country:"Peru",continent:"South America",lat:-12.05,lon:-77.04,pop:10.7,aws:0,gcp:0,azure:0},
+{name:"London",country:"UK",continent:"Europe",lat:51.51,lon:-0.13,pop:9.5,aws:1,gcp:1,azure:1},
+{name:"Dublin",country:"Ireland",continent:"Europe",lat:53.35,lon:-6.26,pop:1.4,aws:1,gcp:1,azure:1},
+{name:"Paris",country:"France",continent:"Europe",lat:48.85,lon:2.35,pop:11.0,aws:1,gcp:1,azure:1},
+{name:"Frankfurt",country:"Germany",continent:"Europe",lat:50.11,lon:8.68,pop:2.3,aws:1,gcp:1,azure:1},
+{name:"Munich",country:"Germany",continent:"Europe",lat:48.14,lon:11.58,pop:1.6,aws:0,gcp:1,azure:1},
+{name:"Amsterdam",country:"Netherlands",continent:"Europe",lat:52.37,lon:4.90,pop:1.2,aws:1,gcp:0,azure:1},
+{name:"Madrid",country:"Spain",continent:"Europe",lat:40.42,lon:-3.70,pop:6.6,aws:1,gcp:1,azure:1},
+{name:"Barcelona",country:"Spain",continent:"Europe",lat:41.39,lon:2.17,pop:5.6,aws:0,gcp:0,azure:0},
+{name:"Milan",country:"Italy",continent:"Europe",lat:45.46,lon:9.19,pop:3.2,aws:1,gcp:1,azure:1},
+{name:"Stockholm",country:"Sweden",continent:"Europe",lat:59.33,lon:18.06,pop:1.6,aws:1,gcp:1,azure:1},
+{name:"Warsaw",country:"Poland",continent:"Europe",lat:52.23,lon:21.01,pop:1.8,aws:1,gcp:1,azure:1},
+{name:"Zurich",country:"Switzerland",continent:"Europe",lat:47.38,lon:8.54,pop:1.4,aws:1,gcp:1,azure:1},
+{name:"Vienna",country:"Austria",continent:"Europe",lat:48.21,lon:16.37,pop:1.9,aws:0,gcp:0,azure:1},
+{name:"Copenhagen",country:"Denmark",continent:"Europe",lat:55.68,lon:12.57,pop:1.3,aws:0,gcp:0,azure:0},
+{name:"Brussels",country:"Belgium",continent:"Europe",lat:50.85,lon:4.35,pop:2.1,aws:0,gcp:0,azure:0},
+{name:"Prague",country:"Czechia",continent:"Europe",lat:50.08,lon:14.44,pop:1.3,aws:0,gcp:0,azure:0},
+{name:"Bucharest",country:"Romania",continent:"Europe",lat:44.43,lon:26.10,pop:1.8,aws:0,gcp:0,azure:0},
+{name:"Athens",country:"Greece",continent:"Europe",lat:37.98,lon:23.73,pop:3.2,aws:0,gcp:0,azure:0},
+{name:"Istanbul",country:"Turkey",continent:"Europe",lat:41.01,lon:28.98,pop:15.5,aws:0,gcp:0,azure:0},
+{name:"Dubai",country:"UAE",continent:"Middle East",lat:25.20,lon:55.27,pop:3.4,aws:1,gcp:1,azure:1},
+{name:"Manama",country:"Bahrain",continent:"Middle East",lat:26.23,lon:50.59,pop:0.7,aws:1,gcp:0,azure:0},
+{name:"Doha",country:"Qatar",continent:"Middle East",lat:25.29,lon:51.53,pop:1.2,aws:0,gcp:0,azure:1},
+{name:"Riyadh",country:"Saudi Arabia",continent:"Middle East",lat:24.71,lon:46.68,pop:7.7,aws:1,gcp:1,azure:0},
+{name:"Tel Aviv",country:"Israel",continent:"Middle East",lat:32.08,lon:34.78,pop:4.3,aws:1,gcp:1,azure:1},
+{name:"Amman",country:"Jordan",continent:"Middle East",lat:31.95,lon:35.93,pop:2.1,aws:0,gcp:0,azure:0},
+{name:"Cape Town",country:"South Africa",continent:"Africa",lat:-33.92,lon:18.42,pop:4.6,aws:1,gcp:0,azure:0},
+{name:"Johannesburg",country:"South Africa",continent:"Africa",lat:-26.20,lon:28.05,pop:5.9,aws:1,gcp:0,azure:1},
+{name:"Lagos",country:"Nigeria",continent:"Africa",lat:6.52,lon:3.38,pop:15.4,aws:0,gcp:0,azure:0},
+{name:"Nairobi",country:"Kenya",continent:"Africa",lat:-1.29,lon:36.82,pop:4.7,aws:0,gcp:0,azure:0},
+{name:"Cairo",country:"Egypt",continent:"Africa",lat:30.04,lon:31.24,pop:20.9,aws:0,gcp:0,azure:0},
+{name:"Casablanca",country:"Morocco",continent:"Africa",lat:33.57,lon:-7.59,pop:3.7,aws:0,gcp:0,azure:0},
+{name:"Accra",country:"Ghana",continent:"Africa",lat:5.60,lon:-0.19,pop:2.6,aws:0,gcp:0,azure:0},
+{name:"Tokyo",country:"Japan",continent:"Asia",lat:35.68,lon:139.69,pop:37.4,aws:1,gcp:1,azure:1},
+{name:"Osaka",country:"Japan",continent:"Asia",lat:34.69,lon:135.50,pop:19.2,aws:1,gcp:1,azure:1},
+{name:"Seoul",country:"South Korea",continent:"Asia",lat:37.57,lon:126.98,pop:9.9,aws:1,gcp:1,azure:1},
+{name:"Beijing",country:"China",continent:"Asia",lat:39.90,lon:116.41,pop:21.5,aws:1,gcp:0,azure:1},
+{name:"Shanghai",country:"China",continent:"Asia",lat:31.23,lon:121.47,pop:27.1,aws:1,gcp:0,azure:0},
+{name:"Shenzhen",country:"China",continent:"Asia",lat:22.54,lon:114.06,pop:17.6,aws:0,gcp:0,azure:0},
+{name:"Hong Kong",country:"China",continent:"Asia",lat:22.32,lon:114.17,pop:7.5,aws:1,gcp:1,azure:1},
+{name:"Taipei",country:"Taiwan",continent:"Asia",lat:25.03,lon:121.56,pop:2.6,aws:0,gcp:0,azure:0},
+{name:"Singapore",country:"Singapore",continent:"Asia",lat:1.35,lon:103.82,pop:5.7,aws:1,gcp:1,azure:1},
+{name:"Jakarta",country:"Indonesia",continent:"Asia",lat:-6.21,lon:106.85,pop:10.6,aws:1,gcp:1,azure:1},
+{name:"Kuala Lumpur",country:"Malaysia",continent:"Asia",lat:3.14,lon:101.69,pop:8.0,aws:1,gcp:0,azure:1},
+{name:"Bangkok",country:"Thailand",continent:"Asia",lat:13.76,lon:100.50,pop:10.7,aws:1,gcp:0,azure:1},
+{name:"Manila",country:"Philippines",continent:"Asia",lat:14.60,lon:120.98,pop:14.2,aws:0,gcp:0,azure:0},
+{name:"Ho Chi Minh City",country:"Vietnam",continent:"Asia",lat:10.82,lon:106.63,pop:9.3,aws:0,gcp:0,azure:0},
+{name:"Hanoi",country:"Vietnam",continent:"Asia",lat:21.03,lon:105.85,pop:5.2,aws:0,gcp:0,azure:0},
+{name:"Mumbai",country:"India",continent:"Asia",lat:19.08,lon:72.88,pop:20.7,aws:1,gcp:1,azure:1},
+{name:"Delhi",country:"India",continent:"Asia",lat:28.61,lon:77.21,pop:31.9,aws:0,gcp:0,azure:0},
+{name:"Hyderabad",country:"India",continent:"Asia",lat:17.39,lon:78.49,pop:10.5,aws:1,gcp:1,azure:1},
+{name:"Bangalore",country:"India",continent:"Asia",lat:12.97,lon:77.59,pop:13.2,aws:0,gcp:0,azure:0},
+{name:"Chennai",country:"India",continent:"Asia",lat:13.08,lon:80.27,pop:11.5,aws:1,gcp:0,azure:0},
+{name:"Kolkata",country:"India",continent:"Asia",lat:22.57,lon:88.36,pop:15.1,aws:0,gcp:0,azure:0},
+{name:"Karachi",country:"Pakistan",continent:"Asia",lat:24.86,lon:67.01,pop:16.8,aws:0,gcp:0,azure:0},
+{name:"Dhaka",country:"Bangladesh",continent:"Asia",lat:23.81,lon:90.41,pop:22.5,aws:0,gcp:0,azure:0},
+{name:"Colombo",country:"Sri Lanka",continent:"Asia",lat:6.93,lon:79.85,pop:2.3,aws:0,gcp:0,azure:0},
+{name:"Sydney",country:"Australia",continent:"Oceania",lat:-33.87,lon:151.21,pop:5.3,aws:1,gcp:1,azure:1},
+{name:"Melbourne",country:"Australia",continent:"Oceania",lat:-37.81,lon:144.96,pop:5.2,aws:0,gcp:1,azure:1},
+{name:"Perth",country:"Australia",continent:"Oceania",lat:-31.95,lon:115.86,pop:2.2,aws:0,gcp:0,azure:0},
+{name:"Auckland",country:"New Zealand",continent:"Oceania",lat:-36.85,lon:174.76,pop:1.7,aws:1,gcp:0,azure:0},
+{name:"Wellington",country:"New Zealand",continent:"Oceania",lat:-41.29,lon:174.78,pop:0.4,aws:0,gcp:0,azure:0}
+];
+
+const CONTINENTS = [...new Set(CITIES.map(c=>c.continent))];
+const PENETRATION = {"North America":0.9,"Europe":0.9,"Oceania":0.9,"South America":0.75,"Middle East":0.7,"Asia":0.62,"Africa":0.4};
+
+/* ---------------- Seeded RNG (graph seed support) ---------------- */
+function mulberry32(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let GENERATE_RNG = Math.random;
+function setGenerationSeed(seed){ GENERATE_RNG = (seed === null || seed === undefined || isNaN(seed)) ? Math.random : mulberry32(+seed); }
+
+/* ---------------- Helpers ---------------- */
+function haversineKm(lat1,lon1,lat2,lon2){
+  const R=6371, toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function weightedPick(pool, weightFn){
+  const weights = pool.map(weightFn);
+  const total = weights.reduce((a,b)=>a+b,0);
+  let r = GENERATE_RNG()*total;
+  for(let i=0;i<pool.length;i++){ r-=weights[i]; if(r<=0) return pool[i]; }
+  return pool[pool.length-1];
+}
+function jitter(v,deg){ return v + (GENERATE_RNG()-0.5)*deg*2; }
+function pickOperator(city){
+  const opts=[];
+  if(city.aws) opts.push("AWS");
+  if(city.gcp) opts.push("GCP");
+  if(city.azure) opts.push("Azure");
+  return opts.length ? opts[Math.floor(GENERATE_RNG()*opts.length)] : "Cloud";
+}
+function fmt(n){ return n>=1e6? (n/1e6).toFixed(2)+"M" : n>=1e3? (n/1e3).toFixed(1)+"k" : String(n); }
+
+/* ---------------- AS-level topology generation ---------------- */
+function nearestWeightedPicks(node, candidates, count){
+  const pool = [...candidates];
+  const picks = [];
+  for(let k=0;k<count && pool.length;k++){
+    const weights = pool.map(c=>{
+      const d = haversineKm(node.lat,node.lon,c.lat,c.lon)+50;
+      return (1+c.degree)/d;
+    });
+    const total = weights.reduce((a,b)=>a+b,0);
+    let r = GENERATE_RNG()*total, idx=0;
+    for(;idx<pool.length;idx++){ r-=weights[idx]; if(r<=0) break; }
+    idx = Math.min(idx, pool.length-1);
+    picks.push(pool[idx]);
+    pool.splice(idx,1);
+  }
+  return picks;
+}
+
+function generateASGraph(nodeCount){
+  const tier1Count = Math.max(4, Math.min(12, Math.round(nodeCount/120)));
+  const remaining = Math.max(0, nodeCount - tier1Count);
+  const transitCount = Math.max(1, Math.round(remaining*0.15));
+  const stubCount = Math.max(0, remaining - transitCount);
+
+  const nodes = [];
+  let idc = 0;
+  const mk = (tier, wFn, jitterDeg) => {
+    const city = weightedPick(CITIES, wFn);
+    const n = {id:`AS${idc++}`, tier, city:city.name, country:city.country, continent:city.continent,
+      lat: jitter(city.lat,jitterDeg), lon: jitter(city.lon,jitterDeg), degree:0};
+    nodes.push(n); return n;
+  };
+  for(let i=0;i<tier1Count;i++) mk('tier1', c=>(c.aws||c.gcp||c.azure?3:1)*Math.sqrt(c.pop), 0.4);
+  for(let i=0;i<transitCount;i++) mk('transit', c=>(c.aws||c.gcp||c.azure?2:1)*Math.sqrt(c.pop), 0.4);
+  for(let i=0;i<stubCount;i++) mk('stub', c=>c.pop*(PENETRATION[c.continent]||0.5), 0.6);
+
+  const edges = [];
+  const tier1 = nodes.filter(n=>n.tier==='tier1');
+  const transit = nodes.filter(n=>n.tier==='transit');
+  const stub = nodes.filter(n=>n.tier==='stub');
+  const addEdge=(a,b,rel)=>{ edges.push({source:a.id,target:b.id,rel}); a.degree++; b.degree++; };
+
+  for(let i=0;i<tier1.length;i++) for(let j=i+1;j<tier1.length;j++) addEdge(tier1[i],tier1[j],'p2p');
+
+  transit.forEach(n=>{
+    nearestWeightedPicks(n, tier1, 1+(GENERATE_RNG()<0.4?1:0)).forEach(p=>addEdge(n,p,'c2p'));
+  });
+  transit.forEach(n=>{
+    if(GENERATE_RNG()<0.5){
+      nearestWeightedPicks(n, transit.filter(t=>t.id!==n.id), 1).forEach(p=>addEdge(n,p,'p2p'));
+    }
+  });
+  stub.forEach(n=>{
+    const useTier1 = GENERATE_RNG()<0.08 && tier1.length;
+    const base = useTier1 ? tier1 : transit.length ? transit : tier1;
+    nearestWeightedPicks(n, base, GENERATE_RNG()<0.25?2:1).forEach(p=>addEdge(n,p,'c2p'));
+  });
+
+  return {nodes, edges, tier1Count, transitCount, stubCount};
+}
+
+function nearestASNode(lat, lon, asNodes){
+  let best=null, bestD=Infinity;
+  for(const n of asNodes){ const d=haversineKm(lat,lon,n.lat,n.lon); if(d<bestD){bestD=d;best=n;} }
+  return best;
+}
+
+/* ---------------- Real CAIDA topology loading ---------------- */
+// A small set of well-known large ASNs anchored to real cities, for approximate
+// geo-placement when no AS->geo mapping file is supplied. Everything else falls
+// back to weighted-random placement across the reference city list.
+const KNOWN_ASN_CITY = {
+  15169:"San Francisco", 16509:"Ashburn", 8075:"Seattle", 13335:"San Francisco",
+  20940:"Boston", 32934:"San Francisco", 3356:"Ashburn", 174:"New York",
+  2914:"Tokyo", 1299:"Stockholm", 3257:"Frankfurt", 6461:"Denver",
+  6939:"San Francisco", 3320:"Frankfurt", 5511:"Paris", 6453:"New York",
+  3491:"Hong Kong", 4134:"Beijing", 4837:"Shanghai", 7922:"Atlanta",
+  7018:"Dallas", 701:"Atlanta", 6167:"New York", 2516:"Tokyo",
+  17676:"Tokyo", 1273:"London", 2856:"London", 1221:"Sydney",
+  4713:"Tokyo", 9498:"Mumbai", 4755:"Mumbai", 45899:"Hanoi",
+  9808:"Beijing", 24560:"Delhi", 55836:"Mumbai", 36351:"Dallas",
+  16276:"Paris", 12876:"Paris", 8220:"Amsterdam", 20473:"Chicago",
+  63949:"Denver", 14061:"Portland", 19551:"San Francisco"
+};
+
+// Real ASNs for the operators used in server placement. Several of these operators run
+// many regional ASNs in reality; this is a small representative subset, not exhaustive,
+// so a match is only trusted when it's also geographically plausible for the server.
+const OPERATOR_ASNS = {
+  AWS:["16509","14618","39111","8987"],
+  GCP:["15169","396982","19527"],
+  Azure:["8075","8068","8069"],
+  Cloud:["16509","15169","8075"],
+  "CDN Edge":["13335","20940","54113"]
+};
+
+let fullCaidaGraph = null; // {nodes:Map(id->node), edges:[...]}
+
+function decodeMaybeGzip(file){
+  if(file.name.endsWith(".gz") && window.DecompressionStream){
+    return new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  }
+  return file.text();
+}
+
+async function loadCaidaFile(file){
+  document.getElementById("caidaStatus").textContent = `Parsing ${file.name}…`;
+  let text;
+  try{ text = await decodeMaybeGzip(file); }
+  catch(err){ document.getElementById("caidaStatus").textContent = `Could not read ${file.name} (${err.message}). If it's .bz2, decompress to .txt first.`; return; }
+
+  const nodes = new Map();
+  const edges = [];
+  const ensure = (asn)=>{ if(!nodes.has(asn)) nodes.set(asn,{id:asn,degree:0}); return nodes.get(asn); };
+  const lines = text.split("\n");
+  for(let i=0;i<lines.length;i++){
+    const line = lines[i].trim();
+    if(!line || line[0]==="#") continue;
+    const parts = line.split("|");
+    if(parts.length<3) continue;
+    const a = parts[0], b = parts[1], rel = parts[2]==="0" ? "p2p" : "c2p";
+    ensure(a).degree++; ensure(b).degree++;
+    edges.push({source:a, target:b, rel});
+  }
+  if(nodes.size===0){
+    document.getElementById("caidaStatus").textContent = `No valid AS-relationship lines found in ${file.name}. Expected pipe-delimited "asn1|asn2|rel" rows.`;
+    return;
+  }
+
+  // tier assignment purely for visual coloring, by degree percentile
+  const degrees = [...nodes.values()].map(n=>n.degree).sort((a,b)=>b-a);
+  const tier1Cut = degrees[Math.max(0, Math.floor(degrees.length*0.003))] || 0;
+  const transitCut = degrees[Math.max(0, Math.floor(degrees.length*0.03))] || 0;
+  nodes.forEach(n=>{ n.tier = n.degree>=tier1Cut ? "tier1" : n.degree>=transitCut ? "transit" : "stub"; });
+
+  fullCaidaGraph = {nodes, edges, filename:file.name, geoApplied:false};
+  applyCaidaGeo(null);
+  document.getElementById("caidaStatus").textContent =
+    `Loaded ${file.name}: ${nodes.size.toLocaleString()} ASes, ${edges.length.toLocaleString()} links. Geo-placement is approximate unless you upload an AS→geo mapping.`;
+  render();
+}
+
+function applyCaidaGeo(mapping){
+  if(!fullCaidaGraph) return;
+  fullCaidaGraph.nodes.forEach(n=>{
+    if(mapping && mapping[n.id]){
+      n.lat = mapping[n.id][0]; n.lon = mapping[n.id][1]; n.city = "mapped"; n.continent = ""; n.country = mapping[n.id][2] || "";
+      return;
+    }
+    if(n.lat!==undefined && n._fromKnown) return;
+    const known = KNOWN_ASN_CITY[n.id];
+    if(known){
+      const c = CITIES.find(c=>c.name===known);
+      if(c){ n.lat=jitter(c.lat,0.3); n.lon=jitter(c.lon,0.3); n.city=c.name; n.country=c.country; n.continent=c.continent; n._fromKnown=true; return; }
+    }
+    if(n.lat===undefined){
+      const c = weightedPick(CITIES, c=>c.pop*(PENETRATION[c.continent]||0.5));
+      n.lat=jitter(c.lat,0.7); n.lon=jitter(c.lon,0.7); n.city=c.name; n.country=c.country; n.continent=c.continent;
+    }
+  });
+  fullCaidaGraph.geoApplied = true;
+}
+
+async function loadCaidaGeoFile(file){
+  try{
+    const mapping = JSON.parse(await file.text());
+    applyCaidaGeo(mapping);
+    document.getElementById("caidaStatus").textContent = `Applied geo mapping from ${file.name} to loaded CAIDA graph.`;
+    render();
+  }catch(err){
+    document.getElementById("caidaStatus").textContent = `Could not parse ${file.name} as JSON: ${err.message}`;
+  }
+}
+
+function buildRenderedFromCaida(cap){
+  const all = [...fullCaidaGraph.nodes.values()];
+  const sorted = [...all].sort((a,b)=>b.degree-a.degree);
+  const top = sorted.slice(0, Math.floor(cap*0.5));
+  const rest = sorted.slice(Math.floor(cap*0.5));
+  const fillCount = Math.max(0, cap-top.length);
+  const fill = [];
+  const step = Math.max(1, Math.floor(rest.length/Math.max(1,fillCount)));
+  for(let i=0;i<rest.length && fill.length<fillCount;i+=step) fill.push(rest[i]);
+  const renderedNodes = [...top, ...fill];
+  const idSet = new Set(renderedNodes.map(n=>n.id));
+  const renderedEdges = fullCaidaGraph.edges.filter(e=>idSet.has(e.source)&&idSet.has(e.target));
+  return {
+    nodes: renderedNodes.map(n=>({id:n.id, tier:n.tier, city:n.city, country:n.country, continent:n.continent, lat:n.lat, lon:n.lon, degree:n.degree})),
+    edges: renderedEdges,
+    tier1Count: renderedNodes.filter(n=>n.tier==="tier1").length,
+    transitCount: renderedNodes.filter(n=>n.tier==="transit").length,
+    stubCount: renderedNodes.filter(n=>n.tier==="stub").length
+  };
+}
+
+/* ---------------- Scenario generation ---------------- */
+function generateServers(count, scenario, regions){
+  let pool;
+  if(scenario==="hyperscaler") pool = CITIES.filter(c=>c.aws||c.gcp||c.azure);
+  else if(scenario==="sparse") pool = CITIES.filter(c=>(c.aws||c.gcp||c.azure) && regions.includes(c.continent));
+  else pool = CITIES; // cdn: broad footprint, all reference cities eligible
+
+  if(pool.length===0) pool = CITIES.filter(c=>c.aws||c.gcp||c.azure);
+
+  const wFn = scenario==="cdn" ? c=>Math.sqrt(c.pop) : c=>c.pop;
+  const servers=[];
+  for(let i=0;i<count;i++){
+    const city = weightedPick(pool, wFn);
+    servers.push({
+      id:`srv_${String(i+1).padStart(3,"0")}`,
+      city:city.name, country:city.country, continent:city.continent,
+      operator: scenario==="cdn" ? "CDN Edge" : pickOperator(city),
+      lat: jitter(city.lat,0.25), lon: jitter(city.lon,0.25)
+    });
+  }
+  return servers;
+}
+
+function generateClients(total, scenario, skewRegion, skewIntensity){
+  const weights = CITIES.map(c=>{
+    let w;
+    if(scenario==="uniform") w = 1;
+    else w = c.pop * (PENETRATION[c.continent]||0.5);
+    if(scenario==="skew" && c.continent===skewRegion) w *= skewIntensity;
+    return w;
+  });
+  const sum = weights.reduce((a,b)=>a+b,0);
+  return CITIES.map((c,i)=>{
+    const count = Math.round(total * (weights[i]/sum));
+    return {city:c.name,country:c.country,continent:c.continent,lat:c.lat,lon:c.lon,client_count:count};
+  }).filter(c=>c.client_count>0);
+}
+
+function attachNearestServerAndDelay(clients, servers, ineff, hop){
+  const SPEED_KM_MS = 200; // ~2/3 c, km/ms
+  return clients.map(cl=>{
+    let best=null,bestD=Infinity;
+    for(const s of servers){
+      const d = haversineKm(cl.lat,cl.lon,s.lat,s.lon);
+      if(d<bestD){bestD=d;best=s;}
+    }
+    const delay = (bestD/SPEED_KM_MS)*ineff + hop;
+    return {...cl, nearest_server_id: best?best.id:null, est_delay_ms: +delay.toFixed(2), dist_km:+bestD.toFixed(0)};
+  });
+}
+
+/* ---------------- Map / projection setup ---------------- */
+const svg = d3.select("#map");
+const viewport = d3.select("#viewport");
+const landLayer = d3.select("#landLayer");
+const graticuleLayer = d3.select("#graticuleLayer");
+const linkLayer = d3.select("#linkLayer");
+const clientLayer = d3.select("#clientLayer");
+const serverLayer = d3.select("#serverLayer");
+const tooltip = d3.select("#tooltip");
+
+let width, height, projection, geoPath;
+
+function sizeSvg(){
+  const rect = document.getElementById("app").getBoundingClientRect();
+  width = rect.width; height = rect.height;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+  projection = d3.geoNaturalEarth1().scale(width/6.3).translate([width/2, height/2]);
+  geoPath = d3.geoPath(projection);
+}
+sizeSvg();
+window.addEventListener("resize", ()=>{ sizeSvg(); drawGraticule(); render(); });
+
+function drawGraticule(){
+  graticuleLayer.selectAll("*").remove();
+  const grat = d3.geoGraticule().step([20,20]);
+  graticuleLayer.append("path").datum(grat()).attr("class","graticule").attr("d", geoPath);
+}
+drawGraticule();
+
+// Try loading real land shapes; fall back silently to graticule-only if offline.
+fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json")
+  .then(r=>r.json())
+  .then(topo=>{
+    const land = topojson.feature(topo, topo.objects.land);
+    landLayer.selectAll("*").remove();
+    landLayer.append("path").datum(land).attr("class","land").attr("d", geoPath);
+  })
+  .catch(()=>{ /* offline fallback: graticule only */ });
+
+// Zoom
+const zoom = d3.zoom().scaleExtent([1,20]).on("zoom", (ev)=>{ viewport.attr("transform", ev.transform); });
+svg.call(zoom);
+document.getElementById("zoomIn").onclick = ()=> svg.transition().duration(200).call(zoom.scaleBy, 1.5);
+document.getElementById("zoomOut").onclick = ()=> svg.transition().duration(200).call(zoom.scaleBy, 1/1.5);
+document.getElementById("zoomReset").onclick = ()=> svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+
+/* ---------------- Render ---------------- */
+let currentServers=[], currentClients=[], currentASGraph={nodes:[],edges:[]};
+
+const SPEED_KM_MS = 200; // ~2/3 c, km/ms — same assumption as the intra-AS delay spec
+function computeEdgeDelays(nodeById, edges, ineff, hop){
+  return edges.map(e=>{
+    const a = nodeById.get(e.source), b = nodeById.get(e.target);
+    if(!a||!b || a.lat===undefined || b.lat===undefined) return {...e, delay_ms:null};
+    const d = haversineKm(a.lat,a.lon,b.lat,b.lon);
+    return {...e, delay_ms: +((d/SPEED_KM_MS)*ineff + hop).toFixed(3)};
+  });
+}
+
+/* ---------------- PoP-level expansion ---------------- */
+// Every AS becomes 1+ router/PoP nodes so large ASes keep multiple distinct egress
+// points instead of collapsing to a single point. Internal PoPs are meshed with
+// delay; external AS-to-AS links attach to whichever PoP is closest to the peer.
+function popCountFor(tier, degree){
+  const d = Math.max(degree||1, 1);
+  if(tier==="tier1") return Math.min(8, Math.max(3, Math.round(Math.sqrt(d)/3)));
+  if(tier==="transit") return Math.min(4, Math.max(2, Math.round(Math.sqrt(d)/5)));
+  return d>15 ? 2 : 1; // most stubs stay single-PoP; well-connected ones get 2
+}
+
+function expandToPoPGraph(asNodes, asEdges, ineff, hop, stubDefault){
+  const popsByAS = new Map();
+  const popNodes = [];
+  asNodes.forEach(n=>{
+    const count = popCountFor(n.tier, n.degree);
+    const pops = [];
+    for(let i=0;i<count;i++){
+      let lat, lon, city=n.city, country=n.country, continent=n.continent;
+      if(i===0){ lat=n.lat; lon=n.lon; }
+      else if(n.tier==="tier1"){
+        const c = weightedPick(CITIES, c=>Math.sqrt(c.pop));
+        lat = jitter(c.lat,0.3); lon = jitter(c.lon,0.3);
+        city = c.name; country = c.country; continent = c.continent;
+      } else {
+        lat = jitter(n.lat, 0.6+i*0.3); lon = jitter(n.lon, 0.6+i*0.3);
+      }
+      // internalDelayMs only means something for single-PoP ASes: with one PoP there's no
+      // internal mesh edge to carry a value, so this is where the "stub AS default delay"
+      // parameter actually lives. Multi-PoP ASes get 0 here — their real internal delay is
+      // already fully represented by the mesh edges between their own PoPs.
+      const pop = {id:`${n.id}-p${i}`, as_id:n.id, tier:n.tier, city, country, continent, lat, lon,
+        internal_delay_ms: count===1 ? +stubDefault : 0};
+      pops.push(pop); popNodes.push(pop);
+    }
+    popsByAS.set(n.id, pops);
+  });
+
+  const edges = [];
+  popsByAS.forEach(pops=>{
+    for(let i=0;i<pops.length;i++) for(let j=i+1;j<pops.length;j++)
+      edges.push({source:pops[i].id, target:pops[j].id, rel:"internal"});
+  });
+
+  const asById = new Map(asNodes.map(n=>[n.id,n]));
+  asEdges.forEach(e=>{
+    const popsA = popsByAS.get(e.source), popsB = popsByAS.get(e.target);
+    if(!popsA||!popsB||!popsA.length||!popsB.length) return;
+    const bAnchor = asById.get(e.target), aAnchor = asById.get(e.source);
+    let bestA = popsA[0];
+    if(popsA.length>1 && bAnchor){
+      let bd=Infinity; popsA.forEach(p=>{ const d=haversineKm(p.lat,p.lon,bAnchor.lat,bAnchor.lon); if(d<bd){bd=d;bestA=p;} });
+    }
+    let bestB = popsB[0];
+    if(popsB.length>1 && aAnchor){
+      let bd=Infinity; popsB.forEach(p=>{ const d=haversineKm(p.lat,p.lon,aAnchor.lat,aAnchor.lon); if(d<bd){bd=d;bestB=p;} });
+    }
+    edges.push({source:bestA.id, target:bestB.id, rel:e.rel});
+  });
+
+  const nodeById = new Map(popNodes.map(p=>[p.id,p]));
+  return {popNodes, edges: computeEdgeDelays(nodeById, edges, ineff, hop), popsByAS};
+}
+
+function findOperatorPoPInGraph(server, popNodes){
+  const candidates = OPERATOR_ASNS[server.operator] || [];
+  for(const asId of candidates){
+    const pops = popNodes.filter(p=>p.as_id===asId);
+    if(!pops.length) continue;
+    let best=pops[0], bd=Infinity;
+    pops.forEach(p=>{ const d=haversineKm(server.lat,server.lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} });
+    if(!server.continent || !best.continent || best.continent===server.continent) return best;
+  }
+  return null;
+}
+
+function delayColor(ms){
+  const t = Math.max(0, Math.min(1, ms/120)); // 0ms green -> 120ms+ red
+  const r = Math.round(94 + t*(255-94));
+  const g = Math.round(234 - t*(234-107));
+  const b = Math.round(212 - t*(212-107));
+  return `rgb(${r},${g},${b})`;
+}
+
+function render(){
+  const params = readParams();
+  setGenerationSeed(params.graphSeed);
+  let asBase;
+  if(params.topoSource==="caida" && fullCaidaGraph){
+    asBase = buildRenderedFromCaida(params.renderCap);
+  } else {
+    asBase = generateASGraph(params.asCount);
+  }
+  const expanded = expandToPoPGraph(asBase.nodes, asBase.edges, params.ineff, params.hop, params.stub);
+  currentASGraph = { asNodes: asBase.nodes, popNodes: expanded.popNodes, edges: expanded.edges,
+    tier1Count: asBase.tier1Count, transitCount: asBase.transitCount, stubCount: asBase.stubCount };
+
+  currentServers = generateServers(params.serverCount, params.serverScenario, params.sparseRegions);
+  let clients = generateClients(params.clientCount, params.clientScenario, params.skewRegion, params.skewIntensity);
+  currentClients = attachNearestServerAndDelay(clients, currentServers, params.ineff, params.hop);
+
+  const usingCaida = params.topoSource==="caida" && fullCaidaGraph;
+  const popHosting = currentASGraph.popNodes.filter(n=>n.tier==="tier1"||n.tier==="transit");
+  const popAccess = currentASGraph.popNodes.filter(n=>n.tier==="stub");
+  const hostingPool = popHosting.length ? popHosting : currentASGraph.popNodes;
+  const accessPool = popAccess.length ? popAccess : currentASGraph.popNodes;
+
+  const popById = new Map(currentASGraph.popNodes.map(n=>[n.id,n]));
+  const attachDelay = (lat,lon,popId)=>{
+    const pop = popById.get(popId);
+    if(!pop) return null;
+    const d = haversineKm(lat,lon,pop.lat,pop.lon);
+    return +((d/SPEED_KM_MS)*params.ineff + params.hop).toFixed(3);
+  };
+
+  currentServers.forEach(s=>{
+    const matched = usingCaida ? findOperatorPoPInGraph(s, currentASGraph.popNodes) : null;
+    if(matched){
+      s.hosting_pop_id = matched.id; s.hosting_as_id = matched.as_id;
+      s.hosting_as_match = "real_operator_asn";
+    } else {
+      const n = nearestASNode(s.lat, s.lon, hostingPool);
+      s.hosting_pop_id = n ? n.id : null; s.hosting_as_id = n ? n.as_id : null;
+      s.hosting_as_match = usingCaida ? "nearest_transit_fallback" : "synthetic";
+    }
+    s.hosting_delay_ms = attachDelay(s.lat, s.lon, s.hosting_pop_id);
+  });
+  currentClients.forEach(c=>{
+    const n = nearestASNode(c.lat, c.lon, accessPool);
+    c.access_pop_id = n ? n.id : null; c.access_as_id = n ? n.as_id : null;
+    c.access_delay_ms = attachDelay(c.lat, c.lon, c.access_pop_id);
+  });
+
+  // AS-level topology (rendered at PoP/router granularity)
+  d3.select("#asEdgeLayer").selectAll("*").remove();
+  d3.select("#asEdgeLayer").selectAll("path").data(currentASGraph.edges).join("path")
+    .attr("class", d=>`as-edge ${d.rel}`)
+    .attr("stroke", d=>delayColor(d.delay_ms||0))
+    .attr("d", d=>{
+      const a = popById.get(d.source), b = popById.get(d.target);
+      if(!a||!b) return null;
+      const p1 = projection([a.lon,a.lat]), p2 = projection([b.lon,b.lat]);
+      if(!p1||!p2) return null;
+      return `M${p1[0]},${p1[1]}L${p2[0]},${p2[1]}`;
+    });
+  const tierR = {tier1:5.5, transit:3, stub:1.3};
+  const popDegree = new Map();
+  currentASGraph.edges.forEach(e=>{ popDegree.set(e.source,(popDegree.get(e.source)||0)+1); popDegree.set(e.target,(popDegree.get(e.target)||0)+1); });
+  d3.select("#asNodeLayer").selectAll("*").remove();
+  d3.select("#asNodeLayer").selectAll("circle").data(currentASGraph.popNodes).join("circle")
+    .attr("class", d=>`as-node ${d.tier}`)
+    .attr("cx", d=>{const p=projection([d.lon,d.lat]); return p?p[0]:-9999;})
+    .attr("cy", d=>{const p=projection([d.lon,d.lat]); return p?p[1]:-9999;})
+    .attr("r", d=>tierR[d.tier])
+    .on("mousemove",(ev,d)=>{
+      const linked = currentASGraph.edges.filter(e=>e.source===d.id||e.target===d.id);
+      const avgDelay = linked.length ? (linked.reduce((a,e)=>a+(e.delay_ms||0),0)/linked.length).toFixed(2) : "–";
+      showTooltip(ev, `<b>${d.id}</b> — ${d.tier} PoP of ${d.as_id}<br>${d.city}, ${d.continent}<br>links: ${popDegree.get(d.id)||0} · avg delay: ${avgDelay} ms`);
+    })
+    .on("mouseleave", hideTooltip);
+  document.getElementById("asEdgeLayer").style.display = params.layerASEdges ? "" : "none";
+  document.getElementById("asNodeLayer").style.display = params.layerASNodes ? "" : "none";
+  document.getElementById("serverLayer").style.display = params.layerServers ? "" : "none";
+  document.getElementById("clientLayer").style.display = params.layerClients ? "" : "none";
+  document.getElementById("linkLayer").style.display = params.layerClientLinks ? "" : "none";
+
+  // links
+  linkLayer.selectAll("*").remove();
+  linkLayer.selectAll("path").data(currentClients).join("path")
+    .attr("class","link")
+    .attr("stroke", d=>delayColor(d.est_delay_ms))
+    .attr("d", d=>{
+      const s = currentServers.find(s=>s.id===d.nearest_server_id);
+      if(!s) return null;
+      const p1 = projection([d.lon,d.lat]), p2 = projection([s.lon,s.lat]);
+      if(!p1||!p2) return null;
+      return `M${p1[0]},${p1[1]}L${p2[0]},${p2[1]}`;
+    });
+
+  // clients
+  const maxCount = d3.max(currentClients, d=>d.client_count) || 1;
+  const rScale = d3.scaleSqrt().domain([0,maxCount]).range([2,16]);
+  clientLayer.selectAll("*").remove();
+  clientLayer.selectAll("circle").data(currentClients).join("circle")
+    .attr("class","client-node")
+    .attr("cx", d=>{const p=projection([d.lon,d.lat]); return p?p[0]:-9999;})
+    .attr("cy", d=>{const p=projection([d.lon,d.lat]); return p?p[1]:-9999;})
+    .attr("r", d=>rScale(d.client_count))
+    .on("mousemove", (ev,d)=>showTooltip(ev, `<span class="c">${d.city}, ${d.country}</span><br>clients: <b>${fmt(d.client_count)}</b><br>nearest: ${d.nearest_server_id||"–"}<br>est. delay: ${d.est_delay_ms} ms`))
+    .on("mouseleave", hideTooltip);
+
+  // servers
+  serverLayer.selectAll("*").remove();
+  serverLayer.selectAll("circle").data(currentServers).join("circle")
+    .attr("class","server-node pulse")
+    .attr("cx", d=>{const p=projection([d.lon,d.lat]); return p?p[0]:-9999;})
+    .attr("cy", d=>{const p=projection([d.lon,d.lat]); return p?p[1]:-9999;})
+    .attr("r", 5)
+    .on("mousemove", (ev,d)=>showTooltip(ev, `<b>${d.id}</b> — ${d.operator}<br>${d.city}, ${d.country}<br>AS ${d.hosting_as_id||"–"} · PoP ${d.hosting_pop_id||"–"} (${d.hosting_as_match||"–"})`))
+    .on("mouseleave", hideTooltip);
+
+  updateStats();
+}
+
+function showTooltip(ev, html){
+  const rect = document.getElementById("app").getBoundingClientRect();
+  tooltip.style("opacity",1).style("left",(ev.clientX-rect.left)+"px").style("top",(ev.clientY-rect.top)+"px").html(html);
+}
+function hideTooltip(){ tooltip.style("opacity",0); }
+
+function updateStats(){
+  const totalClients = d3.sum(currentClients, d=>d.client_count);
+  const avgDelay = totalClients>0 ? d3.sum(currentClients, d=>d.client_count*d.est_delay_ms)/totalClients : 0;
+  const worst = currentClients.reduce((a,b)=> b.est_delay_ms>(a?a.est_delay_ms:-1) ? b : a, null);
+  document.getElementById("statAS").textContent = currentASGraph.asNodes.length;
+  document.getElementById("statPoP").textContent = currentASGraph.popNodes.length;
+  document.getElementById("statASEdges").textContent = currentASGraph.edges.length;
+  document.getElementById("statServers").textContent = currentServers.length;
+  document.getElementById("statClients").textContent = fmt(totalClients);
+  document.getElementById("statHubs").textContent = currentClients.length;
+  document.getElementById("statAvgDelay").textContent = avgDelay.toFixed(1)+" ms";
+  document.getElementById("statMaxDelay").textContent = worst ? worst.est_delay_ms.toFixed(1)+" ms" : "–";
+}
+
+/* ---------------- Controls ---------------- */
+function buildContinentCheckboxes(){
+  const wrap = document.getElementById("sparseRegions");
+  wrap.innerHTML = "";
+  CONTINENTS.forEach((c,i)=>{
+    const id = "reg_"+i;
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="checkbox" id="${id}" value="${c}" ${(c==="North America"||c==="Europe")?"checked":""}> ${c}`;
+    wrap.appendChild(lab);
+  });
+}
+buildContinentCheckboxes();
+
+function buildSkewRegionSelect(){
+  const sel = document.getElementById("skewRegion");
+  sel.innerHTML = CONTINENTS.map(c=>`<option value="${c}">${c}</option>`).join("");
+  sel.value = "Asia";
+}
+buildSkewRegionSelect();
+
+function readParams(){
+  const serverScenario = document.getElementById("serverScenario").value;
+  const sparseRegions = [...document.querySelectorAll("#sparseRegions input:checked")].map(el=>el.value);
+  const clientScenario = document.getElementById("clientScenario").value;
+  return {
+    topoSource: document.getElementById("topoSource").value,
+    graphSeed: document.getElementById("graphSeed").value === "" ? null : +document.getElementById("graphSeed").value,
+    asCount: +document.getElementById("asCount").value,
+    renderCap: +document.getElementById("renderCap").value,
+    showTopology: document.getElementById("layerASNodes").checked, // legacy alias, kept for export metadata
+    layerASNodes: document.getElementById("layerASNodes").checked,
+    layerASEdges: document.getElementById("layerASEdges").checked,
+    layerServers: document.getElementById("layerServers").checked,
+    layerClients: document.getElementById("layerClients").checked,
+    layerClientLinks: document.getElementById("layerClientLinks").checked,
+    serverCount: +document.getElementById("serverCount").value,
+    serverScenario,
+    sparseRegions: sparseRegions.length ? sparseRegions : ["North America","Europe"],
+    clientCount: +document.getElementById("clientCount").value,
+    clientScenario,
+    skewRegion: document.getElementById("skewRegion").value,
+    skewIntensity: +document.getElementById("skewIntensity").value,
+    ineff: +document.getElementById("ineff").value,
+    hop: +document.getElementById("hop").value,
+    stub: +document.getElementById("stub").value
+  };
+}
+
+// live value labels
+const liveMap = [["graphSeed","seedV",v=>v===""?"random":("seed "+v)],["asCount","asCountV",v=>v],["renderCap","renderCapV",v=>v],["serverCount","serverCountV",v=>v],["skewIntensity","skewIntensityV",v=>v+"×"],
+  ["ineff","ineffV",v=>(+v).toFixed(2)],["hop","hopV",v=>(+v).toFixed(2)],["stub","stubV",v=>(+v).toFixed(1)]];
+liveMap.forEach(([id,vid,f])=>{
+  const el = document.getElementById(id);
+  el.addEventListener("input", ()=>{ document.getElementById(vid).textContent = f(el.value); });
+});
+
+document.getElementById("serverScenario").addEventListener("change", (e)=>{
+  document.getElementById("sparseRegionsWrap").classList.toggle("hidden", e.target.value!=="sparse");
+});
+document.getElementById("clientScenario").addEventListener("change", (e)=>{
+  document.getElementById("skewWrap").classList.toggle("hidden", e.target.value!=="skew");
+});
+
+// regenerate on control release, live for sliders too
+["asCount","renderCap","serverCount","serverScenario","clientCount","clientScenario","skewRegion","skewIntensity","ineff","hop","stub"]
+  .forEach(id=> document.getElementById(id).addEventListener("change", render));
+const layerToggles = [
+  ["layerASNodes","asNodeLayer"], ["layerASEdges","asEdgeLayer"],
+  ["layerServers","serverLayer"], ["layerClients","clientLayer"], ["layerClientLinks","linkLayer"]
+];
+layerToggles.forEach(([checkboxId, layerId])=>{
+  document.getElementById(checkboxId).addEventListener("change", (e)=>{
+    document.getElementById(layerId).style.display = e.target.checked ? "" : "none";
+  });
+});
+document.getElementById("topoSource").addEventListener("change", (e)=>{
+  const isCaida = e.target.value==="caida";
+  document.getElementById("synthWrap").classList.toggle("hidden", isCaida);
+  document.getElementById("caidaWrap").classList.toggle("hidden", !isCaida);
+  render();
+});
+document.getElementById("caidaFile").addEventListener("change", (e)=>{
+  if(e.target.files[0]) loadCaidaFile(e.target.files[0]);
+});
+document.getElementById("caidaGeoFile").addEventListener("change", (e)=>{
+  if(e.target.files[0]) loadCaidaGeoFile(e.target.files[0]);
+});
+document.getElementById("regenBtn").addEventListener("click", render);
+
+/* ---------------- Export ---------------- */
+function buildFullTopology(params){
+  const usingCaida = params.topoSource==="caida" && fullCaidaGraph;
+  const statusEl = document.getElementById("caidaStatus");
+  if(usingCaida && statusEl) statusEl.textContent = "Expanding full graph to router/PoP level for export…";
+
+  let asNodesOut, popNodesOut, edgesOut, sourceLabel, filenameOut;
+  if(usingCaida){
+    const fullAsNodes = [...fullCaidaGraph.nodes.values()];
+    const fullExpanded = expandToPoPGraph(fullAsNodes, fullCaidaGraph.edges, params.ineff, params.hop, params.stub);
+    asNodesOut = fullAsNodes.map(n=>({id:n.id, tier:n.tier, city:n.city, country:n.country, continent:n.continent, lat:n.lat, lon:n.lon, degree:n.degree, pop_count:fullExpanded.popsByAS.get(n.id).length}));
+    popNodesOut = fullExpanded.popNodes;
+    edgesOut = fullExpanded.edges;
+    sourceLabel = "caida_upload";
+    filenameOut = fullCaidaGraph.filename;
+    if(statusEl) statusEl.textContent = `Loaded ${fullCaidaGraph.filename}: ${fullAsNodes.length.toLocaleString()} ASes → ${popNodesOut.length.toLocaleString()} router/PoP nodes exported.`;
+  } else {
+    asNodesOut = currentASGraph.asNodes.map(n=>({id:n.id, tier:n.tier, city:n.city, country:n.country, continent:n.continent, lat:n.lat, lon:n.lon, degree:n.degree}));
+    popNodesOut = currentASGraph.popNodes;
+    edgesOut = currentASGraph.edges;
+    sourceLabel = "synthetic";
+    filenameOut = undefined;
+  }
+  return {usingCaida, asNodesOut, popNodesOut, edgesOut, sourceLabel, filenameOut};
+}
+
+function downloadBlob(content, mime, filename){
+  const blob = new Blob([content], {type:mime});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// GML is a plain-ASCII format. Transliterate common accented Latin characters so city/country
+// names (São Paulo, Zürich, Košice, ...) survive as readable ASCII instead of raw bytes or "?"
+const ASCII_MAP = {
+  "á":"a","à":"a","â":"a","ã":"a","ä":"a","å":"a","ā":"a",
+  "é":"e","è":"e","ê":"e","ë":"e","ē":"e",
+  "í":"i","ì":"i","î":"i","ï":"i","ī":"i",
+  "ó":"o","ò":"o","ô":"o","õ":"o","ö":"o","ø":"o","ō":"o",
+  "ú":"u","ù":"u","û":"u","ü":"u","ū":"u",
+  "ñ":"n","ń":"n","ç":"c","ć":"c","č":"c","š":"s","ś":"s","ž":"z","ź":"z","ż":"z",
+  "ł":"l","ő":"o","ű":"u","ý":"y","ÿ":"y","ß":"ss","æ":"ae","œ":"oe",
+  "Á":"A","À":"A","Â":"A","Ã":"A","Ä":"A","Å":"A","Ā":"A",
+  "É":"E","È":"E","Ê":"E","Ë":"E","Ē":"E",
+  "Í":"I","Ì":"I","Î":"I","Ï":"I","Ī":"I",
+  "Ó":"O","Ò":"O","Ô":"O","Õ":"O","Ö":"O","Ø":"O","Ō":"O",
+  "Ú":"U","Ù":"U","Û":"U","Ü":"U","Ū":"U",
+  "Ñ":"N","Ń":"N","Ç":"C","Ć":"C","Č":"C","Š":"S","Ś":"S","Ž":"Z","Ź":"Z","Ż":"Z",
+  "Ł":"L","Ő":"O","Ű":"U","Ý":"Y","Æ":"AE","Œ":"OE"
+};
+function asciiSafe(str){
+  return String(str).split("").map(ch=>{
+    if(ASCII_MAP[ch]!==undefined) return ASCII_MAP[ch];
+    return ch.charCodeAt(0) <= 127 ? ch : "?";
+  }).join("");
+}
+function escGml(v){ return asciiSafe(v).replace(/\\/g,"\\\\").replace(/"/g,'\\"'); }
+
+// GML with three node kinds (router/PoP, server, client hub) and typed edges, so the
+// exported graph is import-ready for Gephi/yEd/NetworkX while keeping router-to-router
+// links (the actual topology) distinguishable from server/client attachment edges.
+// Node fields follow the Topology Zoo convention (label, Country, Longitude, Internal,
+// Latitude) so files drop into tooling built around that format.
+function toGML(popNodesOut, edgesOut, servers, clients){
+  const idMap = new Map();
+  let nextId = 0;
+  const lines = ["graph [", "  directed 0"];
+
+  popNodesOut.forEach(n=>{
+    idMap.set("pop:"+n.id, nextId);
+    lines.push("  node [");
+    lines.push(`    id ${nextId}`);
+    lines.push(`    label "${escGml(n.id)}"`);
+    lines.push(`    Country "${escGml(n.country||"")}"`);
+    if(n.lon!==undefined) lines.push(`    Longitude ${n.lon}`);
+    lines.push(`    Internal 1`);
+    if(n.lat!==undefined) lines.push(`    Latitude ${n.lat}`);
+    lines.push(`    type "router"`);
+    lines.push(`    asId "${escGml(n.as_id||n.id)}"`);
+    lines.push(`    tier "${escGml(n.tier||"")}"`);
+    lines.push(`    city "${escGml(n.city||"")}"`);
+    lines.push(`    continent "${escGml(n.continent||"")}"`);
+    lines.push(`    internalDelayMs ${n.internal_delay_ms!=null?n.internal_delay_ms:0}`);
+    lines.push("  ]");
+    nextId++;
+  });
+  servers.forEach(s=>{
+    idMap.set("srv:"+s.id, nextId);
+    lines.push("  node [");
+    lines.push(`    id ${nextId}`);
+    lines.push(`    label "${escGml(s.id)}"`);
+    lines.push(`    Country "${escGml(s.country||"")}"`);
+    lines.push(`    Longitude ${s.lon}`);
+    lines.push(`    Internal 0`);
+    lines.push(`    Latitude ${s.lat}`);
+    lines.push(`    type "server"`);
+    lines.push(`    operator "${escGml(s.operator||"")}"`);
+    lines.push(`    city "${escGml(s.city||"")}"`);
+    lines.push("  ]");
+    nextId++;
+  });
+  clients.forEach((c,i)=>{
+    const cid = "cl:"+i;
+    idMap.set(cid, nextId);
+    lines.push("  node [");
+    lines.push(`    id ${nextId}`);
+    lines.push(`    label "client_${escGml(c.city)}"`);
+    lines.push(`    Country "${escGml(c.country||"")}"`);
+    lines.push(`    Longitude ${c.lon}`);
+    lines.push(`    Internal 0`);
+    lines.push(`    Latitude ${c.lat}`);
+    lines.push(`    type "client"`);
+    lines.push(`    city "${escGml(c.city)}"`);
+    lines.push(`    clientCount ${c.client_count}`);
+    lines.push("  ]");
+    nextId++;
+    c.__gmlId = cid;
+  });
+
+  edgesOut.forEach(e=>{
+    const s = idMap.get("pop:"+e.source), t = idMap.get("pop:"+e.target);
+    if(s===undefined||t===undefined) return;
+    lines.push("  edge [");
+    lines.push(`    source ${s}`);
+    lines.push(`    target ${t}`);
+    lines.push(`    type "${escGml(e.rel||"")}"`);
+    if(e.delay_ms!==null && e.delay_ms!==undefined) lines.push(`    delayMs ${e.delay_ms}`);
+    lines.push("  ]");
+  });
+  servers.forEach(s=>{
+    const a = idMap.get("srv:"+s.id), b = idMap.get("pop:"+s.hosting_pop_id);
+    if(a===undefined||b===undefined) return;
+    lines.push("  edge [", `    source ${a}`, `    target ${b}`, `    type "hosts"`, `    delayMs ${s.hosting_delay_ms!=null?s.hosting_delay_ms:0}`, "  ]");
+  });
+  clients.forEach(c=>{
+    const a = idMap.get(c.__gmlId), b = idMap.get("pop:"+c.access_pop_id);
+    if(a!==undefined && b!==undefined) lines.push("  edge [", `    source ${a}`, `    target ${b}`, `    type "access"`, `    delayMs ${c.access_delay_ms!=null?c.access_delay_ms:0}`, "  ]");
+    const srv = servers.find(s=>s.id===c.nearest_server_id);
+    const sId = srv ? idMap.get("srv:"+srv.id) : undefined;
+    if(a!==undefined && sId!==undefined) lines.push("  edge [", `    source ${a}`, `    target ${sId}`, `    type "demand"`, `    delayMs ${c.est_delay_ms}`, "  ]");
+  });
+
+  lines.push("]");
+  return lines.join("\n");
+}
+
+document.getElementById("exportBtn").addEventListener("click", ()=>{
+  const params = readParams();
+  const {usingCaida, asNodesOut, popNodesOut, edgesOut, sourceLabel, filenameOut} = buildFullTopology(params);
+
+  const payload = {
+    generated_at: new Date().toISOString(),
+    note: usingCaida
+      ? `Real CAIDA AS-relationships topology loaded from "${filenameOut}". Full graph exported at router/PoP granularity — every AS is expanded into 1+ internal PoPs (scaled by degree) meshed with delay, and external AS-to-AS links attach to the nearest specific PoP rather than a single AS-level point. Geo-placement is approximate for ASNs not covered by a known-hub lookup or an uploaded AS→geo mapping. Servers/clients are still synthetic/parametric.`
+      : "Representative/synthetic router-level topology generated in-browser for parameter exploration (Tier-1 mesh + hierarchical customer-provider attachment, expanded into per-AS PoPs). Replace with real CAIDA / PeeringDB / APNIC pipeline output for production evaluation runs.",
+    parameters: params,
+    delay_model: { inefficiency_factor: params.ineff, per_hop_processing_ms: params.hop, stub_as_default_ms: params.stub },
+    as_graph: {
+      source: sourceLabel,
+      filename: filenameOut,
+      as_count: asNodesOut.length,
+      pop_node_count: popNodesOut.length,
+      edge_count: edgesOut.length,
+      rendered_pop_count: currentASGraph.popNodes.length,
+      as_nodes: asNodesOut,
+      pop_nodes: popNodesOut,
+      edges: edgesOut
+    },
+    servers: currentServers,
+    clients: currentClients.map(c=>({
+      city:c.city, country:c.country, continent:c.continent, lat:c.lat, lon:c.lon,
+      client_count:c.client_count, access_as_id:c.access_as_id, access_pop_id:c.access_pop_id, access_delay_ms:c.access_delay_ms,
+      nearest_server_id:c.nearest_server_id, dist_km:c.dist_km, est_delay_ms:c.est_delay_ms
+    }))
+  };
+  downloadBlob(JSON.stringify(payload,null,2), "application/json", `scenario_${params.serverScenario}_${params.clientScenario}_${Date.now()}.json`);
+});
+
+document.getElementById("exportGmlBtn").addEventListener("click", ()=>{
+  const params = readParams();
+  const {popNodesOut, edgesOut} = buildFullTopology(params);
+  const gml = toGML(popNodesOut, edgesOut, currentServers, currentClients);
+  downloadBlob(gml, "text/plain;charset=us-ascii", `topology_${params.topoSource}_${Date.now()}.gml`);
+});
+
+/* ---------------- Init ---------------- */
+render();
+</script>
+</body>
+</html>
