@@ -101,6 +101,7 @@ def topology_setup():
     clients = network.client_names()
     print(f"load: gml {t1 - t0:.3f}s, from_graph {t2 - t1:.3f}s; "
           f"{len(network.routers)} nodes ({len(servers)} servers, {len(clients)} clients)")
+    print(f"clients in gml ({len(clients)}): {clients}")
 
     # 3 - routing tables: precomputed from the GML if present, else the engine
     network.calculate_forwarding_tables()
@@ -135,6 +136,7 @@ def topology_setup():
             _nall = len(clients)
             clients = clients[:int(os.environ.get("NCLIENTS_USE"))]
             print(f"NCLIENTS_USE: using first {len(clients)} of {_nall} clients")
+        print(f"clients generating requests ({len(clients)}): {clients}")
         # arrival_lambda is the mean inter-request time per client (seconds);
         # session length averages size_lambda * size_scale_factor (seconds)
         _lam = float(_tu) if _tu is not None else 0.4
