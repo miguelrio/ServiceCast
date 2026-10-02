@@ -22,8 +22,11 @@ size before passing it. Either way, the Dijkstra runs happen inside
 scipy.sparse.csgraph.dijkstra (compiled C, one call per set of source trees)
 rather than a pure-Python heap loop.
 
-Edge weights:
-  - if the edge has a `delayMs` attribute, use it directly
+Edge weights (mirrors the engine's parsing in src/Gml.py exactly):
+  - if either endpoint has `Internal 0`, the engine never reads the edge's
+    delayMs and uses the default propagation delay (0.1) -- same here
+  - else if the edge has a `delayMs` attribute, use it directly (a 0 value
+    is replaced by the default, as Network.from_graph does)
   - otherwise, compute great-circle distance between the two endpoints'
     Latitude/Longitude (km) and convert at 0.009 ms/km
 
@@ -54,6 +57,11 @@ from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra as scipy_dijkstra
 
 KM_PER_DEGREE_DELAY_MS_PER_KM = 0.009
+
+# The engine's default link weight (src/Graph.py: Graph.default_propagation_delay,
+# set to 0.1 by experiments/main_precomputed_t1.py). Used for edges touching
+# an Internal-0 node and for 0 delayMs, mirroring the engine exactly.
+ENGINE_DEFAULT_PROPAGATION_DELAY = 0.1
 EARTH_RADIUS_KM = 6371.0
 
 ROUTER_ROUTER_EDGE_TYPES = {"internal", "p2p", "c2p"}
@@ -147,6 +155,15 @@ def build_sparse_graph(nodes, edges):
     plus the id<->matrix-index mappings. Vectorized: edge weights for the
     Euclidean-fallback case are computed for all such edges at once with
     numpy rather than one Python call per edge, which matters at 10^5+ scale.
+
+    Weights mirror the engine's link rule exactly (src/Gml.py edge parsing +
+    src/Network.from_graph): an edge touching an Internal-0 node keeps
+    Graph.default_propagation_delay regardless of any delayMs on the edge
+    (the engine parses those edges as "external" and never reads delayMs),
+    and a 0 delayMs is replaced by the default as well. Tables must be
+    computed over the same weights the engine puts on links, otherwise
+    accumulated announcement delay can exceed the table-derived diameter
+    and crash MetricUtility's 0..1 range check.
     """
     node_ids = list(nodes.keys())
     id_to_idx = {nid: i for i, nid in enumerate(node_ids)}
@@ -166,6 +183,11 @@ def build_sparse_graph(nodes, edges):
         and nodes[e["target"]].get("type") != "client"
     ]
 
+    def touches_external(e):
+        src = nodes.get(e["source"], {})
+        dst = nodes.get(e["target"], {})
+        return int(src.get("Internal", 1)) == 0 or int(dst.get("Internal", 1)) == 0
+
     src_ids = np.fromiter((e["source"] for e in routable_edges), dtype=np.int64, count=len(routable_edges))
     dst_ids = np.fromiter((e["target"] for e in routable_edges), dtype=np.int64, count=len(routable_edges))
 
@@ -175,7 +197,17 @@ def build_sparse_graph(nodes, edges):
         (float(e["delayMs"]) for e in routable_edges if "delayMs" in e), dtype=np.float64, count=int(has_delay.sum())
     )
 
-    if (~has_delay).any():
+    # engine: Network.from_graph replaces a 0 weight with the default
+    zero_delay = np.zeros(len(routable_edges), dtype=bool)
+    zero_delay[has_delay] = weights[has_delay] == 0.0
+    weights[zero_delay] = ENGINE_DEFAULT_PROPAGATION_DELAY
+
+    # engine: Gml edge weight stays at the default when either endpoint is
+    # external (Internal 0) -- delayMs is never read for those edges
+    external = np.fromiter((touches_external(e) for e in routable_edges), dtype=bool, count=len(routable_edges))
+    weights[external] = ENGINE_DEFAULT_PROPAGATION_DELAY
+
+    if (~has_delay & ~external).any():
         no_delay_edges = [e for e, hd in zip(routable_edges, has_delay) if not hd]
         lat1 = np.array([nodes[e["source"]]["Latitude"] for e in no_delay_edges])
         lon1 = np.array([nodes[e["source"]]["Longitude"] for e in no_delay_edges])
