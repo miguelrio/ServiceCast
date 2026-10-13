@@ -56,6 +56,10 @@ class Network:
         # (topology tool output): name -> {server_label: (next_hop, delay)}
         self.precomputed_tables = {}
 
+        # every run starts its end-of-run counters from zero
+        Router.reset_counters()
+        Server.server_metrics_created = 0
+
         # dropped nodes
         self.dropped = []
 
@@ -237,6 +241,27 @@ class Network:
             
         # start the simpy environment run
         self.env.run(until)
+
+        # ServerMetric updates dropped as off the unicast path (0 when
+        # forward_to_tree_children_only is on); an end-of-run count, so
+        # printed at the metrics level too
+        if Verbose.level >= -1:
+            print("{:.3f}: INVALID_ROUTE_DROPS {} (forward_to_tree_children_only = {})".format(self.env.now, Router.invalid_route_drops, Router.forward_to_tree_children_only))
+
+        if Verbose.level >= -1:
+            self.print_metrics_summary()
+
+    # End-of-run SUMMARY_ lines (Verbose.level >= -1): the totals the
+    # analysis scripts would otherwise count from per-update lines
+    def print_metrics_summary(self):
+        now = self.env.now
+        print("{:.3f}: {:5s} SUMMARY_SERVER_METRICS created: {} announce: {} withdraw: {}".format(
+            now, "Net ", Server.server_metrics_created,
+            Router.recv_server_metric.get('A', 0), Router.recv_server_metric.get('W', 0)))
+        for router_id in sorted(Router.fib_actions):
+            c = Router.fib_actions[router_id]
+            print("{:.3f}: {:5s} SUMMARY_FIB_ROUTER SET: {} KEEP: {} CHANGED: {} REMOVED: {}".format(
+                now, router_id, c['SET'], c['KEEP'], c['CHANGED'], c['REMOVED']))
 
     # contains router
     # pass in name or Router
@@ -903,8 +928,17 @@ class Network:
         all_loads = {}
         all_latencies = {}
 
+        vantage_latencies = self.latency_table.get(vantage_node, {})
+
         for server in servers:
-            latency = self.latency_table[vantage_node][server.id()]
+            # skip servers with no valid path from the vantage node: with
+            # valley-free routing some router/server pairs have no route, so
+            # the ground truth is the best *reachable* server -- the same set
+            # the router can choose from (see doc/TODO.md, Unreachable servers)
+            if server.id() not in vantage_latencies:
+                continue
+
+            latency = vantage_latencies[server.id()]
 
             # the raw metrics of this replica, live -- the payload's placeholder
             # delay of 0 is replaced by the latency from the vantage node
@@ -1002,12 +1036,13 @@ class Network:
 
     # Report the per-request metrics.
     # This is called by individual Servers, when the request arrives (t_arr).
-    #   OUTCOME_GAP   (B = BEST_UTIL_ARR - SEL_UTIL_ARR)   at Verbose level >= 0
-    #   DECISION_GAP  (A = BEST_UTIL_SEL - SEL_UTIL_EST)   at Verbose level >= 1
-    #   STALENESS_ERR (C = SEL_UTIL_SEL - SEL_UTIL_EST)    at Verbose level >= 1
+    #   OUTCOME_GAP   (B = BEST_UTIL_ARR - SEL_UTIL_ARR)   at Verbose level >= -1
+    #   DECISION_GAP  (A = BEST_UTIL_SEL - SEL_UTIL_EST)   at Verbose level >= -1
+    #   STALENESS_ERR (C = SEL_UTIL_SEL - SEL_UTIL_EST)    at Verbose level >= -1
     def best_replica_utility(self, requesting_server, packet, status = None):
 
-        if Verbose.level < 0:
+        # level -2 (silent) skips the ground truth; -1 (metrics) and up need it
+        if Verbose.level < -1:
             return
 
         client_name = packet.src
@@ -1025,6 +1060,11 @@ class Network:
         load_values = {}
 
         for server in servers:
+            # skip servers with no valid path to the client
+            # (see doc/TODO.md, Unreachable servers)
+            if client_name not in self.latency_table.get(server.id(), {}):
+                continue
+
             # get latency from client to server
             latency = self.latency_table[server.id()][client_name]
 
@@ -1059,6 +1099,11 @@ class Network:
             print("best_replica_utility: '" + requesting_server_id + "' utility from " + str(client_name) + " = " + str(utility_values))
 
         # best replica at arrival time, tie-break towards the arrival server
+        # the arrival server was reached, so it must be reachable; an empty
+        # set means the routing and latency tables disagree
+        if not utility_values:
+            raise RuntimeError("best_replica_utility: no reachable server in latency_table "
+                               "for client {} (request arrived at {})".format(client_name, requesting_server_id))
         best_arrival_utility = max(utility_values.values())
         best_arrival_replicas = [sid for sid, u in utility_values.items() if u == best_arrival_utility]
 
@@ -1089,7 +1134,7 @@ class Network:
                               status=status, minload=minload)
 
         # A and C need the decision-time data recorded by the deciding router
-        if Verbose.level >= 1 and hasattr(packet, 'optimal_snapshot') and hasattr(packet, 'selection_estimate'):
+        if Verbose.level >= -1 and hasattr(packet, 'optimal_snapshot') and hasattr(packet, 'selection_estimate'):
             snapshot = packet.optimal_snapshot      # ground truth at t_sel
             estimate = packet.selection_estimate    # FIB belief, from the update at t_update
             selected_id = estimate['server_id']

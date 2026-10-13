@@ -182,8 +182,25 @@ def read_gml(path, label="label", destringizer=None):
 
     """
 
+    total_bytes = Path(path).stat().st_size
+    progress_bytes = 0
+    next_progress_bytes = 10 * 1024 * 1024
+
     def filter_lines(lines):
-        for line in lines:
+        nonlocal progress_bytes, next_progress_bytes
+
+        for line_number, line in enumerate(lines, 1):
+            # the file is opened as ASCII, so characters == bytes
+            progress_bytes += len(line)
+            if Verbose.level >= 0 and progress_bytes >= next_progress_bytes:
+                percent = 100 * progress_bytes / total_bytes if total_bytes else 100
+                print(
+                    f"GML parsing: {progress_bytes / 1024 / 1024:.1f} MB / "
+                    f"{total_bytes / 1024 / 1024:.1f} MB ({percent:.1f}%), "
+                    f"line {line_number}",
+                    flush=True,
+                )
+                next_progress_bytes += 10 * 1024 * 1024
             #try:
                 #line = line.decode("ascii")
                 #pass
@@ -572,7 +589,11 @@ def parse_gml_lines(lines, label, destringizer):
 
 
     edges = graph.get("edge", [])
-    for i, edge in enumerate(edges if isinstance(edges, list) else [edges]):
+    edge_list = edges if isinstance(edges, list) else [edges]
+    total_edges = len(edge_list)
+    next_edge_progress = max(1, total_edges // 20)
+
+    for i, edge in enumerate(edge_list):
         source = pop_attr(edge, "edge", "source", i)
         target = pop_attr(edge, "edge", "target", i)
 
@@ -589,7 +610,9 @@ def parse_gml_lines(lines, label, destringizer):
         # print("gml node_meta_data[" + target_name + "] = " + str(neighbour_meta_data))
 
         weight = Graph.default_propagation_delay
-        
+        # only set when the weight comes from lat/long; None when delayMs is used
+        distance = None
+
         if meta_data is None or gml_is_external(meta_data):
             if Verbose.level >= 2:
                 print("gml error no edge distance -- Internal: 0 for " + source_name)
@@ -661,6 +684,15 @@ def parse_gml_lines(lines, label, destringizer):
                 print("gml add_edge " + str(source_name) + " " + str(target_name) + " " + str(weight))
 
             G.add_edge(source, target, weight)
+
+        if Verbose.level >= 0 and (i + 1) >= next_edge_progress:
+            percent = 100 * (i + 1) / total_edges if total_edges else 100
+            print(
+                f"GML graph construction: {i + 1:,} / {total_edges:,} edges "
+                f"({percent:.1f}%)",
+                flush=True,
+            )
+            next_edge_progress += max(1, total_edges // 20)
 
     #if label is not None and label != "id":
     #    G = nx.relabel_nodes(G, mapping)

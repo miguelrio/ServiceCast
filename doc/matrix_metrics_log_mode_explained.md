@@ -5,7 +5,7 @@ There are two ways to build the change-factor matrix:
 | Mode | How it reads metrics | Code |
 |------|----------------------|------|
 | **Pure-log** (default, this doc) | Runs the simulation with logging **on**, then derives every metric from the **log text** only — the same three gap lines per request the log notation defines. Touches nothing inside the simulation. | [`run_simulation_sweep_log.py`](run_simulation_sweep_log.py) |
-| **Monkey-patch** (legacy) | Wraps 3 simulation functions and reads in-memory state. Silent (`Verbose.level=-1`). Kept as the independent cross-check. | [`run_simulation_sweep.py`](run_simulation_sweep.py) — see [`matrix_metrics_explained.md`](matrix_metrics_explained.md) |
+| **Monkey-patch** (legacy) | Wraps 3 simulation functions and reads in-memory state. Sets `Verbose.level=-1`, which used to be silent and is now the metrics level (silent is -2; see `doc/TODO.md`). Kept as the independent cross-check. | [`run_simulation_sweep.py`](run_simulation_sweep.py) — see [`matrix_metrics_explained.md`](matrix_metrics_explained.md) |
 
 Both run the *identical* simulation (same topology, seed, parameters) and produce the
 same JSON shape, so the heatmaps are directly comparable. The only difference is
@@ -26,8 +26,10 @@ for each grid cell (server_cf, router_cf, delay):
 ```
 
 - Nothing in the simulation or any log line is changed — the collector is a pure **reader**.
-- `Verbose.level = 1` is the lowest level that prints every line we need (the FIB line
-  and the `DECISION_GAP` / `STALENESS_ERR` lines all need `>=1`).
+- `Verbose.level = 1` is the lowest level that prints every line we need: `log_metrics.py`
+  counts the per-update `RECV_PACKET` and FIB lines itself (it does not read the
+  end-of-run `SUMMARY_` lines), and the FIB lines need `>=1`. The gap lines appear
+  from level -1 up.
 - By default each cell's `.log` is written, parsed, then **deleted** (`--log-mode file`), so disk
   stays bounded. `--log-mode stream` keeps it in memory instead.
 

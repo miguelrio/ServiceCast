@@ -6,6 +6,9 @@ The Classes and Objects utilized in ServiceCast are outlined here.
 
 We use the Verbose class to adjust the logging output.
 The higher the level, the more logging output is produced.
+Level -1 (metrics) is the expected level for large networks and long runs;
+levels 0 and up are for protocol debugging on small networks or short runs.
+See [Logging](Logging.md).
 
 
 ### MetricUtility

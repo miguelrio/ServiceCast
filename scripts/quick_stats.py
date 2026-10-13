@@ -6,6 +6,7 @@ Usage:
 """
 
 import argparse
+import sys
 from collections import defaultdict
 import numpy as np
 
@@ -14,6 +15,7 @@ from log_syntax import (
     parse_fib_stability_action,
     parse_gap_line,
     parse_log_header,
+    parse_metrics_summary,
     parse_not_forwarded_event,
     parse_server_metric_event,
 )
@@ -77,7 +79,11 @@ def parse_log_lines(lines, filename=None, warn_header=False):
         "server_metrics_withdraw": 0,
         "fib_totals": {"SET": 0, "KEEP": 0, "CHANGED": 0, "REMOVED": 0},
         "fib_router_counts": defaultdict(lambda: {"SET": 0, "KEEP": 0, "CHANGED": 0, "REMOVED": 0}),
+        # per router and server; filled only from FIB lines (level >= 1), so
+        # empty for lower levels -- never printed, so output is unaffected
         "fib_router_server_counts": defaultdict(lambda: defaultdict(lambda: {"SET": 0, "KEEP": 0, "CHANGED": 0, "REMOVED": 0})),
+        "has_summary": False,
+        "summary_mismatches": [],
     }
 
     parameters, event_lines = parse_log_header(
@@ -88,9 +94,22 @@ def parse_log_lines(lines, filename=None, warn_header=False):
         if isinstance(verbose_level, int):
             stats["log_verbose_level"] = verbose_level
 
+    # end-of-run SUMMARY_ lines (Verbose.level >= -1) replace counting the
+    # per-update lines, which are absent at level -1
+    server_metrics_summary = None
+    fib_router_summaries = {}
+
     for line in event_lines:
         header = parse_event_header(line)
         if header is None:
+            continue
+
+        summary = parse_metrics_summary(line, header)
+        if summary is not None:
+            if summary.kind == "server_metrics":
+                server_metrics_summary = summary.counts
+            else:
+                fib_router_summaries[summary.router] = summary.counts
             continue
 
         if header.keyword in {"PACKET_CREATED", "RECV_PACKET"}:
@@ -121,6 +140,35 @@ def parse_log_lines(lines, filename=None, warn_header=False):
         gap_line = parse_gap_line(line, header)
         if gap_line is not None:
             _consume_gap(gap_line, stats)
+
+    # summary totals take the place of counting individual lines; where
+    # the lines were logged too, check that both agree
+    level = stats["log_verbose_level"]
+    if server_metrics_summary is not None:
+        stats["has_summary"] = True
+        for key, name in (("server_updates_created", "created"),
+                          ("server_metrics_announce", "announce"),
+                          ("server_metrics_withdraw", "withdraw")):
+            value = server_metrics_summary.get(name, 0)
+            if level is not None and level >= 0 and stats[key] != value:
+                stats["summary_mismatches"].append((name, stats[key], value))
+            stats[key] = value
+        # at level 1 and up the FIB lines were counted too: compare per
+        # router (not only in total, which could hide an action attributed
+        # to the wrong router) before the summary values replace them
+        zero = {"SET": 0, "KEEP": 0, "CHANGED": 0, "REMOVED": 0}
+        if level is not None and level >= 1:
+            for router in sorted(set(stats["fib_router_counts"]) | set(fib_router_summaries)):
+                counted = dict(stats["fib_router_counts"].get(router, zero))
+                summarised = {k: fib_router_summaries.get(router, {}).get(k, 0) for k in zero}
+                if counted != summarised:
+                    stats["summary_mismatches"].append(("fib_router " + router, counted, summarised))
+        summary_fib = dict(zero)
+        for router, counts in fib_router_summaries.items():
+            for key in summary_fib:
+                stats["fib_router_counts"][router][key] = counts.get(key, 0)
+                summary_fib[key] += counts.get(key, 0)
+        stats["fib_totals"] = summary_fib
 
     return stats
 
@@ -271,8 +319,14 @@ def main():
         with open(path, "r", encoding="utf-8") as fh:
             stats = parse_log_lines(fh, filename=path, warn_header=True)
 
+        for name, counted, summarised in stats.get("summary_mismatches", []):
+            print(f"WARNING: {path}: {name}: counted from log lines {counted} "
+                  f"!= SUMMARY_ line {summarised}", file=sys.stderr)
+
         log_verbose_level = stats.get("log_verbose_level")
-        log_is_low_verbosity = log_verbose_level is not None and log_verbose_level < 1
+        # FIB counts are available below level 1 only from the SUMMARY_ lines
+        log_is_low_verbosity = (log_verbose_level is not None and log_verbose_level < 1
+                                and not stats.get("has_summary"))
         include_fib_stability = not (not args.verbose and log_is_low_verbosity)
 
         if show_filename:

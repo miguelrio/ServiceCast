@@ -163,15 +163,6 @@ def build_network(knobs):
     return network
 
 
-def close_router_dbs(network):
-    """Close router TinyDB instances. The DBs use MemoryStorage, so this is
-    hygiene, not file cleanup."""
-    for router in network.routers.values():
-        db = getattr(router, "db", None)
-        if db is not None:
-            db.close()
-
-
 # --- config_key: how paired and repeated rows join ---------------------------
 #
 # Identifies the simulation config INDEPENDENT of log_mode, verbose, and
@@ -292,8 +283,6 @@ def run(knobs):
                 t_sim_start = time.perf_counter()
                 network.start(until=knobs["sim_duration"])
                 sim_s = time.perf_counter() - t_sim_start
-
-        close_router_dbs(network)
 
         row["build_s"] = build_s
         row["sim_s"] = sim_s

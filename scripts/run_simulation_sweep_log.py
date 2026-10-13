@@ -192,13 +192,6 @@ def summarise_records(records):
             "mean_err_arrival": float(np.mean(arrival_errors))
         }
 
-# Close router DBs
-def _close_router_dbs(network):
-    """Close router DBs"""
-    for router in network.routers.values():
-        if getattr(router, 'db', None):
-            router.db.close()
-
 def resolve_jobs(jobs):
     """<=0 means 'auto' (recommended_jobs); a positive value is used as-is."""
     return recommended_jobs() if (jobs is None or jobs <= 0) else jobs
@@ -249,7 +242,6 @@ def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_del
             if not keep_logs and os.path.exists(path):
                 os.remove(path)
 
-    _close_router_dbs(network)
     return _cell_from_metrics(lm), lm
 
 

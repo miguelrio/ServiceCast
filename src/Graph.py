@@ -14,6 +14,8 @@ class Graph:
         self.labels = []                # an array of names
         self.meta_data = {}             # a dict of meta data
         self.node_meta_data = {}        # a dict of meta data for each node
+        self._index = {}                # node name -> index into labels
+        self._edge_keys = set()         # (low index, high index) per edge
 
     # index into graph by index or node name
     # returns a name
@@ -31,6 +33,21 @@ class Graph:
     def __len__(self):
         return self.V
     
+    # index of a node given its index or its name
+    # (raises ValueError for an unknown name, like list.index did)
+    def _to_index(self, val):
+        if type(val) == int:
+            return val
+        try:
+            return self._index[val]
+        except KeyError:
+            raise ValueError("{!r} is not in list".format(val)) from None
+
+    # the key an undirected edge is stored under
+    @staticmethod
+    def _edge_key(s, d):
+        return (s, d) if s <= d else (d, s)
+
     # Build a graph from a dictionary
     @classmethod
     def from_dict(cls, neighbours):
@@ -44,6 +61,7 @@ class Graph:
         for node in neighbours.keys():
             # and create entries in labels
             graph.labels.append(node)
+            graph._index.setdefault(node, len(graph.labels) - 1)
             
         # print ("labels: {}\n".format(graph.labels))
         
@@ -51,7 +69,7 @@ class Graph:
         for node in neighbours.keys():
 
             # get index of node
-            index = graph.labels.index(node)
+            index = graph._to_index(node)
             # print ("index {} = {}\n".format( node, index))
             
             # get the next links  {'b', 'c'}
@@ -75,7 +93,7 @@ class Graph:
 
 
                 # get index of next
-                nextIndex = graph.labels.index(name)
+                nextIndex = graph._to_index(name)
                 # print ("nextIndex {} = {}\n".format(next, nextIndex))
 
                 # add the edge, if it doesn't exist
@@ -119,6 +137,7 @@ class Graph:
         else:
             self.V += 1
             self.labels.append(s)
+            self._index.setdefault(s, len(self.labels) - 1)
             self.graph.append(None)
 
     # Contains node
@@ -128,7 +147,7 @@ class Graph:
             # it's an int -- check size
             return val < self.V
         else:
-            return val in self.labels
+            return val in self._index
 
         # if type(s) == int:
         #     s = self.labels[s]
@@ -154,27 +173,21 @@ class Graph:
                 print("graph add_node " + str(self.name_of(d)))
             self.add_node(d)
 
-        if not self.contains_edge(s, d):
-            node = AdjNode(d,weight)
-            if type(s) == int:
-                pass
-            else:
-                # label to number
-                s = self.labels.index(s)
-                
+        # s and d can be int or value: convert both to indexes once
+        s = self._to_index(s)
+        d = self._to_index(d)
+
+        if self._edge_key(s, d) not in self._edge_keys:
+            node = AdjNode(d, weight)
             node.next = self.graph[s]
             self.graph[s] = node
 
-            node = AdjNode(s,weight)
-            # d can be int or value
-            if type(d) == int:
-                pass
-            else:
-                # label to number
-                d = self.labels.index(d)
+            node = AdjNode(s, weight)
             node.next = self.graph[d]
             self.graph[d] = node
-            
+
+            self._edge_keys.add(self._edge_key(s, d))
+
 
     # Contains a link
     def contains_link(self, s, d):
@@ -182,46 +195,21 @@ class Graph:
     
     # Contains an edge
     def contains_edge(self, s, d):
-        # s can be int or value
-        if type(s) == int:
-            pass
-        else:
-            # label to number
-            s = self.labels.index(s)
-        
-        # d can be int or value
-        if type(d) == int:
-            pass
-        else:
-            # label to number
-            d = self.labels.index(d)
-        
-        # get head of the adjacency
-        node = self.graph[s]
+        # s and d can be int or value
+        s = self._to_index(s)
+        d = self._to_index(d)
 
-        # Skip through all the nodes
-        while node != None:
-            if node.vertex == d:
-                return True
-            else:
-                node = node.next
-        return False
+        # add_edge is the only place adjacency entries are added,
+        # so the edge set is complete
+        return self._edge_key(s, d) in self._edge_keys
         
     # Get an edge
     def edge(self, s, d):
         """Returns a 3-tuple (src, dst, weight)  or None"""
-        # s can be int or value
-        if type(s) == int:
-            pass
-        else:
-            s = self.labels.index(s)
-        
-        # d can be int or value
-        if type(d) == int:
-            pass
-        else:
-            d = self.labels.index(d)
-        
+        # s and d can be int or value
+        s = self._to_index(s)
+        d = self._to_index(d)
+
         # get head of the adjacency
         node = self.node(s)
         head = node
@@ -279,14 +267,14 @@ class Graph:
             node = self.graph[val]
             return node
         else:
-            index = self.labels.index(val)
+            index = self._to_index(val)
             node = self.graph[index]
             return node
 
     # Label for node
     def name_of(self, i):
         if type(i) == str:
-            i = self.labels.index(i)
+            i = self._to_index(i)
             
 
         if len(self.labels) > i:
@@ -305,7 +293,7 @@ class Graph:
             else:
                 return [(self.name_of(value[0]), value[1]) for value in node.as_list()]
         else:
-            index = self.labels.index(val)
+            index = self._to_index(val)
             node = self.graph[index]
             if node == None:
                 return []

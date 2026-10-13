@@ -17,6 +17,8 @@ mappings = [    ("Utility.alpha", "ALPHA"),
                 ("Graph.default_propagation_delay", "GRAPH_DELAY"),
                 ("Router.hop_by_hop", "ROUTER_HOP_BY_HOP"),
                 ("Router.fib_utility_update_threshold", "ROUTER_FIB_UPT"),
+                ("Router.forward_to_tree_children_only", "ROUTER_FORWARD_TO_TREE_CHILDREN_ONLY"),
+                ("Router.remove_fib_entry_when_all_utilities_zero", "ROUTER_REMOVE_FIB_ENTRY_WHEN_ALL_UTILITIES_ZERO"),
                 ("Server.slots", "SERVER_SLOTS"),
                 ("Server.change_factor", "SERVER_CF"),
                 # lambdas
@@ -25,6 +27,13 @@ mappings = [    ("Utility.alpha", "ALPHA"),
                 ("Router.same_as_fn_load", "ROUTER_SAME_AS_FN_LOAD"),
                 ("Router.same_as_fn_delay", "ROUTER_SAME_AS_FN_DELAY"),
                 ("Utility.user_utility_fn", "UTILITY_USER_UTILITY_FN")
+                # TODO: the metric utility functions and the load scale,
+                # MetricUtility.metric_utility_fn['load'] / ['delay'] and
+                # MetricUtility.metric_scale['load'], can't be set from a
+                # config yet: they are dict entries, which update() can't
+                # set. Until then they keep the MetricUtility defaults
+                # (linear). MetricUtility.metric_scale['delay'] is always
+                # set to the network diameter by the Network.
             ]
 
 # Import some values from a .py file

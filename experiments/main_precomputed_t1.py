@@ -8,6 +8,21 @@
 # Usage:
 #   python3 main_precomputed_t1.py [gml_file] [until] [verbose_level]
 # Defaults: the synthetic topology, until=360, verbose 1.
+#
+# Verbose levels (each prints everything the level below prints):
+#   -2  silent: nothing per event, no ground-truth calculations (timing runs)
+#   -1  metrics: parameter header, per-request lines (OUTCOME_GAP,
+#       DECISION_GAP, STALENESS_ERR, REQUEST_NOT_FORWARDED, BLOCKED) and
+#       end-of-run SUMMARY_ counts -- enough for quick_stats.py / plot_load.py
+#    0  + per-update lines (PACKET_CREATED, RECV_PACKET)
+#    1  + FIB stability lines and other decision detail
+#   2+  + progressively more debug detail
+# Use -1 for large networks and long runs; levels 0 and up are for protocol
+# debugging on small networks or short runs only (see doc/Logging.md).
+#
+# Environment:
+#   TREE_CHILDREN_ONLY=1  only send ServerMetric updates to neighbours whose
+#                         unicast next hop to the replica is this router
 
 import os
 import sys
@@ -54,6 +69,11 @@ def topology_setup():
     # first-decide unicast (False)
     Router.hop_by_hop = False
 
+    # TREE_CHILDREN_ONLY=1: only send ServerMetric updates to neighbours whose
+    # unicast next hop to the replica is this router (skips sends the
+    # receiver would drop as off the unicast path)
+    Router.forward_to_tree_children_only = os.environ.get("TREE_CHILDREN_ONLY") == "1"
+
     # Default propagation delay for links without a usable GML weight
     # (attachment links to clients and servers)
     Graph.default_propagation_delay = 0.1
@@ -75,6 +95,7 @@ def topology_setup():
     until = {until}
     Verbose.level = {Verbose.level}
     Router.hop_by_hop = {Router.hop_by_hop}
+    Router.forward_to_tree_children_only = {Router.forward_to_tree_children_only}
     Graph.default_propagation_delay = {Graph.default_propagation_delay}
     Utility.alpha = {Utility.alpha}
     Server.slots = {Server.slots}
@@ -137,8 +158,10 @@ def topology_setup():
             clients = clients[:int(os.environ.get("NCLIENTS_USE"))]
             print(f"NCLIENTS_USE: using first {len(clients)} of {_nall} clients")
         print(f"clients generating requests ({len(clients)}): {clients}")
-        # arrival_lambda is the mean inter-request time per client (seconds);
-        # session length averages size_lambda * size_scale_factor (seconds)
+        # arrival_lambda is the mean inter-request time (seconds) of a single
+        # Poisson process across all clients (each request goes to a random
+        # client), so the total rate is 1/arrival_lambda whatever the client
+        # count; session length averages size_lambda * size_scale_factor (seconds)
         _lam = float(_tu) if _tu is not None else 0.4
         Generator.multi_client_event_generator(network, clients, "§a",
                                                arrival_lambda=_lam, size_lambda=10,

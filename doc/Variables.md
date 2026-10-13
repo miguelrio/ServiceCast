@@ -248,10 +248,16 @@ Set verbose level for system [logging](Logging.md) outputs
 
 ```Verbose.level = 2```
 
-Current values for ```Verbose.level``` to produced output are [0, 1, 2, 3].
+Current values for ```Verbose.level``` are [-2, -1, 0, 1, 2, 3].
 
+- -2 produces no per-event logging output (timing runs).
+- -1 (metrics) prints the per-request result lines and end-of-run
+  summary counts. It is the expected level for large networks and long
+  runs.
+- 0 and above add per-update-message detail, for protocol debugging on
+  small networks or short runs only.
 
-Setting the value to -1 will produce no logging output.
+See [Logging](Logging.md) for what each level prints and typical log sizes.
 
 
 Set table printout style.  

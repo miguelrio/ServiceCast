@@ -24,8 +24,10 @@ FIB_STABILITY_KEYWORDS = frozenset({
     "CHANGED_BEST_REPLICA",
     "REMOVED_BEST_REPLICA_FROM_FIB",
 })
+# end-of-run totals printed at Verbose.level >= -1 (Network.print_metrics_summary)
+SUMMARY_KEYWORDS = frozenset({"SUMMARY_SERVER_METRICS", "SUMMARY_FIB_ROUTER"})
 EVENT_KEYWORDS = tuple(sorted(
-    GAP_KEYWORDS | FIB_STABILITY_KEYWORDS | {
+    GAP_KEYWORDS | FIB_STABILITY_KEYWORDS | SUMMARY_KEYWORDS | {
         "PACKET_CREATED",
         "RECV_PACKET",
         "SERVICE_FIB",
@@ -92,6 +94,12 @@ class RequestNotForwarded(NamedTuple):
     router: str
     service: str
     packet: int
+
+
+class MetricsSummary(NamedTuple):
+    kind: str            # "server_metrics" or "fib_router"
+    router: str | None   # set for "fib_router"
+    counts: dict[str, int]
 
 
 def _parse_parameter_value(value: str):
@@ -306,3 +314,18 @@ def parse_fib_stability_action(
         server=match.group("server"),
         neighbour=match.group("neighbour"),
     )
+
+
+def parse_metrics_summary(
+    line: str, header: EventHeader | None = None
+) -> MetricsSummary | None:
+    """Parse an end-of-run SUMMARY_ line, e.g.
+    SUMMARY_SERVER_METRICS created: 12 announce: 340 withdraw: 5
+    <router> SUMMARY_FIB_ROUTER SET: 1 KEEP: 20 CHANGED: 3 REMOVED: 0"""
+    header = header or parse_event_header(line)
+    if header is None or header.keyword not in SUMMARY_KEYWORDS:
+        return None
+    counts = {key: int(value) for key, value in re.findall(r"(\w+):\s+(\d+)", header.payload)}
+    if header.keyword == "SUMMARY_SERVER_METRICS":
+        return MetricsSummary("server_metrics", None, counts)
+    return MetricsSummary("fib_router", header.emitter, counts)

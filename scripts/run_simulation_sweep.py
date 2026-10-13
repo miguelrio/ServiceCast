@@ -22,18 +22,6 @@ import simpy
 script_path = os.path.dirname(os.path.abspath(__file__))
 project_path = os.path.dirname(script_path)
 
-import Router as RouterModule
-from tinydb.storages import MemoryStorage
-import tinydb
-
-class InMemoryTinyDB(tinydb.TinyDB):
-    def __init__(self, *args, **kwargs):
-        # Force MemoryStorage and discard the path argument since MemoryStorage is purely in-memory
-        super().__init__(storage=MemoryStorage)
-
-# Monkeypatch Router module's TinyDB to be in-memory
-RouterModule.TinyDB = InMemoryTinyDB
-
 from Graph import Graph
 from Network import Network
 from Server import Server
@@ -323,13 +311,6 @@ def build_network(env, propagation_delay):
     return network
 
 
-def _close_router_dbs(network):
-    """Close router DBs to release file descriptors (avoids 'Too many open files')."""
-    for router in network.routers.values():
-        if getattr(router, 'db', None):
-            router.db.close()
-
-
 def run_single_experiment(server_cf, router_cf, hop_by_hop=False, propagation_delay=0.1):
     """Run one SIM_DURATION-second simulation for the given parameters.
 
@@ -347,7 +328,6 @@ def run_single_experiment(server_cf, router_cf, hop_by_hop=False, propagation_de
         network.start(until=SIM_DURATION)
 
     fib_updates = sum(getattr(r, 'service_fib_updates', 0) for r in network.routers.values())
-    _close_router_dbs(network)
 
     return ExperimentResult(probes.created, probes.hops, probes.records, fib_updates,
                             probes.blocked, probes.hops_announce, probes.hops_withdraw)

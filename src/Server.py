@@ -56,6 +56,10 @@ class Server(Host):
     # capacity as no of slots
     slots = 10
 
+    # ServerMetric packets created by all servers, as PACKET_CREATED lines
+    # would show (end-of-run count, see Network.print_metrics_summary)
+    server_metrics_created = 0
+
     # flow change factor  10% -> 0.1
     change_factor = 0.1
 
@@ -326,6 +330,9 @@ class Server(Host):
             print("{:.3f}: {:5s} CALCULATE_PAYLOAD: slots: {} flows: {} load: {}".format(self.env.now, self.id(), self.last_payload['slots'], self.last_payload['no_of_flows'], self.last_payload['load']))
         
         packet.payload = self.last_payload
+
+        # end-of-run count (see Network.print_metrics_summary)
+        Server.server_metrics_created += 1
 
         if Verbose.level >= 0:
             print("{:.3f}: {:5s} PACKET_CREATED {}.{} ({:.3f}) ServerMetric in {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.id, packet.time, self.hostid, (self.env.now - packet.time)))

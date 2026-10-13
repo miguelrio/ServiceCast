@@ -330,7 +330,9 @@ class Generator(object):
 
         env = network.env
 
-        if Verbose.level >= 0:
+        # also at -1 (metrics): log_syntax.py ends the log header at the
+        # size_scale_factor line printed here
+        if Verbose.level >= -1:
             print(f"""Client multi_client_event_generator parameters:
     arrival_lambda = {arrival_lambda}
     size_lambda = {size_lambda}

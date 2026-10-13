@@ -48,6 +48,35 @@ class Router(object):
     # Remove FIB if all replicas in the RIB have utility of zero 
     remove_fib_entry_when_all_utilities_zero = True
 
+    # Only send ServerMetric updates to neighbours whose unicast next hop
+    # toward the replica is this router (children in the replica's
+    # shortest-path tree). Others would drop them as not on the unicast route.
+    # NB: reads the neighbour's FIB directly - a simulation shortcut.
+    forward_to_tree_children_only = False
+
+    # count of ServerMetric updates dropped as not from the unicast route
+    invalid_route_drops = 0
+
+    # end-of-run counts (see Network.print_metrics_summary):
+    # ServerMetric receptions by operation (A / W), as RECV_PACKET lines would show
+    recv_server_metric = {'A': 0, 'W': 0}
+    # FIB stability actions per router, as the *_BEST_REPLICA lines would show
+    fib_actions = {}
+
+    @classmethod
+    def count_fib_action(cls, router_id, action):
+        counts = cls.fib_actions.get(router_id)
+        if counts is None:
+            counts = cls.fib_actions[router_id] = {'SET': 0, 'KEEP': 0, 'CHANGED': 0, 'REMOVED': 0}
+        counts[action] += 1
+
+    # reset the end-of-run counters (class-level, so shared by all routers)
+    @classmethod
+    def reset_counters(cls):
+        cls.invalid_route_drops = 0
+        cls.recv_server_metric = {'A': 0, 'W': 0}
+        cls.fib_actions = {}
+
     # The following staticmethods can be reset from the outside
     # to change the behaviour of the algorithms
 
@@ -314,6 +343,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def incoming_server_metrics_packet(self, link_end, packet):
         """The process for a packet with type ServerMetric"""
 
+        Router.recv_server_metric[packet.operation] = Router.recv_server_metric.get(packet.operation, 0) + 1
+
         if Verbose.level >= 0:
             print("{:.3f}: {:5s} RECV_PACKET  ServerMetric {} {}.{} ({:.3f}) [{}.{}] MT({:.3f}) managed in {} after {:.3f}".format(self.env.now, self.id(), packet.operation, packet.src, packet.pkt_no, packet.time, packet.replica, packet.id, packet.msg_time, self.id(), (self.env.now - packet.time)))
 
@@ -342,6 +373,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print("{:.3f}: {:5s} UNICAST_ROUTE for {} from {} --> {} ".format(self.env.now, self.id(), replica, link_end.src_node.id(), 'VALID' if valid_route else 'INVALID'))
 
         if not valid_route:
+            Router.invalid_route_drops += 1
             return
 
         # Only sent if propagation_time < anouncement_distance 
@@ -815,6 +847,13 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         print("{:.3f}: {:5s} NO_RETURN to {} - metric {}".format(self.env.now, self.id(), neighbour,  metric_to_send['replica']))
                     pass
 
+                elif Router.forward_to_tree_children_only and \
+                     self.neighbour_destination(neighbour).next_hop_to(metric_to_send['replica']) != self.id():
+                    # neighbour's next hop toward this replica isn't us: it would drop this
+                    if Verbose.level >= 2:
+                        print("{:.3f}: {:5s} NOT_TREE_CHILD {} - metric {}".format(self.env.now, self.id(), neighbour, metric_to_send['replica']))
+                    pass
+
                 else:
                     # a candidate for forwarding
 
@@ -1180,6 +1219,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     self.service_fib_updates += 1
                 # remove the FIB entry
                 self.service_FIB[service_name] = None
+                Router.count_fib_action(self.id(), 'REMOVED')
                 if Verbose.level >= 1:
                     print("{:.3f}: {:5s} REMOVED_BEST_REPLICA_FROM_FIB {}".format(self.env.now, self.id(), self.best_replica))   
                 self.best_replica = None
@@ -1272,6 +1312,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 #  counter's meaning matches previous runs)
                 self.service_fib_updates += 1
 
+
+        # Count the FIB stability action the lines below print
+        # (no prefix -- not counted -- when there was and is no best replica)
+        if old_best_replica == None:
+            fib_action = 'SET' if old_best_replica != self.best_replica else None
+        else:
+            fib_action = 'CHANGED' if old_best_replica != self.best_replica else 'KEEP'
+        if fib_action is not None:
+            Router.count_fib_action(self.id(), fib_action)
 
         # Print out some info on what changed
         if Verbose.level >= 1:
@@ -1590,6 +1639,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             return self.unicast_forwarding_table[dst][1]
         else:
             return self.unicast_forwarding_table[dst.id()][1]
+
+    # Get the next hop to a destination, without raising
+    def next_hop_to(self, dst):
+        """Next hop toward dst, or None if no route"""
+        entry = self.unicast_forwarding_table.get(dst)
+        return entry[1] if entry else None
 
     # Get the distance to a specific node
     def distance_to(self, dst):

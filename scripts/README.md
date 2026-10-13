@@ -12,6 +12,31 @@ They are intended to be run from this directory so their local imports resolve.
 | `log_syntax.py` | Shared line-level parser for current-format logs. It reads the optional parameter header, classifies timestamped events, and extracts gap, ServerMetric, and FIB fields. It is a library module rather than a standalone command. |
 | `log_metrics.py` | Matrix-specific log aggregator used by the log-based matrix sweep. It uses `log_syntax.py` to assemble each request's gap lines and return raw metrics. |
 
+### Verbose levels
+
+The simulator's verbose level (`Verbose.level`, the third argument of
+`experiments/main_precomputed_t1.py`) decides what a log contains. Each level
+prints everything the level below prints.
+
+| Level | Prints |
+| --- | --- |
+| -2 | Silent: nothing per event, no ground-truth calculations. For timing runs. |
+| -1 | Metrics: the parameter header, the per-request lines (`OUTCOME_GAP`, `DECISION_GAP`, `STALENESS_ERR`, `REQUEST_NOT_FORWARDED`, blocked requests) and end-of-run `SUMMARY_` counts of ServerMetrics and per-router FIB actions. |
+| 0 | + per-update lines (`PACKET_CREATED`, `RECV_PACKET`). |
+| 1 | + FIB stability lines and other decision detail. |
+| 2+ | + progressively more debug detail. |
+
+`quick_stats.py` and `plot_load.py` give the same results from a level -1 log
+as from a level 1 log, at a small fraction of the size. Other scripts that
+count `RECV_PACKET` or FIB lines themselves (e.g. `log_metrics.py` for the
+matrix sweep) need level 0 or above.
+
+**Level -1 is the expected level for large networks and long runs.** Levels
+0 and above print one or more lines per update message, so they are for
+detailed protocol debugging on small networks or short runs only; at scale
+the logs become far too large (a 500 s run on 100K routers is projected at
+about 25 MB at -1, 110 GB at 0 and 1.7 TB at 1). See `../doc/Logging.md`.
+
 ## Change-Factor Matrix Experiments
 
 | Script | Purpose |
@@ -39,7 +64,7 @@ behaviour (requests served, blocked rate) scale with each configuration knob.
 
 Unlike the scripts above, these run from the repository root — the runner
 starts `scripts/measure_one.py` by relative path and sets `PYTHONPATH=src`.
-Use an interpreter with the simulator's dependencies (simpy, tinydb, numpy)
+Use an interpreter with the simulator's dependencies (simpy, numpy)
 plus matplotlib, and check the matrix before committing to a full run:
 
 ```bash
