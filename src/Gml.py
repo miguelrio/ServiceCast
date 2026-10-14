@@ -624,9 +624,15 @@ def parse_gml_lines(lines, label, destringizer):
             if Verbose.level >= 2:
                 print("gml error no edge distance -- Internal: 0 for " + target_name)
 
+        elif ('type' in edge and edge['type'] in ['demand', 'access'] ):
+            # ignore demand and access links
+            if Verbose.level >= 2:
+                print("gml ignore link type " + edge['type'] + " for " + source_name + " to " + target_name)
         else:
             if gml_is_hyperedge(meta_data) or gml_is_hyperedge(neighbour_meta_data):
                 # don't use hyperedges
+                if Verbose.level >= 2:
+                    print("gml hyperedge use default_propagation_delay for " + source_name + " to " + target_name)
                 distance = Graph.default_propagation_delay
             else:
                 # a normal edge
