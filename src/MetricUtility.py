@@ -9,11 +9,17 @@
 import math
 
 
+# How far outside 0 -> 1 a utility may stray from float rounding
+# (e.g. a delay summed along a path a few 1e-16 over the diameter).
+RANGE_TOLERANCE = 1e-9
+
 # Check a utility is in its defined range: 0 (useless) -> 1 (best).
+# A value outside it by no more than RANGE_TOLERANCE is rounding error
+# and is clamped to the end of the range.
 def check_in_range(value, what):
-    if value < 0 or value > 1:
+    if value < -RANGE_TOLERANCE or value > 1 + RANGE_TOLERANCE:
         raise ValueError("{} = {} -- not in range 0 -> 1".format(what, value))
-    return value
+    return min(max(value, 0), 1)
 
 
 # ---------------------------------------------------------------------------

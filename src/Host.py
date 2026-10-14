@@ -18,7 +18,9 @@ class Host(object):
         self.pkt_no = 1
         self.type = "Host"
         
-        # need just one SimComponent.SwitchPort for the neighbour
+        # need just one SimComponent.SwitchPort for the neighbour:
+        # a Host is single-homed, linked to one Router
+        self.neighbour = None
         self.outgoing_port = None
 
         # a forwarding table
@@ -65,7 +67,14 @@ class Host(object):
     def add_neighbour(self, neighbour_obj, propdelay=1, rate=LINKRATE):
         """Add a neighbour from this host to a router"""
         link = None
-        
+
+        # a Host is single-homed: the same link again is a no-op,
+        # a link to a second node is an error
+        if self.neighbour is not None:
+            if self.neighbour == neighbour_obj.id():
+                return ("exists", self.outgoing_port.out)
+            raise ValueError("{} {} is already linked to {}: a host has one link, cannot add {}".format(self.type, self.id(), self.neighbour, neighbour_obj.id()))
+
         if Verbose.level >= 2:
             print("LinkEnd Add " + self.id() + " -> " + "neighbour " + str(neighbour_obj) + " neighbour_obj " + str(neighbour_obj.id()) + " delay " + str(propdelay))
 

@@ -1,23 +1,5 @@
 # Bugs
 
-#### `Network.contains_node` crashes on an integer
-
-For an `int` argument it does `return val < len(self.routers)`, but
-`val` is never defined, so it raises `NameError`. Present at
-`1fc7d42`. Likely fix: `return r < len(self.routers)`, or follow
-`Graph.contains_node`.
-
-#### A host's second link silently replaces its first
-
-A `Host` (Server or Client) has one port: `Host.add_neighbour`
-overwrites `self.neighbour` and `self.outgoing_port` each time. Any
-second edge on a host silently disconnects the first. This is how the
-client-server `demand` edges in the CAIDA GMLs stopped 51 servers'
-announcements reaching the network (they went to the client instead).
-To do: have the GML loader skip `demand` edges, and make
-`Host.add_neighbour` fail (or at least warn) when a host already has
-a link.
-
 #### GML loader ignores `clientCount`
 
 The topology generator writes one `client_<City>` node per city with
@@ -31,10 +13,13 @@ Decide whether the loader should create `clientCount` clients, or the
 generator should write one node per client, and fix the generator's
 total.
 
-#### `tests/gml_test1.py` fails
+Postponed (2026-10-14) until we have aligned with Miguel on the next
+version of the topology generator.
 
-It fails with a `TypeError` at `1fc7d42`, before any of the logging
-refactor changes.
+#### `run_simulation_sweep_log.py` has no `import subprocess`
+
+So the sweep results always record the git commit as "unknown". A
+one-line fix, left for Wes (his script).
 
 
 # Issues
@@ -133,14 +118,6 @@ To do:
     loaded as links and silenced 51 servers on CAIDA
   - the same link-weight rule everywhere
 
-#### GML loader drops nodes whose ids are not contiguous
-
-`Gml.py` checks for duplicate node ids with `if id in G`, where `G` is
-indexed by position. If node ids in the file are not written as
-0, 1, 2, ... in order, later nodes are silently treated as duplicates
-and dropped, and the run fails later with an unrelated `KeyError`.
-Workaround: renumber node ids contiguously when writing a GML.
-
 #### Engine-built latency tables leave out server access links
 
 `Router.weight_edge(dest)` only handles `str` and `Router`, so it
@@ -153,16 +130,15 @@ for 'delay' ... not in range 0 -> 1`. Reproduce with Cogentco, 20
 servers, 10 clients. Precomputed tables avoid this only because the
 route adders apply the engine's link rule themselves.
 
-Likely fix: `isinstance(dest, (Router, Host))`. It changes the results
-of every engine-routed experiment, and `Router-old.py` /
-`Router-dict.py` would need the same decision.
+Decided (2026-10-14): client and server links to routers must never
+have weight / latency 0; they take the default delay unless the GML
+gives one. Kept as a TODO until the experiment workflow and the
+config / `Importer` logic are resolved, since the fix
+(`isinstance(dest, (Router, Host))`, and the same rule in the route
+adders) changes the results of every engine-routed experiment.
+`Router-old.py` / `Router-dict.py` would need the same change.
 
-#### Float rounding can push the delay utility out of range
-
-Summing link delays hop by hop can come out about 1e-16 above the
-latency-table diameter, which fails the same 0..1 range check.
-Reproduce with Cogentco, weighted Dijkstra, 30-50 servers. Likely fix:
-a small tolerance or clamp in `MetricUtility`'s range check.
+#### Change the utility function
 
 Change utilty fn from:
 

@@ -161,6 +161,7 @@ class Network:
                     network.routers[name] = router
 
         # now add the links
+        demand_edges = []
         for i in range(len(graph)):
             # convert number to name
             name = graph.name_of(i)
@@ -197,6 +198,14 @@ class Network:
                         current = network.routers[name]
                         neighbour_obj = network.routers[neighbour_name]
 
+                        # a link between two hosts is a client-server
+                        # demand edge, not a network link: ignore it
+                        # (each edge is seen from both ends)
+                        if isinstance(current, Host) and isinstance(neighbour_obj, Host):
+                            if name < neighbour_name:
+                                demand_edges.append((name, neighbour_name))
+                            continue
+
                         actual_weight = weight
 
                         # double check weight
@@ -216,6 +225,9 @@ class Network:
                         # create the BidirectionalLink
                         if status1 == "create" or status2 == "create":
                             network.links.append(BidirectionalLink(link1, link2))
+
+        if demand_edges:
+            print("Network: ignored {} host-to-host (demand) edges, e.g. {} -- {}".format(len(demand_edges), *demand_edges[0]), file=sys.stderr)
 
         if Verbose.level >= 3:
             print("dropped = " + str(network.dropped))
@@ -272,7 +284,7 @@ class Network:
     def contains_node(self, r):
         if type(r) == int:
             # it's an int -- check size
-            return val < len(self.routers)
+            return r < len(self.routers)
 
         elif isinstance(r, str):
             # we just got a name

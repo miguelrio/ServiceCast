@@ -539,7 +539,10 @@ def parse_gml_lines(lines, label, destringizer):
     node_labels = set()
     for i, node in enumerate(nodes if isinstance(nodes, list) else [nodes]):
         id = pop_attr(node, "node", "id", i)
-        if id in G:
+        # check against the GML ids seen so far, not 'id in G': for an
+        # int that tests id < number of nodes added, so ids that are not
+        # written 0, 1, 2 ... in order looked like duplicates
+        if id in mapping:
             msg = f"gml error node id {id!r} is duplicated"
             # ORIG
             # raise ValueError(msg)
@@ -657,11 +660,13 @@ def parse_gml_lines(lines, label, destringizer):
         if target_name not in G:
             raise ValueError(f"gml error edge #{i} has undefined target {target_name!r}")
         if not multigraph:
-            if not G.contains_edge(source, target):
+            # add by name: the GML ids are not graph indexes when they
+            # are not written 0, 1, 2 ... in order
+            if not G.contains_edge(source_name, target_name):
                 if Verbose.level >= 2:
                     print("gml add_edge " + str(source_name) + " " + str(target_name) + " " +  str(weight))
 
-                G.add_edge(source, target, weight)
+                G.add_edge(source_name, target_name, weight)
             else:
                 arrow = "->" if directed else "--"
                 msg = f"edge #{i} ({source!r}{arrow}{target!r}) is duplicated"
@@ -683,7 +688,7 @@ def parse_gml_lines(lines, label, destringizer):
             if Verbose.level >= 2:
                 print("gml add_edge " + str(source_name) + " " + str(target_name) + " " + str(weight))
 
-            G.add_edge(source, target, weight)
+            G.add_edge(source_name, target_name, weight)
 
         if Verbose.level >= 0 and (i + 1) >= next_edge_progress:
             percent = 100 * (i + 1) / total_edges if total_edges else 100
@@ -974,7 +979,8 @@ def generate_gml(G, stringizer=None):
     # Output node data
     node_id = dict(zip(G, range(len(G))))
     ignored_keys = {"id", "label"}
-    for node, attrs in G.get_node_meta_data().items():          # ORIG G.nodes.items():
+    for node in node_id:          # ORIG G.nodes.items():
+        attrs = G.get_node_meta_data(node) or {}
         yield "  node ["
         yield "    id " + str(node_id[node])
         yield from stringize("label", node, (), "    ")
