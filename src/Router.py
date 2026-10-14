@@ -1395,16 +1395,16 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # Destination is likely to be a service name: e.g. §a
         service_name = packet.dst
 
-        if self.service_FIB.get(service_name) is None:
-            print("{:.3f}: {:5s} REQUEST_NOT_FORWARDED [{}.{}] for service {} pkt: {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, service_name, packet.id))
-            return
+        #if self.service_FIB.get(service_name) is None:
+        #    print("{:.3f}: {:5s} REQUEST_NOT_FORWARDED [{}.{}] for service {} pkt: {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, service_name, packet.id))
+        #    return
 
         if Router.hop_by_hop:
             # --- Original Hop-by-Hop Anycast Routing ---
             if not service_name in self.service_FIB:
                 # no service name in the service_FIB
                 if Verbose.level >= 2:
-                    print("{:.3f}: {:5s} NO_SERVICE_FIB_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+                    print("{:.3f}: {:5s} NO_SERVICE_FIB_ENTRY ClientRequest for service {} pkt: {}.{}  Not Forwarded".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
             else:
                 # we have that service name in the service_FIB
                 neighbour = self.service_FIB[service_name]['neighbour']
@@ -1431,7 +1431,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if not service_name in self.service_FIB:
                 # no service name in the service_FIB
                 if Verbose.level >= 2:
-                    print("{:.3f}: {:5s} NO_SERVICE_FIB_ENTRY ClientRequest for service {} pkt: {}.{}".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
+                    print("{:.3f}: {:5s} NO_SERVICE_FIB_ENTRY ClientRequest for service {} pkt: {}.{}  Not Forwarded".format(self.env.now, self.id(), packet.dst, packet.src, packet.pkt_no))
             else:
                 # we have that service name in the service_FIB
                 best_replica = self.service_FIB[service_name]['replica']
@@ -1453,12 +1453,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                         self.record_forwarding_decision(packet, self.service_FIB[service_name])
 
                     if Verbose.level >= 1:
-                        print("{:.3f}: {:5s} SINGLE_DECISION ClientRequest for service {} mapped to replica {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), service_name, best_replica, packet.id, link_end.dst_node))
+                        print("{:.3f}: {:5s} SINGLE_DECISION ClientRequest {}.{} for service {} forwarded to replica {} send to neighbour {}".format(self.env.now, self.id(),  packet.src, packet.pkt_no, service_name, best_replica, link_end.dst_node))
 
                     # print forward info
                     neighbour = self.route_to(packet.dst)
                     if Verbose.level >= 2:
-                        print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(), packet.dst, packet.id, link_end.dst_node))
+                        print("{:.3f}: {:5s} FORWARD_PACKET ClientRequest {}.{} for service {} pkt: {} send to neighbour {}".format(self.env.now, self.id(),  packet.src, packet.pkt_no, packet.dst, packet.id, link_end.dst_node))
 
                     self.normal_forwarding_packet(packet, link_end)                
 
