@@ -30,8 +30,9 @@ Verbose level -1 is now the metrics level (per-request lines plus
 end-of-run SUMMARY_ counts); silent is -2. Scripts written before
 the change pass -1 to mean "no logging" and now get the metrics
 level instead: about 2% slower, and per-request lines printed to
-stdout. Results are unchanged. To fix (switch to -2, or decide that
--1 is what they want):
+stdout. Results are unchanged. Wes is looking at these (2026-10-13),
+and the experiment workflow proposal will cover the sweep scripts. To
+fix (switch to -2, or decide that -1 is what they want):
 
 - `scripts/run_simulation_sweep.py`: sets `Verbose.level = -1` for its
   in-process runs, so it will now print every request's gap lines to
@@ -52,6 +53,10 @@ stdout. Results are unchanged. To fix (switch to -2, or decide that
   `quick_stats.py` handles both.
 
 #### Unreachable servers with valley-free routing
+
+Owner: Miguel (2026-10-13). Investigate why valley-free routing makes
+servers unreachable, then decide between relaxing the rules and
+constraining server placement.
 
 Valley-free (Gao-Rexford) routing leaves some router/server pairs with
 no valid path. On the CAIDA topology
@@ -79,6 +84,10 @@ Still to decide:
 - Should results report how many requests had a reduced server set?
 
 #### Default link delay is hard-coded and inconsistent
+
+Owner: Miguel (2026-10-13). A plan is agreed for the default delay and
+for ms vs s; Miguel fixes them in the next version of the topology
+generator, after further discussion with the group.
 
 Links touching an `Internal 0` node (every server and client attachment)
 never use the GML `delayMs`: `Gml.py` checks for external nodes before
@@ -115,7 +124,8 @@ To do:
   - units: the simulator reads seconds, but the CAIDA GMLs were written
     in milliseconds
   - which edges count as links: client-server `demand` edges were
-    loaded as links and silenced 51 servers on CAIDA
+    loaded as links and silenced 51 servers on CAIDA. The loader now
+    ignores them (2026-10-14); the generator should stop writing them
   - the same link-weight rule everywhere
 
 #### Engine-built latency tables leave out server access links
@@ -223,6 +233,10 @@ Fixed issue when there are no more slots in the whole system.
 Figures from the October 2026 scaling runs
 (`results/precomputed-scaling-20261008/`).
 
+Accepted (2026-10-13): the limits are understood and no optimisation is
+planned for now. Long runs go in parallel on other machines, including
+the two testbed servers once they are installed.
+
 #### Memory per router
 
 About 100 KB per router: 7.9 GB at 91K routers, about 35 GB projected
@@ -289,17 +303,57 @@ session moves load by less than 0.01, so most changes are never
 announced (with 500 slots, about every 5th). This dominated the
 damped curves in the server-count sweep. Consider damping in units of
 slots, or scaling `change_factor` with `Server.slots`, or at least
-documenting it.
+documenting it. To be handled by the planned review of the default
+thresholds (2026-10-13).
+
+#### Experiment workflow proposal
+
+Owner: David (2026-10-13). A concrete proposal for creating and running
+experiments, single runs and sweeps alike, to share with the group. It
+should settle: one config format (extended `Importer` constants files
+or something else); per-run `--set` overrides or config files only;
+where configs live and how results directories are named; the
+provenance kept with every run (config copy, git commit, seeds); how
+many parallel runs per machine and who manages the queue; the sweep
+scripts; and what happens to the existing scripts once the new
+workflow is validated.
+
+#### Set utility functions through `Importer`
+
+Agreed (2026-10-13), to do in the near future. `Importer` cannot set
+`MetricUtility.metric_utility_fn['load']` / `['delay']` or
+`MetricUtility.metric_scale['load']`, because they are dict entries
+(see the comment in `src/Importer.py`). `main_dfn_2.py` uses a
+logarithmic load utility and a geometric user utility; configs run
+through `Importer` get the linear defaults. Also decide which
+functions are canonical.
+
+#### Move the old experiments still in use
+
+Agreed (2026-10-13, Stuart's suggestion). Some of the hand-built
+experiments (`main_e1`, `main_e2`, `main_ls_lc`, `main_sa`, `main_sm`,
+`main_small`, `main_sm_cm`, `main_dfn`, `main_mig_t1`) are still used:
+move them to a separate directory rather than deleting them.
+
+#### Topology generator improvements
+
+Owner: Miguel (2026-10-13); proposals discussed, work continues
+alongside the rest. Questions raised about `scenario-explorer-12.html`:
+real AS locations for CAIDA (PeeringDB, CAIDA AS-to-organisation, IP
+geolocation) instead of random geography; a larger city list than the
+82 hard-coded `CITIES`; PoP counts and tiers from real data, and the
+8-PoP cap and full internal mesh; client rounding (see the
+`clientCount` bug); one copy of the generator, with the seed recorded
+in each GML.
+
+#### New metrics
+
+Postponed (2026-10-13). Proposed so far: per-router summary lines
+(RIB size at the end of the run and its peak, non-dominated set size),
+per-server summary lines (announcements sent and suppressed by
+damping), periodic progress lines, and run statistics.
 
 ## Experiments to run
-
-#### Calibrate the `TREE_CHILDREN_ONLY=0` slowdown
-
-The estimate that turning the flag off makes CAIDA-scale runs about
-3-5 times slower (about 3.7x at 91K, range 2.8-5.5) comes from routing
-tables plus one small calibration topology. Flag-off runs of 19
-simulated seconds on the 3K and 10K CAIDA subsets (about 10 minutes)
-would check it.
 
 #### Does RIB size settle at about log(number of servers)?
 
@@ -308,8 +362,9 @@ c * ln(servers) once loads spread out. A 30 s probe showed RIBs about
 twice H_n at 10-50 servers, probably because loads are still near zero
 early in a run. Test: run 10, 25, 50, 100 and 500 servers to 200 s,
 snapshotting each router's RIB and non-dominated set size every 10 s,
-and compare the median and 90th percentile with H_n. The RIB fields
-proposed in `plans/new_metrics.md` would provide the data.
+and compare the median and 90th percentile with H_n. The per-router RIB
+summary lines proposed under "New metrics" would provide the data. Part of
+the evaluation plan, to be refined (2026-10-13).
 
 
 # Experiments
