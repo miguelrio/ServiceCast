@@ -67,7 +67,7 @@ cannot reach 20 of the 100 servers.
 Routing copes with this: a router only chooses among servers it has a
 route to, and a request arriving at a router with no FIB entry for the
 service is dropped (`Router.client_request_packet` logs
-`REQUEST_NOT_FORWARDED`, at every verbose level). The ground-truth "best server"
+`REQUEST_NOT_FORWARDED`, at verbose -1 and above). The ground-truth "best server"
 calculations in `Network.py` (`inject_snapshot_optimal_utility` and the
 arrival-time `OUTCOME_GAP` calculation) looked up the latency to *every*
 server and crashed with a `KeyError` on the first unreachable one.

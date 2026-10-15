@@ -1395,9 +1395,12 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # Destination is likely to be a service name: e.g. §a
         service_name = packet.dst
 
-        #if self.service_FIB.get(service_name) is None:
-        #    print("{:.3f}: {:5s} REQUEST_NOT_FORWARDED [{}.{}] for service {} pkt: {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, service_name, packet.id))
-        #    return
+        # no FIB entry, or one set to None when all utilities reached zero:
+        # drop the request (the branches below assume a usable entry)
+        if self.service_FIB.get(service_name) is None:
+            if Verbose.level >= -1:
+                print("{:.3f}: {:5s} REQUEST_NOT_FORWARDED [{}.{}] for service {} pkt: {}".format(self.env.now, self.id(), packet.src, packet.pkt_no, service_name, packet.id))
+            return
 
         if Router.hop_by_hop:
             # --- Original Hop-by-Hop Anycast Routing ---

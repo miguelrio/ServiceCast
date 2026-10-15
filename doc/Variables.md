@@ -177,7 +177,7 @@ This means that one is not *better than* the other.
 
 ##### Remove FIB Entry if all Replicas Have Zero Utility
 
-If the utility of all replicas is zero then remove the FIB entry for this service name, which results in a REQUEST_NOT_FORWARDED message in the log for that request. Defaults to True.
+If the utility of all replicas is zero then remove the FIB entry for this service name, which results in a REQUEST_NOT_FORWARDED message in the log for that request (at verbose -1 and above). Defaults to True.
 
 ```
 Router.remove_fib_entry_when_all_utilities_zero = True

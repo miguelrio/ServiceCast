@@ -94,10 +94,10 @@ def apply_config(knobs):
 
     Router.remove_fib_entry_when_all_utilities_zero is forced OFF: with it
     on, the simulator changes which requests get served, fib_updates picks
-    up removal-driven updates, and null mode (verbose=-1) loses its
+    up removal-driven updates, and the low verbose levels lose their
     near-log-free property. Feature behaviour is out of scope for this
-    benchmark. (The startup REQUEST_NOT_FORWARDED guard still fires once
-    for services never yet announced -- the single line null mode prints.)
+    benchmark. (At verbose -1 the startup REQUEST_NOT_FORWARDED guard
+    still fires for services not yet announced; -2 prints nothing.)
     """
     Verbose.level = knobs["verbose_level"]
     Verbose.table = 0

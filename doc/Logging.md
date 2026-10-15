@@ -13,7 +13,7 @@ prints everything the level below prints.
 | 2 | + extra messages related to level 1, e.g. per-neighbour decisions. | As level 0. |
 | 3 | + fine detail from loops and full table dumps (rarely used). | As level 0. |
 
-`REQUEST_NOT_FORWARDED` is printed at every level, including -2.
+`REQUEST_NOT_FORWARDED` is printed at every level from -1 up; -2 prints nothing.
 
 ### Which level to use
 
