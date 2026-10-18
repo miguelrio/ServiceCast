@@ -1377,6 +1377,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
            The snapshot is taken from THIS router's vantage so the ground truth
            (SEL_UTIL_SEL, BEST_UTIL_SEL) shares the latency basis of the FIB
            estimate (SEL_UTIL_EST)."""
+        # The silent level has no consumer for this data: best_replica_utility
+        # returns before reading it, so skip the ground-truth calculation.
+        if Verbose.level < -1:
+            return
+
         self.network.inject_snapshot_optimal_utility(packet, vantage=self.id())
         packet.selection_estimate = { 'update_time': fib_entry['update_time'],  # t_update
                                       'server_id': fib_entry['replica'],        # s_sel
