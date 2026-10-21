@@ -71,8 +71,8 @@ def compare(name, net_x, net_y, routers, servers):
 def main():
     plain_gml, baked_gml = sys.argv[1], sys.argv[2]
 
-    # config parity with experiments/main_precomputed_t1.py
-    Graph.default_propagation_delay = 0.1
+    # config parity with experiments/main_precomputed_t1.py (100 ms = 0.1 s)
+    Graph.default_propagation_delay = 100
     Server.slots = 50
 
     net_a = build(plain_gml)                    # engine, min-hop

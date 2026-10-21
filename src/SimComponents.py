@@ -193,7 +193,8 @@ class SwitchPort(object):
         env : simpy.Environment
             the simulation environment
         rate : float
-            the bit rate of the port
+            the bit rate of the port in bits per millisecond (the clock unit,
+            see src/units.py), so the transmission time size*8/rate is ms
         qlimit : integer (or None)
             a buffer size limit in bytes or packets for the queue (including items
             in service).
@@ -342,9 +343,9 @@ class TrTCM(object):
         Parameters
         ----------
         env : the SimPy environment (so we can get the simulated time)
-        pir : Peak Information Rate in units of bits (slighly different from RFC)
+        pir : Peak Information Rate in units of bits per millisecond (slighly different from RFC)
         pbs : Peak Burst Size in units of bytes
-        cir : Committed Information Rate in units of bits (time part maybe scaled)
+        cir : Committed Information Rate in units of bits per millisecond (time part maybe scaled)
         cbs : Committed Burst Size in bytes
     """
     def __init__(self, env, pir, pbs, cir, cbs):
@@ -559,7 +560,8 @@ class VirtualClockServer(object):
         env : simpy.Environment
             the simulation environment
         rate : float
-            the bit rate of the port
+            the bit rate of the port in bits per millisecond (the clock unit,
+            see src/units.py), so the transmission time size*8/rate is ms
         vticks : A list
             list of the vtick parameters (for each possible packet flow_id). We assume a simple assignment of
             flow id to vticks, i.e., flow_id = 0 corresponds to vticks[0], etc... We assume that the vticks are
@@ -606,7 +608,8 @@ class WFQServer(object):
         env : simpy.Environment
             the simulation environment
         rate : float
-            the bit rate of the port
+            the bit rate of the port in bits per millisecond (the clock unit,
+            see src/units.py), so the transmission time size*8/rate is ms
         phis : A list
             list of the phis parameters (for each possible packet flow_id). We assume a simple assignment of
             flow id to phis, i.e., flow_id = 0 corresponds to phis[0], etc...

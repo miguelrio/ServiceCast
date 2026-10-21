@@ -21,7 +21,9 @@ class Compare(Enum):
 
     
 
-LINKRATE = 10000000
+# Port rate in BITS PER MILLISECOND (= 10 Mbit/s), so that the transmission
+# time size*8/rate comes out in clock milliseconds (see src/units.py).
+LINKRATE = 10000
 
 
 def less_than(x,y):

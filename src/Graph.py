@@ -2,10 +2,11 @@ from Verbose import Verbose
 
 # A Graph
 class Graph:
-    # Default propagation delay for links in the network (in seconds).
-    # This will usually be overridden by setting a value for it in an experiment file.
-    # This allows us to set the link delays from links in the GML file.
-    default_propagation_delay = 1
+    # Default propagation delay for links in the network (in milliseconds:
+    # the simulator clock is ms, see src/units.py). Overridden by experiment
+    # files (typically 100 ms = 0.1 s) and used only when the GML edge has no
+    # delayMs of its own. GML delayMs values are milliseconds too.
+    default_propagation_delay = 1000
 
     """A representation of a Graph"""
     def __init__(self, num=0):

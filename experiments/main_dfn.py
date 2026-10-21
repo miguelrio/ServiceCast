@@ -21,11 +21,11 @@ def topology_setup():
     # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
     Router.hop_by_hop = True
 
-    # Default propagation delay.
-    # If this is not configured explicitly here then a default value of 1 will be used, see Graph.py.    
-    # This allows us to override link delays specified in the GML file
-    # and set some hardcoded delays for links to clients and servers in Network. 
-    Graph.default_propagation_delay = 0.1
+    # Default propagation delay (ms: the simulator clock is ms, src/units.py).
+    # If this is not configured explicitly here then a default of 1000 ms is
+    # used, see Graph.py. This allows us to override link delays specified in
+    # the GML file and set hardcoded delays for links to clients and servers.
+    Graph.default_propagation_delay = 100
 
     # Set alpha value
     Utility.alpha = 0.50

@@ -57,6 +57,7 @@ from Router import Router
 from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility
+from units import s_to_ms
 from Gml import read_gml
 
 import placement
@@ -106,7 +107,8 @@ def apply_config(knobs):
     Server.slots = knobs["slots"]
     Server.change_factor = knobs["server_cf"]
     Router.fib_utility_update_threshold = knobs["router_cf"]
-    Graph.default_propagation_delay = knobs["prop_delay"]
+    # prop_delay knob is seconds (human interface); the engine constant is ms
+    Graph.default_propagation_delay = s_to_ms(knobs["prop_delay"])
     Router.remove_fib_entry_when_all_utilities_zero = False
 
 
@@ -140,11 +142,11 @@ def build_network(knobs):
 
     # Third arg is `weight` (Network.add_server/add_client signature); the
     # older sweep scripts pass propagation_delay here, so we mirror it for
-    # identical wiring.
+    # identical wiring. Knob is seconds; engine weights are ms.
     for name, node in zip(server_names, server_nodes):
-        network.add_server(name, node, knobs["prop_delay"])
+        network.add_server(name, node, s_to_ms(knobs["prop_delay"]))
     for name, node in zip(client_names, client_nodes):
-        network.add_client(name, node, knobs["prop_delay"])
+        network.add_client(name, node, s_to_ms(knobs["prop_delay"]))
 
     network.calculate_forwarding_tables()
 

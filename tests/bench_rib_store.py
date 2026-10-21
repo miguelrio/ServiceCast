@@ -445,7 +445,7 @@ def fullsim_worker(backend, gml, until, mode, result_file, log_level,
 
     router_cls.hop_by_hop = hop_by_hop
     router_cls.fib_utility_update_threshold = 0.001
-    Graph.default_propagation_delay = 0.1
+    Graph.default_propagation_delay = 100   # ms (0.1 s), src/units.py
     Utility.alpha = 0.50
     Server.slots = 50
     Server.change_factor = 0.01

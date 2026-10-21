@@ -24,7 +24,7 @@ rather than a pure-Python heap loop.
 
 Edge weights (mirrors the engine's parsing in src/Gml.py exactly):
   - if either endpoint has `Internal 0`, the engine never reads the edge's
-    delayMs and uses the default propagation delay (0.1) -- same here
+    delayMs and uses the default propagation delay (100 ms) -- same here
   - else if the edge has a `delayMs` attribute, use it directly (a 0 value
     is replaced by the default, as Network.from_graph does)
   - otherwise, compute great-circle distance between the two endpoints'
@@ -38,7 +38,7 @@ reaching servers (and, with --all-destinations, other routers).
 Output: a new GML file, with each router node gaining two attribute lines per
 destination:
     nextHop "<destinationLabel>" "<neighbor label>"
-    delayMs "<destinationLabel>" <total delay>
+    delayMs "<destinationLabel>" <total delay ms>
 (omitted for a destination unreachable from that router). Note this two-
 value-per-line form is not standard GML (GML only defines one value per
 key), so generic GML readers (networkx, igraph, ...) will not parse these
@@ -59,9 +59,10 @@ from scipy.sparse.csgraph import dijkstra as scipy_dijkstra
 KM_PER_DEGREE_DELAY_MS_PER_KM = 0.009
 
 # The engine's default link weight (src/Graph.py: Graph.default_propagation_delay,
-# set to 0.1 by experiments/main_precomputed_t1.py). Used for edges touching
-# an Internal-0 node and for 0 delayMs, mirroring the engine exactly.
-ENGINE_DEFAULT_PROPAGATION_DELAY = 0.1
+# set to 100 ms by experiments/main_precomputed_t1.py; all delays are ms, see
+# src/units.py). Used for edges touching an Internal-0 node and for 0 delayMs,
+# mirroring the engine exactly.
+ENGINE_DEFAULT_PROPAGATION_DELAY = 100
 EARTH_RADIUS_KM = 6371.0
 
 ROUTER_ROUTER_EDGE_TYPES = {"internal", "p2p", "c2p"}

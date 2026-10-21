@@ -36,6 +36,7 @@ from Generator import Generator
 from Verbose import Verbose
 from Utility import Utility
 from Server import Server
+from units import s_to_ms
 import simpy
 import random
 
@@ -75,8 +76,9 @@ def topology_setup():
     Router.forward_to_tree_children_only = os.environ.get("TREE_CHILDREN_ONLY") == "1"
 
     # Default propagation delay for links without a usable GML weight
-    # (attachment links to clients and servers)
-    Graph.default_propagation_delay = 0.1
+    # (attachment links to clients and servers). Engine constants are in ms
+    # (src/units.py); 100 ms = 0.1 s.
+    Graph.default_propagation_delay = 100
 
     # Set alpha value
     Utility.alpha = 0.50
@@ -93,6 +95,7 @@ def topology_setup():
     print(f"""Simulation parameters:
     gml_file = {gml_file}
     until = {until}
+    time_unit = ms
     Verbose.level = {Verbose.level}
     Router.hop_by_hop = {Router.hop_by_hop}
     Router.forward_to_tree_children_only = {Router.forward_to_tree_children_only}
@@ -171,7 +174,7 @@ def topology_setup():
     print("RUN ----------------------------------------------------------------")
     network.start(until=until)
     t4 = time.perf_counter()
-    print(f"run: {t4 - t3:.3f}s simulated seconds={until}")
+    print(f"run: {t4 - t3:.3f}s wall; simulated {until:g} s = {s_to_ms(until):g} ms (clock: ms)")
 
 
 # go !

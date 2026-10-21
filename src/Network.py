@@ -7,6 +7,7 @@ from Server import Server
 from Client import Client
 from Verbose import Verbose
 from Utility import Utility
+from units import s_to_ms
 from MetricUtility import MetricUtility
 from collections import OrderedDict
 from Gml import read_gml, write_gml
@@ -245,14 +246,19 @@ class Network:
 
     def start(self, until=1000):
         """Start the Network processing.
-        Calls back to the simpy env to start elements"""
+        Calls back to the simpy env to start elements.
+
+        until is the run bound in SECONDS (the human-interface convention,
+        see src/units.py); the simpy clock runs in milliseconds, so the
+        bound converts here -- the single boundary crossing for this knob.
+        """
 
         # start each of the routers
         for router in self.routers.values():
             router.start()
-            
+
         # start the simpy environment run
-        self.env.run(until)
+        self.env.run(s_to_ms(until))
 
         # ServerMetric updates dropped as off the unicast path (0 when
         # forward_to_tree_children_only is on); an end-of-run count, so

@@ -35,6 +35,7 @@ from typing import NamedTuple
 import numpy as np
 import simpy
 from Graph import Graph
+from units import s_to_ms
 from Network import Network
 from Server import Server
 from Router import Router
@@ -54,11 +55,14 @@ def configure_sweep_variables(server_cf, router_cf, propagation_delay):
     """Set the global knobs that define a single experiment. Verbose output is silenced."""
     Server.change_factor = server_cf
     Router.fib_utility_update_threshold = router_cf
-    Graph.default_propagation_delay = propagation_delay
+    # propagation_delay knob is seconds (human interface); the engine
+    # constant is ms (src/units.py)
+    Graph.default_propagation_delay = s_to_ms(propagation_delay)
 
 # Print parameters 
 def print_simulation_parameters():
     print(f"""Simulation parameters:
+    time_unit = ms
     Verbose.level = {Verbose.level}
     Verbose.table = {Verbose.table}
     Router.hop_by_hop = {Router.hop_by_hop}

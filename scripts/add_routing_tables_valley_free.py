@@ -62,7 +62,7 @@ only ever the last hop, never transit.
 Output: a new GML file, with each router node gaining two attribute lines per
 destination:
     nextHop "<destinationLabel>" "<neighbor label>"
-    delayMs "<destinationLabel>" <total delay>
+    delayMs "<destinationLabel>" <total delay ms>
 (omitted for a destination unreachable from that router). Note this two-
 value-per-line form is not standard GML (GML only defines one value per
 key), so generic GML readers (networkx, igraph, ...) will not parse these
@@ -87,9 +87,10 @@ ROUTER_ROUTER_EDGE_TYPES = {"internal", "p2p", "c2p"}
 SERVER_ROUTER_EDGE_TYPES = {"hosts"}
 
 # The engine's default link weight (src/Graph.py: Graph.default_propagation_delay,
-# set to 0.1 by experiments/main_precomputed_t1.py). Used for edges touching
-# an Internal-0 node and for 0 delayMs, mirroring the engine exactly.
-ENGINE_DEFAULT_PROPAGATION_DELAY = 0.1
+# set to 100 ms by experiments/main_precomputed_t1.py; all delays are ms, see
+# src/units.py). Used for edges touching an Internal-0 node and for 0 delayMs,
+# mirroring the engine exactly.
+ENGINE_DEFAULT_PROPAGATION_DELAY = 100
 
 TIER_RANK = {"stub": 0, "transit": 1, "tier1": 2}
 C2P_ORIENTATIONS = ("customer-provider", "provider-customer")

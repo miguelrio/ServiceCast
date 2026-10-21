@@ -1,6 +1,7 @@
 from Host import Host
 from SimComponents import Packet
 from Verbose import Verbose
+from units import MS_PER_S, s_to_ms
 from enum import Enum
 
 # some default values for the slots and flows functions
@@ -16,9 +17,12 @@ def flows_up_by1(val):
 def flows_down_by1(val):
     return val - 1
 
-# Convert a request size into a timeout
+# Convert a request size into a timeout. A request size is the session
+# length in SECONDS (the human-interface convention, see src/units.py); the
+# clock timeout is milliseconds. The same size field doubles as the packet's
+# byte size for transmission -- only the timeout converts.
 def size_to_time(size):
-    return size
+    return s_to_ms(size)
 
 class ServerMetricMessageType(Enum):
     Announce = 0
@@ -284,11 +288,12 @@ class Server(Host):
                     self.send_load_packet(time, service_name)
 
                 else:
-                    # work out next second boundary
-                    timeout = int(now) + 1 - now
+                    # work out next second boundary (the clock is ms, so a
+                    # "second" boundary is every MS_PER_S ticks)
+                    timeout = (int(now // MS_PER_S) + 1) * MS_PER_S - now
 
                     if Verbose.level >= 1:
-                        print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric at next second boundary in {:.3f} secs".format(self.env.now, self.id(),diff, timeout))
+                        print("{:.3f}: {:5s} CALCULATE_LOAD_DIFFERENCE: change = {} -- send ServerMetric at next second boundary in {:.3f} ms".format(self.env.now, self.id(),diff, timeout))
 
                     # process callback for a delayed announce
                     self.env.process(self.delay_announce(timeout, time, service_name))

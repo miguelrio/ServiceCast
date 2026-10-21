@@ -3,6 +3,7 @@ import numpy as np
 import random as random
 import itertools
 from Verbose import Verbose
+from units import s_to_ms
 
 
 class ServerEventGenerator(EventGenerator):
@@ -153,7 +154,9 @@ class Generator(object):
 
         # The interarrival times of a poisson process follow an exponential
         def arrival_dist():
-            next_time = gen.exponential(exponential_lambda)
+            # exponential_lambda is the mean inter-arrival time in SECONDS
+            # (human-interface knob); the clock is ms (src/units.py)
+            next_time = s_to_ms(gen.exponential(exponential_lambda))
             return next_time
 
         # Assume all packets have the same size given by packet_size
@@ -291,7 +294,9 @@ class Generator(object):
 
         # The interarrival times of a poisson process follow an exponential
         def arrival_dist():
-            next_time = gen.exponential(arrival_lambda)
+            # arrival_lambda is the mean inter-arrival time in SECONDS
+            # (human-interface knob); the clock is ms (src/units.py)
+            next_time = s_to_ms(gen.exponential(arrival_lambda))
             return next_time
 
         # Assume all packets have the same size given by packet_size
@@ -352,11 +357,14 @@ class Generator(object):
 
         # The interarrival times of a poisson process follow an exponential
         def arrival_dist():
-            next_time = gen.exponential(arrival_lambda)
+            # arrival_lambda is the mean inter-arrival time in SECONDS
+            # (human-interface knob); the clock is ms (src/units.py)
+            next_time = s_to_ms(gen.exponential(arrival_lambda))
             # WAS next_time = gen.poisson(arrival_lambda)
             return next_time
 
-        # The size / length of the jobs in each request
+        # The size / length of the jobs in each request: a session length in
+        # SECONDS (converted to clock ms by Server.size_to_time)
         def size_dist():
             next_size = gen2.exponential(size_lambda)
             return int(next_size * size_scale_factor)

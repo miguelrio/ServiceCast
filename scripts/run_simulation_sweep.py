@@ -23,6 +23,7 @@ script_path = os.path.dirname(os.path.abspath(__file__))
 project_path = os.path.dirname(script_path)
 
 from Graph import Graph
+from units import s_to_ms
 from Network import Network
 from Server import Server
 from Router import Router
@@ -246,7 +247,9 @@ def _configure_globals(server_cf, router_cf, hop_by_hop, propagation_delay):
     Verbose.table = 0
 
     Router.hop_by_hop = hop_by_hop
-    Graph.default_propagation_delay = propagation_delay
+    # propagation_delay knob is seconds (human interface); the engine
+    # constant is ms (src/units.py)
+    Graph.default_propagation_delay = s_to_ms(propagation_delay)
     Utility.alpha = ALPHA
     Server.slots = SLOTS
     Server.change_factor = server_cf

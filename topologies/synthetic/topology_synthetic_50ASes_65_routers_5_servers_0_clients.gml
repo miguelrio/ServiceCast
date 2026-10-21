@@ -376,7 +376,7 @@ graph [
     tier "stub"
     city "Bangkok"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 27
@@ -390,7 +390,7 @@ graph [
     tier "stub"
     city "Barcelona"
     continent "Europe"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 28
@@ -404,7 +404,7 @@ graph [
     tier "stub"
     city "Delhi"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 29
@@ -418,7 +418,7 @@ graph [
     tier "stub"
     city "Tokyo"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 30
@@ -432,7 +432,7 @@ graph [
     tier "stub"
     city "Osaka"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 31
@@ -446,7 +446,7 @@ graph [
     tier "stub"
     city "Manila"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 32
@@ -460,7 +460,7 @@ graph [
     tier "stub"
     city "Delhi"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 33
@@ -474,7 +474,7 @@ graph [
     tier "stub"
     city "Bangalore"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 34
@@ -488,7 +488,7 @@ graph [
     tier "stub"
     city "Beijing"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 35
@@ -502,7 +502,7 @@ graph [
     tier "stub"
     city "Kolkata"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 36
@@ -516,7 +516,7 @@ graph [
     tier "stub"
     city "Tokyo"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 37
@@ -530,7 +530,7 @@ graph [
     tier "stub"
     city "Jakarta"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 38
@@ -544,7 +544,7 @@ graph [
     tier "stub"
     city "Hong Kong"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 39
@@ -558,7 +558,7 @@ graph [
     tier "stub"
     city "Perth"
     continent "Oceania"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 40
@@ -572,7 +572,7 @@ graph [
     tier "stub"
     city "Cairo"
     continent "Africa"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 41
@@ -586,7 +586,7 @@ graph [
     tier "stub"
     city "Cairo"
     continent "Africa"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 42
@@ -600,7 +600,7 @@ graph [
     tier "stub"
     city "Tokyo"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 43
@@ -614,7 +614,7 @@ graph [
     tier "stub"
     city "Warsaw"
     continent "Europe"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 44
@@ -628,7 +628,7 @@ graph [
     tier "stub"
     city "Karachi"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 45
@@ -642,7 +642,7 @@ graph [
     tier "stub"
     city "Manila"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 46
@@ -656,7 +656,7 @@ graph [
     tier "stub"
     city "Delhi"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 47
@@ -670,7 +670,7 @@ graph [
     tier "stub"
     city "Colombo"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 48
@@ -684,7 +684,7 @@ graph [
     tier "stub"
     city "Kolkata"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 49
@@ -698,7 +698,7 @@ graph [
     tier "stub"
     city "Johannesburg"
     continent "Africa"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 50
@@ -712,7 +712,7 @@ graph [
     tier "stub"
     city "San Francisco"
     continent "North America"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 51
@@ -726,7 +726,7 @@ graph [
     tier "stub"
     city "Shenzhen"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 52
@@ -740,7 +740,7 @@ graph [
     tier "stub"
     city "Bangalore"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 53
@@ -754,7 +754,7 @@ graph [
     tier "stub"
     city "Cairo"
     continent "Africa"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 54
@@ -768,7 +768,7 @@ graph [
     tier "stub"
     city "Tokyo"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 55
@@ -782,7 +782,7 @@ graph [
     tier "stub"
     city "Shenzhen"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 56
@@ -796,7 +796,7 @@ graph [
     tier "stub"
     city "Santiago"
     continent "South America"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 57
@@ -810,7 +810,7 @@ graph [
     tier "stub"
     city "Lima"
     continent "South America"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 58
@@ -824,7 +824,7 @@ graph [
     tier "stub"
     city "Mumbai"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 59
@@ -838,7 +838,7 @@ graph [
     tier "stub"
     city "Shanghai"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 60
@@ -852,7 +852,7 @@ graph [
     tier "stub"
     city "Bangkok"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 61
@@ -866,7 +866,7 @@ graph [
     tier "stub"
     city "Sao Paulo"
     continent "South America"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 62
@@ -880,7 +880,7 @@ graph [
     tier "stub"
     city "Manila"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 63
@@ -894,7 +894,7 @@ graph [
     tier "stub"
     city "Jakarta"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 64
@@ -908,7 +908,7 @@ graph [
     tier "stub"
     city "Delhi"
     continent "Asia"
-    internalDelayMs 0.001500
+    internalDelayMs 1.500000
   ]
   node [
     id 65
@@ -969,546 +969,546 @@ graph [
     source 0
     target 1
     type "internal"
-    delayMs 0.030508
+    delayMs 30.508000
   ]
   edge [
     source 0
     target 2
     type "internal"
-    delayMs 0.044621
+    delayMs 44.621000
   ]
   edge [
     source 1
     target 2
     type "internal"
-    delayMs 0.018562
+    delayMs 18.562000
   ]
   edge [
     source 3
     target 4
     type "internal"
-    delayMs 0.008125
+    delayMs 8.125000
   ]
   edge [
     source 3
     target 5
     type "internal"
-    delayMs 0.012619
+    delayMs 12.619000
   ]
   edge [
     source 4
     target 5
     type "internal"
-    delayMs 0.006578
+    delayMs 6.578000
   ]
   edge [
     source 6
     target 7
     type "internal"
-    delayMs 0.036270
+    delayMs 36.270000
   ]
   edge [
     source 6
     target 8
     type "internal"
-    delayMs 0.030704
+    delayMs 30.704000
   ]
   edge [
     source 7
     target 8
     type "internal"
-    delayMs 0.011543
+    delayMs 11.543000
   ]
   edge [
     source 9
     target 10
     type "internal"
-    delayMs 0.042622
+    delayMs 42.622000
   ]
   edge [
     source 9
     target 11
     type "internal"
-    delayMs 0.057034
+    delayMs 57.034000
   ]
   edge [
     source 10
     target 11
     type "internal"
-    delayMs 0.096091
+    delayMs 96.091000
   ]
   edge [
     source 12
     target 13
     type "internal"
-    delayMs 0.000503
+    delayMs 0.503000
   ]
   edge [
     source 14
     target 15
     type "internal"
-    delayMs 0.000700
+    delayMs 0.700000
   ]
   edge [
     source 16
     target 17
     type "internal"
-    delayMs 0.000743
+    delayMs 0.743000
   ]
   edge [
     source 18
     target 19
     type "internal"
-    delayMs 0.000772
+    delayMs 0.772000
   ]
   edge [
     source 20
     target 21
     type "internal"
-    delayMs 0.000731
+    delayMs 0.731000
   ]
   edge [
     source 22
     target 23
     type "internal"
-    delayMs 0.000484
+    delayMs 0.484000
   ]
   edge [
     source 24
     target 25
     type "internal"
-    delayMs 0.000424
+    delayMs 0.424000
   ]
   edge [
     source 0
     target 4
     type "p2p"
-    delayMs 0.000666
+    delayMs 0.666000
   ]
   edge [
     source 0
     target 6
     type "p2p"
-    delayMs 0.000907
+    delayMs 0.907000
   ]
   edge [
     source 1
     target 11
     type "p2p"
-    delayMs 0.035965
+    delayMs 35.965000
   ]
   edge [
     source 4
     target 6
     type "p2p"
-    delayMs 0.000566
+    delayMs 0.566000
   ]
   edge [
     source 4
     target 11
     type "p2p"
-    delayMs 0.006454
+    delayMs 6.454000
   ]
   edge [
     source 8
     target 11
     type "p2p"
-    delayMs 0.036068
+    delayMs 36.068000
   ]
   edge [
     source 12
     target 11
     type "c2p"
-    delayMs 0.000470
+    delayMs 0.470000
   ]
   edge [
     source 12
     target 6
     type "c2p"
-    delayMs 0.006219
+    delayMs 6.219000
   ]
   edge [
     source 14
     target 5
     type "c2p"
-    delayMs 0.002250
+    delayMs 2.250000
   ]
   edge [
     source 14
     target 6
     type "c2p"
-    delayMs 0.007623
+    delayMs 7.623000
   ]
   edge [
     source 17
     target 7
     type "c2p"
-    delayMs 0.054663
+    delayMs 54.663000
   ]
   edge [
     source 19
     target 7
     type "c2p"
-    delayMs 0.006339
+    delayMs 6.339000
   ]
   edge [
     source 21
     target 7
     type "c2p"
-    delayMs 0.009793
+    delayMs 9.793000
   ]
   edge [
     source 22
     target 3
     type "c2p"
-    delayMs 0.082486
+    delayMs 82.486000
   ]
   edge [
     source 25
     target 6
     type "c2p"
-    delayMs 0.046719
+    delayMs 46.719000
   ]
   edge [
     source 13
     target 14
     type "p2p"
-    delayMs 0.002402
+    delayMs 2.402000
   ]
   edge [
     source 14
     target 13
     type "p2p"
-    delayMs 0.002402
+    delayMs 2.402000
   ]
   edge [
     source 16
     target 22
     type "p2p"
-    delayMs 0.003889
+    delayMs 3.889000
   ]
   edge [
     source 22
     target 16
     type "p2p"
-    delayMs 0.003889
+    delayMs 3.889000
   ]
   edge [
     source 26
     target 14
     type "c2p"
-    delayMs 0.015421
+    delayMs 15.421000
   ]
   edge [
     source 27
     target 2
     type "c2p"
-    delayMs 0.007870
+    delayMs 7.870000
   ]
   edge [
     source 28
     target 14
     type "c2p"
-    delayMs 0.012982
+    delayMs 12.982000
   ]
   edge [
     source 29
     target 24
     type "c2p"
-    delayMs 0.000525
+    delayMs 0.525000
   ]
   edge [
     source 30
     target 25
     type "c2p"
-    delayMs 0.002900
+    delayMs 2.900000
   ]
   edge [
     source 31
     target 17
     type "c2p"
-    delayMs 0.092294
+    delayMs 92.294000
   ]
   edge [
     source 32
     target 12
     type "c2p"
-    delayMs 0.012108
+    delayMs 12.108000
   ]
   edge [
     source 32
     target 14
     type "c2p"
-    delayMs 0.012177
+    delayMs 12.177000
   ]
   edge [
     source 33
     target 14
     type "c2p"
-    delayMs 0.002460
+    delayMs 2.460000
   ]
   edge [
     source 33
     target 13
     type "c2p"
-    delayMs 0.000328
+    delayMs 0.328000
   ]
   edge [
     source 34
     target 14
     type "c2p"
-    delayMs 0.032639
+    delayMs 32.639000
   ]
   edge [
     source 35
     target 12
     type "c2p"
-    delayMs 0.011630
+    delayMs 11.630000
   ]
   edge [
     source 36
     target 24
     type "c2p"
-    delayMs 0.000679
+    delayMs 0.679000
   ]
   edge [
     source 36
     target 22
     type "c2p"
-    delayMs 0.075745
+    delayMs 75.745000
   ]
   edge [
     source 37
     target 15
     type "c2p"
-    delayMs 0.025450
+    delayMs 25.450000
   ]
   edge [
     source 38
     target 17
     type "c2p"
-    delayMs 0.087291
+    delayMs 87.291000
   ]
   edge [
     source 39
     target 13
     type "c2p"
-    delayMs 0.045193
+    delayMs 45.193000
   ]
   edge [
     source 40
     target 25
     type "c2p"
-    delayMs 0.067089
+    delayMs 67.089000
   ]
   edge [
     source 41
     target 19
     type "c2p"
-    delayMs 0.017428
+    delayMs 17.428000
   ]
   edge [
     source 42
     target 14
     type "c2p"
-    delayMs 0.044711
+    delayMs 44.711000
   ]
   edge [
     source 43
     target 18
     type "c2p"
-    delayMs 0.000715
+    delayMs 0.715000
   ]
   edge [
     source 44
     target 12
     type "c2p"
-    delayMs 0.012731
+    delayMs 12.731000
   ]
   edge [
     source 45
     target 18
     type "c2p"
-    delayMs 0.066338
+    delayMs 66.338000
   ]
   edge [
     source 46
     target 14
     type "c2p"
-    delayMs 0.012497
+    delayMs 12.497000
   ]
   edge [
     source 46
     target 19
     type "c2p"
-    delayMs 0.036736
+    delayMs 36.736000
   ]
   edge [
     source 47
     target 13
     type "c2p"
-    delayMs 0.004652
+    delayMs 4.652000
   ]
   edge [
     source 47
     target 15
     type "c2p"
-    delayMs 0.004252
+    delayMs 4.252000
   ]
   edge [
     source 48
     target 19
     type "c2p"
-    delayMs 0.045870
+    delayMs 45.870000
   ]
   edge [
     source 49
     target 15
     type "c2p"
-    delayMs 0.050269
+    delayMs 50.269000
   ]
   edge [
     source 50
     target 14
     type "c2p"
-    delayMs 0.097538
+    delayMs 97.538000
   ]
   edge [
     source 50
     target 17
     type "c2p"
-    delayMs 0.024994
+    delayMs 24.994000
   ]
   edge [
     source 51
     target 14
     type "c2p"
-    delayMs 0.026437
+    delayMs 26.437000
   ]
   edge [
     source 52
     target 12
     type "c2p"
-    delayMs 0.000661
+    delayMs 0.661000
   ]
   edge [
     source 53
     target 19
     type "c2p"
-    delayMs 0.017679
+    delayMs 17.679000
   ]
   edge [
     source 54
     target 25
     type "c2p"
-    delayMs 0.000307
+    delayMs 0.307000
   ]
   edge [
     source 55
     target 11
     type "c2p"
-    delayMs 0.028466
+    delayMs 28.466000
   ]
   edge [
     source 56
     target 10
     type "c2p"
-    delayMs 0.020822
+    delayMs 20.822000
   ]
   edge [
     source 57
     target 14
     type "c2p"
-    delayMs 0.123518
+    delayMs 123.518000
   ]
   edge [
     source 58
     target 14
     type "c2p"
-    delayMs 0.007936
+    delayMs 7.936000
   ]
   edge [
     source 59
     target 14
     type "c2p"
-    delayMs 0.032913
+    delayMs 32.913000
   ]
   edge [
     source 59
     target 13
     type "c2p"
-    delayMs 0.034926
+    delayMs 34.926000
   ]
   edge [
     source 60
     target 14
     type "c2p"
-    delayMs 0.015123
+    delayMs 15.123000
   ]
   edge [
     source 61
     target 15
     type "c2p"
-    delayMs 0.100418
+    delayMs 100.418000
   ]
   edge [
     source 61
     target 19
     type "c2p"
-    delayMs 0.074506
+    delayMs 74.506000
   ]
   edge [
     source 62
     target 14
     type "c2p"
-    delayMs 0.030969
+    delayMs 30.969000
   ]
   edge [
     source 63
     target 15
     type "c2p"
-    delayMs 0.025509
+    delayMs 25.509000
   ]
   edge [
     source 63
     target 13
     type "c2p"
-    delayMs 0.027462
+    delayMs 27.462000
   ]
   edge [
     source 64
     target 22
     type "c2p"
-    delayMs 0.082285
+    delayMs 82.285000
   ]
   edge [
     source 65
     target 11
     type "hosts"
-    delayMs 0.003893
+    delayMs 3.893000
   ]
   edge [
     source 66
     target 25
     type "hosts"
-    delayMs 0.002804
+    delayMs 2.804000
   ]
   edge [
     source 67
     target 21
     type "hosts"
-    delayMs 0.003711
+    delayMs 3.711000
   ]
   edge [
     source 68
     target 15
     type "hosts"
-    delayMs 0.025313
+    delayMs 25.313000
   ]
   edge [
     source 69
     target 25
     type "hosts"
-    delayMs 0.014612
+    delayMs 14.612000
   ]
 ]

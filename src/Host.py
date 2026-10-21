@@ -3,7 +3,9 @@ from SimComponents import SwitchPort, PacketSink
 from Link import LinkEnd
 from Verbose import Verbose
 
-LINKRATE = 10000000
+# Port rate in BITS PER MILLISECOND (= 10 Mbit/s), so that the transmission
+# time size*8/rate comes out in clock milliseconds (see src/units.py).
+LINKRATE = 10000
 
 class Host(object):
     """ A Host in the emulation.
