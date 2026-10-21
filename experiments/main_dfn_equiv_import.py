@@ -115,7 +115,7 @@ def topology_setup():
         if Verbose.level >= 3:
             print("Add " + str(server_name) + " at " + str(server_dest))
 
-        network.add_server(server_name, server_dest, config.GRAPH_DELAY)
+        network.add_server(server_name, server_dest, Graph.default_propagation_delay)
 
     for c, client_dest in enumerate(client_nodes, start=1):
         client_name = "c" + str(c)
@@ -124,7 +124,7 @@ def topology_setup():
         if Verbose.level >= 3:
             print("Add " + str(client_name) + " at " + str(client_dest))
 
-        network.add_client(client_name, client_dest, config.GRAPH_DELAY)
+        network.add_client(client_name, client_dest, Graph.default_propagation_delay)
 
     # 7 - now calculate all the forwarding tables
     network.calculate_forwarding_tables()

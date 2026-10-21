@@ -87,7 +87,7 @@ def current_git_commit():
         return "unknown"
 
 # 
-def build_network(env, propagation_delay, output_root):
+def build_network(env, output_root):
     """Build the Dfn network ready to run: graph -> network, attach servers and clients,
     pre-compute forwarding tables, and install the load/request generators."""
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -117,11 +117,11 @@ def build_network(env, propagation_delay, output_root):
 
     servers = [f"s{s}" for s in range(1, config.NUM_SERVERS + 1)]
     for s, (name, node) in enumerate(zip(servers, server_nodes), start=1):
-        network.add_server(name, node, propagation_delay)
+        network.add_server(name, node, Graph.default_propagation_delay)
 
     clients = [f"c{c}" for c in range(1, config.NUM_CLIENTS + 1)]
     for c, (name, node) in enumerate(zip(clients, client_nodes), start=1):
-        network.add_client(name, node, propagation_delay)
+        network.add_client(name, node, Graph.default_propagation_delay)
     # end of main_dfn_2 client/server random attachment block
 
     network.calculate_forwarding_tables()
@@ -225,7 +225,7 @@ def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_del
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             print_simulation_parameters()
-            network = build_network(env, propagation_delay, output_root)
+            network = build_network(env, output_root)
             network.start(until=config.SIM_DURATION)
         lm = parse_log_lines(buf.getvalue().splitlines())
 
@@ -240,7 +240,7 @@ def run_single_experiment_log(config_spec, server_cf, router_cf, propagation_del
         try:
             with open(path, "w") as fh, contextlib.redirect_stdout(fh):
                 print_simulation_parameters()
-                network = build_network(env, propagation_delay, output_root)
+                network = build_network(env, output_root)
                 network.start(until=config.SIM_DURATION)
             lm = parse_log_file(path)
         finally:

@@ -100,13 +100,14 @@ class Importer(object):
     def update(self, variable,  name):
         #print("update " + str(variable) + " = " + str(value))
 
-        value = getattr(self, name)
-
-        if variable in TIME_KNOBS_S:
-            value = s_to_ms(value)
-        
         if name in self.__dict__.keys():
             # we have that name
+            value = getattr(self, name)
+
+            # convert only defined settings: a missing one must never be
+            # converted (None * 1000 would crash)
+            if variable in TIME_KNOBS_S:
+                value = s_to_ms(value)
 
             # split out class name and attribute name
             class_name, attr_name = variable.split(".", 1)

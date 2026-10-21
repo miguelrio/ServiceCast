@@ -279,7 +279,7 @@ class Server(Host):
             else:
                 # only send changes at second boundaries
                 # probably only used for debugging
-                if (now == int(now)):
+                if (now % MS_PER_S == 0):
                     # are on second boundary
                     # send a ServerMetric packet
                     if Verbose.level >= 1:

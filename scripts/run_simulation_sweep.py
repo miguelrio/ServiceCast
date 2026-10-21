@@ -256,7 +256,7 @@ def _configure_globals(server_cf, router_cf, hop_by_hop, propagation_delay):
     Router.fib_utility_update_threshold = router_cf
 
 
-def build_network(env, propagation_delay):
+def build_network(env):
     """Build the Dfn network ready to run: graph -> network, attach servers and clients,
     pre-compute forwarding tables, and install the load/request generators."""
     gml_file = os.path.join(project_path, "topologies/gml/Dfn.gml")
@@ -294,11 +294,11 @@ def build_network(env, propagation_delay):
 
     servers = [f"s{s}" for s in range(1, NUM_SERVERS + 1)]
     for s, (name, node) in enumerate(zip(servers, server_nodes), start=1):
-        network.add_server(name, node, propagation_delay)
+        network.add_server(name, node, Graph.default_propagation_delay)
 
     clients = [f"c{c}" for c in range(1, NUM_CLIENTS + 1)]
     for c, (name, node) in enumerate(zip(clients, client_nodes), start=1):
-        network.add_client(name, node, propagation_delay)
+        network.add_client(name, node, Graph.default_propagation_delay)
     # end of main_dfn_2 client/server block
 
     network.calculate_forwarding_tables()
@@ -323,7 +323,7 @@ def run_single_experiment(server_cf, router_cf, hop_by_hop=False, propagation_de
     _configure_globals(server_cf, router_cf, hop_by_hop, propagation_delay)
 
     env = simpy.Environment()
-    network = build_network(env, propagation_delay)
+    network = build_network(env)
 
     # Run with the observation wrappers installed; the context manager guarantees
     # the originals are restored afterwards even if the run raises.
