@@ -76,9 +76,14 @@ def topology_setup():
     Router.forward_to_tree_children_only = os.environ.get("TREE_CHILDREN_ONLY") == "1"
 
     # Default propagation delay for links without a usable GML weight
-    # (attachment links to clients and servers). Engine constants are in ms
-    # (src/units.py); 100 ms = 0.1 s.
+    # (hyperedges and missing-meta fallbacks). Engine constants are in ms
+    # (src/units.py); 100 ms = 0.1 s. Attachment links use their own defaults.
     Graph.default_propagation_delay = 100
+
+    # Attachment-link defaults (ms): a delayMs on the GML edge always wins
+    # (team rule 2026-10-22); these apply only when the edge carries none.
+    Graph.default_server_attachment_delay_ms = 1
+    Graph.default_client_attachment_delay_ms = 10
 
     # Set alpha value
     Utility.alpha = 0.50
@@ -100,6 +105,8 @@ def topology_setup():
     Router.hop_by_hop = {Router.hop_by_hop}
     Router.forward_to_tree_children_only = {Router.forward_to_tree_children_only}
     Graph.default_propagation_delay = {Graph.default_propagation_delay}
+    Graph.default_server_attachment_delay_ms = {Graph.default_server_attachment_delay_ms}
+    Graph.default_client_attachment_delay_ms = {Graph.default_client_attachment_delay_ms}
     Utility.alpha = {Utility.alpha}
     Server.slots = {Server.slots}
     Server.change_factor = {Server.change_factor}

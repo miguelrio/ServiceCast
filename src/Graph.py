@@ -8,6 +8,15 @@ class Graph:
     # delayMs of its own. GML delayMs values are milliseconds too.
     default_propagation_delay = 1000
 
+    # Attachment links (server hosts / client access), team rule 2026-10-22:
+    # a delayMs on the GML edge always wins over default/config/CLI; these
+    # defaults apply only when the edge carries none. A written 0 counts as
+    # unspecified, the engine-wide sentinel (Network.from_graph replaces 0
+    # weights). Milliseconds, like every delay (src/units.py). Future
+    # config/CLI overrides slot in between the GML value and these defaults.
+    default_server_attachment_delay_ms = 1
+    default_client_attachment_delay_ms = 10
+
     """A representation of a Graph"""
     def __init__(self, num=0):
         self.V = num                    # the size of the graph

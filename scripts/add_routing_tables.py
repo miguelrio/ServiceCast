@@ -58,11 +58,14 @@ from scipy.sparse.csgraph import dijkstra as scipy_dijkstra
 
 KM_PER_DEGREE_DELAY_MS_PER_KM = 0.009
 
-# The engine's default link weight (src/Graph.py: Graph.default_propagation_delay,
-# set to 100 ms by experiments/main_precomputed_t1.py; all delays are ms, see
-# src/units.py). Used for edges touching an Internal-0 node and for 0 delayMs,
-# mirroring the engine exactly.
+# Engine link weights (all delays are ms, see src/units.py), mirrored exactly:
+# a delayMs on the GML edge always wins over any default (team rule
+# 2026-10-22); a 0 delayMs is unspecified -- the engine-wide sentinel -- and
+# falls back to the default: Graph.default_propagation_delay (set to 100 ms by
+# experiments/main_precomputed_t1.py) for router links, the server-attachment
+# default for edges touching an Internal-0 node.
 ENGINE_DEFAULT_PROPAGATION_DELAY = 100
+ENGINE_DEFAULT_SERVER_ATTACHMENT_DELAY_MS = 1
 EARTH_RADIUS_KM = 6371.0
 
 ROUTER_ROUTER_EDGE_TYPES = {"internal", "p2p", "c2p"}
@@ -158,13 +161,14 @@ def build_sparse_graph(nodes, edges):
     numpy rather than one Python call per edge, which matters at 10^5+ scale.
 
     Weights mirror the engine's link rule exactly (src/Gml.py edge parsing +
-    src/Network.from_graph): an edge touching an Internal-0 node keeps
-    Graph.default_propagation_delay regardless of any delayMs on the edge
-    (the engine parses those edges as "external" and never reads delayMs),
-    and a 0 delayMs is replaced by the default as well. Tables must be
-    computed over the same weights the engine puts on links, otherwise
-    accumulated announcement delay can exceed the table-derived diameter
-    and crash MetricUtility's 0..1 range check.
+    src/Network.from_graph): a delayMs on the edge always wins over any
+    default; a 0 delayMs is unspecified and falls back to the default --
+    Graph.default_propagation_delay for router links, the 1 ms
+    server-attachment default for edges touching an Internal-0 node (client
+    attachments never appear here). Tables must be computed over the same
+    weights the engine puts on links, otherwise accumulated announcement
+    delay can exceed the table-derived diameter and crash MetricUtility's
+    0..1 range check.
     """
     node_ids = list(nodes.keys())
     id_to_idx = {nid: i for i, nid in enumerate(node_ids)}
@@ -198,15 +202,16 @@ def build_sparse_graph(nodes, edges):
         (float(e["delayMs"]) for e in routable_edges if "delayMs" in e), dtype=np.float64, count=int(has_delay.sum())
     )
 
-    # engine: Network.from_graph replaces a 0 weight with the default
+    # engine: a 0 delayMs is unspecified; Network.from_graph replaces a 0
+    # weight with the default
     zero_delay = np.zeros(len(routable_edges), dtype=bool)
     zero_delay[has_delay] = weights[has_delay] == 0.0
     weights[zero_delay] = ENGINE_DEFAULT_PROPAGATION_DELAY
 
-    # engine: Gml edge weight stays at the default when either endpoint is
-    # external (Internal 0) -- delayMs is never read for those edges
+    # engine: an edge touching an Internal-0 node takes its delayMs when it has
+    # one (GML always wins), else the server-attachment default
     external = np.fromiter((touches_external(e) for e in routable_edges), dtype=bool, count=len(routable_edges))
-    weights[external] = ENGINE_DEFAULT_PROPAGATION_DELAY
+    weights[external & (~has_delay | zero_delay)] = ENGINE_DEFAULT_SERVER_ATTACHMENT_DELAY_MS
 
     if (~has_delay & ~external).any():
         no_delay_edges = [e for e, hd in zip(routable_edges, has_delay) if not hd]

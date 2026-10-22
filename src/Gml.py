@@ -212,7 +212,7 @@ def read_gml(path, label="label", destringizer=None):
                 line = line[:-1]
             yield line
 
-    with open(path, "r", encoding="ascii") as file:
+    with open(path, "r", encoding="utf-8") as file:
         G = parse_gml_lines(filter_lines(file), label, destringizer)
         return G
 
@@ -616,13 +616,27 @@ def parse_gml_lines(lines, label, destringizer):
         # only set when the weight comes from lat/long; None when delayMs is used
         distance = None
 
-        if meta_data is None or gml_is_external(meta_data):
-            if Verbose.level >= 2:
-                print("gml error no edge distance -- Internal: 0 for " + source_name)
+        source_external = meta_data is None or gml_is_external(meta_data)
+        target_external = neighbour_meta_data is None or gml_is_external(neighbour_meta_data)
 
-        elif neighbour_meta_data is None or gml_is_external(neighbour_meta_data):
+        if source_external or target_external:
+            # attachment link (server hosts / client access): a delayMs on the
+            # GML edge always wins over default/config/CLI; only when the edge
+            # carries none does the per-host default apply (10 ms client,
+            # 1 ms server). A written 0 counts as unspecified, the engine-wide
+            # sentinel (Network.from_graph replaces 0 weights).
+            if 'delayMs' in edge and float(edge['delayMs']) != 0:
+                weight = float(edge['delayMs'])
+            else:
+                external_metas = [m for m in (meta_data, neighbour_meta_data)
+                                  if m is not None and gml_is_external(m)]
+                host_types = {m.get('type') for m in external_metas}
+                if 'client' in host_types:
+                    weight = Graph.default_client_attachment_delay_ms
+                elif 'server' in host_types:
+                    weight = Graph.default_server_attachment_delay_ms
             if Verbose.level >= 2:
-                print("gml error no edge distance -- Internal: 0 for " + target_name)
+                print("gml attachment link " + source_name + " -> " + target_name + " = " + str(weight))
 
         elif ('type' in edge and edge['type'] in ['demand', 'access'] ):
             # ignore demand and access links
