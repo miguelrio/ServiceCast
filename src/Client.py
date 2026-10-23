@@ -4,10 +4,18 @@ from Verbose import Verbose
 
 class Client(Host):
     """ A Client in the emulation."""
-    def __init__(self, clientid, network=None):
+    def __init__(self, clientid, network=None, count=1):
         super().__init__(clientid, network)
         self.type = "Client"
         self.pkt_no = 1
+
+        # a count of the number of actual clients this Client object represents
+        self.count = count
+
+
+    def get_count(self):
+        # return the number of actual clients this Client object represents
+        return self.count
 
     def process_event(self, event):
         # check the type of event we got

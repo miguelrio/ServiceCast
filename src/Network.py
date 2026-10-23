@@ -326,7 +326,7 @@ class Network:
             raise TypeError("host must be a Host")
 
     # add a client to the network and link it to a specified router
-    def add_client(self, host, router, weight=1):
+    def add_client(self, host, router, weight=1, count=1):
         """Add an edge from a Client to a Router.
            Pass in a name or a Client, and a Router.
         """
@@ -335,6 +335,8 @@ class Network:
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
             network.clients[host.id()] = host
+            # set the count
+            host.count = count
 
         elif isinstance(host, str):
             # got a name
@@ -342,6 +344,8 @@ class Network:
             client = Client(host, self)
             self.add_edge(client, router, weight)
             self.clients[host] = client
+            # set the count
+            client.count = count
         else:
             raise TypeError("host must be a Client or a name")
 
@@ -495,6 +499,32 @@ class Network:
         else:
             # it's a router
             return self.routers[r.id()]
+
+    # get a specific client
+    def get_client(self, r):
+        """Get the Client represented by val."""
+        
+        if isinstance(r, int):
+            name = self.name_of(r)
+            return self.clients[name]
+        elif isinstance(r, str):
+            return self.clients[r]
+        else:
+            # it's a client
+            return self.clients[r.id()]
+
+    # get a specific server
+    def get_server(self, r):
+        """Get the Server represented by val."""
+        
+        if isinstance(r, int):
+            name = self.name_of(r)
+            return self.servers[name]
+        elif isinstance(r, str):
+            return self.servers[r]
+        else:
+            # it's a Server
+            return self.servers[r.id()]
 
     def weight(self, node1, node2):
         "Returns the weight of an edge between two nodes."

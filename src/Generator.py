@@ -335,6 +335,27 @@ class Generator(object):
 
         env = network.env
 
+        # we work out the total no of actual clients that the Client objects represent
+        clients = [network.get_client(c) for c in possible_sources]
+
+        print("clients = " + str(clients))
+            
+        counts = [cl.get_count() for cl in clients]
+
+        print("counts = " + str(counts))
+
+        cumulative = np.cumsum(counts)
+            
+        print("cumulative = " + str(cumulative))
+
+        total = sum(counts)
+        
+        # now work out the probability that a Client object gets an event
+        # based on the no of actual clients
+        probs = [ (c.count / total) for c in clients]
+            
+
+
         # also at -1 (metrics): log_syntax.py ends the log header at the
         # size_scale_factor line printed here
         if Verbose.level >= -1:
@@ -371,7 +392,30 @@ class Generator(object):
 
         # Send to sources
         def sources_dist():
-            return gen.choice(possible_sources)
+            # choose 1 candidate from the possible_sources, based on the probabilities
+            #choice =  gen.choice(possible_sources, 1, probs)
+
+            #print("multi_client_event_generator: sources_dist = possible_sources: " + str(possible_sources) + " counts: " + str(counts) + " probabilities: " + str(probs) + " choice: " + str(choice))
+
+            # pick a random number
+            value = np.random.randint(0, total)
+            
+            # convert value to choice - based on cumulative list
+            # work out offset into cumulative first
+            offset = 0
+            for i, v in enumerate(cumulative):
+                if (value < v):
+                    offset = i
+                    break
+                                
+            # use offset into possible_sources to find choice
+            choice = possible_sources[offset]
+
+            if Verbose.level >= 1:
+                print("multi_client_event_generator: sources_dist = possible_sources: " + str(possible_sources) + " counts: " + str(counts) + " cumulative: " + str(cumulative) + " value: " + str(value) + " offset: " + str(offset) + " choice: " + choice)
+
+            
+            return choice
 
         # Create the event generator oobject
         event_generator = MultiClientEventGenerator(env, target_name,
