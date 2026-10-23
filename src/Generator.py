@@ -338,23 +338,18 @@ class Generator(object):
         # we work out the total no of actual clients that the Client objects represent
         clients = [network.get_client(c) for c in possible_sources]
 
-        print("clients = " + str(clients))
+        #print("clients = " + str(clients))
             
         counts = [cl.get_count() for cl in clients]
 
-        print("counts = " + str(counts))
+        #print("counts = " + str(counts))
 
         cumulative = np.cumsum(counts)
             
-        print("cumulative = " + str(cumulative))
+        #print("cumulative = " + str(cumulative))
 
         total = sum(counts)
         
-        # now work out the probability that a Client object gets an event
-        # based on the no of actual clients
-        probs = [ (c.count / total) for c in clients]
-            
-
 
         # also at -1 (metrics): log_syntax.py ends the log header at the
         # size_scale_factor line printed here
@@ -363,6 +358,9 @@ class Generator(object):
     arrival_lambda = {arrival_lambda}
     size_lambda = {size_lambda}
     size_scale_factor = {size_scale_factor}
+    clients = {clients}
+    counts = {counts}
+    cumulative = {cumulative}
             """)
 
         # EventGenerator accepts three (zero arguments) functions as arguments,
@@ -411,7 +409,7 @@ class Generator(object):
             # use offset into possible_sources to find choice
             choice = possible_sources[offset]
 
-            if Verbose.level >= 1:
+            if Verbose.level >= 2:
                 print("multi_client_event_generator: sources_dist = possible_sources: " + str(possible_sources) + " counts: " + str(counts) + " cumulative: " + str(cumulative) + " value: " + str(value) + " offset: " + str(offset) + " choice: " + choice)
 
             
