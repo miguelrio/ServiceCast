@@ -116,6 +116,10 @@ def literal_destringizer(rep):
         raise ValueError(f"{rep!r} is not a string")
 
 
+# Encodings read_gml tries, in order (see read_gml)
+GML_ENCODINGS = ("utf-8-sig", "latin-1")
+
+
 def read_gml(path, label="label", destringizer=None):
     """Read graph in GML format from `path`.
 
@@ -190,7 +194,7 @@ def read_gml(path, label="label", destringizer=None):
         nonlocal progress_bytes, next_progress_bytes
 
         for line_number, line in enumerate(lines, 1):
-            # the file is opened as ASCII, so characters == bytes
+            # characters, so close to bytes (equal for ASCII files)
             progress_bytes += len(line)
             if Verbose.level >= 0 and progress_bytes >= next_progress_bytes:
                 percent = 100 * progress_bytes / total_bytes if total_bytes else 100
@@ -212,9 +216,21 @@ def read_gml(path, label="label", destringizer=None):
                 line = line[:-1]
             yield line
 
-    with open(path, "r", encoding="utf-8") as file:
-        G = parse_gml_lines(filter_lines(file), label, destringizer)
-        return G
+    # Accented names (e.g. city "São Paulo") are common in generated
+    # topologies. Read UTF-8 first (it covers plain ASCII, and "utf-8-sig"
+    # skips a byte-order mark if there is one); if the file is not valid
+    # UTF-8, read it again as Latin-1 (ISO-8859-1, the encoding the GML spec
+    # assumes), which decodes any byte. &...; entities are unescaped either way.
+    for encoding in GML_ENCODINGS:
+        progress_bytes = 0
+        next_progress_bytes = 10 * 1024 * 1024
+        try:
+            with open(path, "r", encoding=encoding) as file:
+                return parse_gml_lines(filter_lines(file), label, destringizer)
+        except UnicodeDecodeError:
+            if Verbose.level >= 0:
+                print("GML: {} is not {}; trying the next encoding".format(path, encoding))
+    raise ValueError("gml error: cannot decode {} as any of {}".format(path, GML_ENCODINGS))
 
 
 def parse_gml(lines, label="label", destringizer=None):
@@ -488,7 +504,7 @@ def parse_gml_lines(lines, label, destringizer):
         elif 'hyperedge' in data and data['hyperedge'] == 1:
             # check if there is a lat / long
             if 'Latitude' in data and 'Longitude' in data:
-                return false
+                return False
             else:
                 return True
         else:
@@ -687,6 +703,8 @@ def parse_gml_lines(lines, label, destringizer):
                     print("gml add_edge " + str(source_name) + " " + str(target_name) + " " +  str(weight))
 
                 G.add_edge(source_name, target_name, weight)
+                if 'type' in edge:
+                    G.set_edge_type(source_name, target_name, edge['type'])
             else:
                 arrow = "->" if directed else "--"
                 msg = f"edge #{i} ({source!r}{arrow}{target!r}) is duplicated"
@@ -709,6 +727,8 @@ def parse_gml_lines(lines, label, destringizer):
                 print("gml add_edge " + str(source_name) + " " + str(target_name) + " " + str(weight))
 
             G.add_edge(source_name, target_name, weight)
+            if 'type' in edge:
+                G.set_edge_type(source_name, target_name, edge['type'])
 
         if Verbose.level >= 0 and (i + 1) >= next_edge_progress:
             percent = 100 * (i + 1) / total_edges if total_edges else 100

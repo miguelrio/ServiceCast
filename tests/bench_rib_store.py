@@ -416,7 +416,7 @@ def attach_hosts(network, num_servers, num_clients):
 
 
 def fullsim_worker(backend, gml, until, mode, result_file, log_level,
-                   hosts=(0, 0), hop_by_hop=False, weighted=False):
+                   hosts=(0, 0), hop_by_hop=False):
     """Run one full simulation with the selected Router backend and write a
     JSON result to result_file.
 
@@ -428,9 +428,6 @@ def fullsim_worker(backend, gml, until, mode, result_file, log_level,
            hosts already in the GML
     hop_by_hop: Router.hop_by_hop -- hop-by-hop anycast forwarding of client
            requests (True) or first-decide unicast (False)
-    weighted: engine Dijkstra over link weights instead of hop count, as
-           experiments/main_precomputed_t1.py's "weighted" option does
-           (ignored when the GML carries precomputed routing tables)
     """
     from Graph import Graph
     import Network as network_mod
@@ -463,16 +460,9 @@ def fullsim_worker(backend, gml, until, mode, result_file, log_level,
         sys.exit(f"{os.path.basename(gml)} has {len(network.server_names())} "
                  f"servers and {len(network.client_names())} clients; pass "
                  "--servers N --clients N to attach hosts to it")
-    if weighted:
-        orig_dijkstra = Graph.dijkstra_algorithm
-        Graph.dijkstra_algorithm = classmethod(
-            lambda cls, g, start, use_weights=False: orig_dijkstra(g, start,
-                                                                   True))
     network.calculate_forwarding_tables()
-    if weighted:
-        Graph.dijkstra_algorithm = orig_dijkstra
-    routing = ('precomputed' if network.precomputed_tables
-               else 'engine weighted' if weighted else 'engine min-hop')
+    from Routing import Routing
+    routing = Routing.policy
 
     for server_name in network.server_names():
         Generator.server_load_event_generator(network, server_name, ["§a"],
@@ -522,7 +512,7 @@ def fullsim_worker(backend, gml, until, mode, result_file, log_level,
 
 
 def _run_worker(backend, gml, until, mode, log_level=2, log_path=None,
-                hosts=(0, 0), hop_by_hop=False, weighted=False):
+                hosts=(0, 0), hop_by_hop=False):
     fd, result_file = tempfile.mkstemp(suffix='.json', prefix='bench_')
     os.close(fd)
     cmd = [sys.executable, os.path.abspath(__file__),
@@ -533,8 +523,6 @@ def _run_worker(backend, gml, until, mode, log_level=2, log_path=None,
            '--old-file', OLD_FILE, '--new-file', NEW_FILE]
     if hop_by_hop:
         cmd.append('--hop-by-hop')
-    if weighted:
-        cmd.append('--weighted')
     try:
         if log_path:
             with open(log_path, 'w') as log:
@@ -585,8 +573,8 @@ def _summarise_requests(reqs):
 
 
 def part_b(gml, until, repeats, logs_dir, log_level, hosts=(0, 0),
-           hop_by_hop=False, weighted=False):
-    wk = dict(hosts=hosts, hop_by_hop=hop_by_hop, weighted=weighted)
+           hop_by_hop=False):
+    wk = dict(hosts=hosts, hop_by_hop=hop_by_hop)
     print("\n" + "=" * 78)
     print("Part B -- full-simulation A/B "
           f"(gml={os.path.basename(gml)}, until={until}, repeats={repeats})")
@@ -723,9 +711,6 @@ def main():
     ap.add_argument('--hop-by-hop', action='store_true',
                     help='Part B: Router.hop_by_hop = True (hop-by-hop anycast '
                          'request forwarding; default first-decide unicast)')
-    ap.add_argument('--weighted', action='store_true',
-                    help='Part B: engine Dijkstra over link weights instead of '
-                         'hop count (as main_precomputed_t1.py "weighted")')
     ap.add_argument('--until', type=float, default=60,
                     help='simulated seconds for Part B (default 60)')
     ap.add_argument('--repeats', type=int, default=3,
@@ -753,8 +738,7 @@ def main():
     if args.fullsim_worker:
         fullsim_worker(args.fullsim_worker, args.gml, args.until,
                        args.worker_mode, args.result_file, args.log_level,
-                       (args.servers, args.clients), args.hop_by_hop,
-                       args.weighted)
+                       (args.servers, args.clients), args.hop_by_hop)
         return 0
 
     ok = True
@@ -763,8 +747,7 @@ def main():
     if args.fullsim:
         ok = part_b(args.gml, args.until, args.repeats, args.logs,
                     args.log_level,
-                    (args.servers, args.clients), args.hop_by_hop,
-                    args.weighted) and ok
+                    (args.servers, args.clients), args.hop_by_hop) and ok
     return 0 if ok else 1
 
 

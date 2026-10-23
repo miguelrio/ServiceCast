@@ -26,6 +26,10 @@ class Graph:
         self.node_meta_data = {}        # a dict of meta data for each node
         self._index = {}                # node name -> index into labels
         self._edge_keys = set()         # (low index, high index) per edge
+        # (low index, high index) -> (type, source name, target name), for
+        # edges whose GML entry has a `type` (c2p, p2p, internal, hosts, ...);
+        # source/target keep the GML order, which gives a c2p edge its direction
+        self._edge_types = {}
 
     # index into graph by index or node name
     # returns a name
@@ -198,6 +202,16 @@ class Graph:
 
             self._edge_keys.add(self._edge_key(s, d))
 
+
+    # Record the relationship type of an edge, e.g. c2p, p2p, internal
+    def set_edge_type(self, s, d, edge_type):
+        key = self._edge_key(self._to_index(s), self._to_index(d))
+        self._edge_types[key] = (edge_type, self.name_of(s), self.name_of(d))
+
+    # The (type, source, target) of an edge, or None if it has no type
+    def edge_type(self, s, d):
+        key = self._edge_key(self._to_index(s), self._to_index(d))
+        return self._edge_types.get(key)
 
     # Contains a link
     def contains_link(self, s, d):
@@ -382,74 +396,6 @@ class Graph:
         for label in self.labels:
             print("  '{}' : {},".format(label, self.adjacency(label), end="\n"))
         print("}")
-
-
-    # simple Dijkstra algorithm - adapted
-    # from https://www.udacity.com/blog/2021/10/implementing-dijkstras-algorithm-in-python.html
-    
-    @classmethod
-    def dijkstra_algorithm(cls, graph, start_node, use_weights=False):
-        """Dijkstra algorithm which returns 3 values:
-        the 'source' node, the 'shortest_path' to other nodes,
-        the 'previous_nodes' for other nodes. An example:
-        {'source': 'a', 'shortest_path': {'a': 0, 'b': 1, 'c': 4,
-        'd': 3, 'e': 3}, 'previous_nodes': {'b': 'a', 'c': 'a', 'd': 'b', 'e': 'b'}}"""
-        
-        unvisited_nodes = list(graph.nodes())
-
-        # We'll use this dict to save the cost of visiting each node and update it as we move along the graph   
-        shortest_path = {}
-
-        # We'll use this dict to save the shortest known path to a node found so far
-        previous_nodes = {}
-
-        # We'll use max_value to initialize the "infinity" value of the unvisited nodes   
-        max_value = float('inf')
-
-        for node in unvisited_nodes:
-            shortest_path[node] = max_value
-            
-        # However, we initialize the starting node's value with 0   
-        shortest_path[start_node] = 0
-
-        # The algorithm executes until we visit all nodes
-        while unvisited_nodes:
-            # The code block below finds the node with the lowest score
-            current_min_node = None
-            for node in unvisited_nodes: # Iterate over the nodes
-                if current_min_node == None:
-                    current_min_node = node
-                elif shortest_path[node] < shortest_path[current_min_node]:
-                    current_min_node = node
-
-            # The code block below retrieves the current node's neighbors and updates their distances
-            neighbors = graph.neighbours(current_min_node)
-
-            if Verbose.level >= 3:
-                print("dijkstra_algorithm: neighbours " + current_min_node + " = " + str(len(neighbors)) + " " + str(neighbors))
-
-            for neighbor in neighbors:
-
-                if use_weights:
-                    # use the actual weight for the shortest_path
-                    next = graph.weight(current_min_node, neighbor)
-                else:
-                    # use the hop count for the shortest_path
-                    next = 1
-
-                tentative_value = shortest_path[current_min_node] + next
-                
-                if tentative_value < shortest_path[neighbor]:
-                    shortest_path[neighbor] = tentative_value
-                    # We also update the best path to the current node
-                    previous_nodes[neighbor] = current_min_node
-
-            # After visiting its neighbors, we mark the node as "visited"
-            unvisited_nodes.remove(current_min_node)
-
-        return { 'source': start_node, 'shortest_path': shortest_path, 'previous_nodes': previous_nodes }
-
-
 
 
 # Adjacency List representation in Python

@@ -396,7 +396,7 @@ class Generator(object):
             #print("multi_client_event_generator: sources_dist = possible_sources: " + str(possible_sources) + " counts: " + str(counts) + " probabilities: " + str(probs) + " choice: " + str(choice))
 
             # pick a random number
-            value = np.random.randint(0, total)
+            value = gen.randint(0, total)
             
             # convert value to choice - based on cumulative list
             # work out offset into cumulative first

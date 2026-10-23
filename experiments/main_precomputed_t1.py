@@ -1,9 +1,8 @@
 
 # Load a typed GML topology (routers + servers + clients in the file) and run
-# a simulation. If the GML carries precomputed routing tables (per-router
-# nextHop/delayMs attributes from the topology tool) they are installed
-# instead of running per-router Dijkstra; otherwise the engine builds the
-# tables as usual. Both paths use the same simulator logic after setup.
+# a simulation. The routing tables are computed at start-up (src/Routing.py,
+# valley-free when the links carry c2p/p2p relationships). Any precomputed
+# nextHop/delayMs lines in the GML are ignored.
 #
 # Usage:
 #   python3 main_precomputed_t1.py [gml_file] [until] [verbose_level]
@@ -31,6 +30,7 @@ from pathlib import Path
 
 from Graph import Graph
 from Network import Network
+from Routing import Routing
 from Router import Router
 from Generator import Generator
 from Verbose import Verbose
@@ -47,20 +47,11 @@ def topology_setup():
     until = float(sys.argv[2]) if len(sys.argv) > 2 else 360
     Verbose.level = int(sys.argv[3]) if len(sys.argv) > 3 else 1
     Verbose.table = 0
-    # optional trailing arguments (any order after the first three):
-    #   "weighted"  engine Dijkstra with use_weights=True (delay-shortest)
-    #               instead of the default min-hop; ignored when the GML
-    #               carries precomputed tables
+    # optional trailing arguments after the first three:
     #   a float     Server.change_factor damping threshold (default 0.01);
     #               bigger values mean load must drift further before a
     #               ServerMetric announcement is sent
-    weighted = False
-    floats = []
-    for arg in sys.argv[4:]:
-        if arg == "weighted":
-            weighted = True
-        else:
-            floats.append(float(arg))
+    floats = [float(arg) for arg in sys.argv[4:]]
     # optional trailing floats: [server_change_factor [router_fib_threshold]]
     change_factor = float(os.environ.get("SERVER_CF",
                        floats[0] if len(floats) > 0 else 0.01))
@@ -118,11 +109,6 @@ def topology_setup():
 
     # 2 - build the network: topology -> graph -> network
     t0 = time.perf_counter()
-    if weighted:
-        orig_dijkstra = Graph.dijkstra_algorithm
-        Graph.dijkstra_algorithm = classmethod(
-            lambda cls, g, start, use_weights=False: orig_dijkstra(g, start, True)
-        )
     graph = Graph.from_gml_file(gml_file)
     t1 = time.perf_counter()
     network = Network.from_graph(graph, env, drop_external=False)
@@ -134,18 +120,13 @@ def topology_setup():
           f"{len(network.routers)} nodes ({len(servers)} servers, {len(clients)} clients)")
     print(f"clients in gml ({len(clients)}): {clients}")
 
-    # 3 - routing tables: precomputed from the GML if present, else the engine
+    # 3 - routing tables, computed at start-up
     network.calculate_forwarding_tables()
-    if weighted:
-        Graph.dijkstra_algorithm = orig_dijkstra
     t3 = time.perf_counter()
-    if network.precomputed_tables:
-        print(f"routing tables: PRECOMPUTED from GML for "
-              f"{len(network.precomputed_tables)} routers in {t3 - t2:.3f}s")
-    else:
-        mode = "weighted" if weighted else "min-hop"
-        print(f"routing tables: engine Dijkstra ({mode}) for {len(network.nodes())} "
-              f"nodes in {t3 - t2:.3f}s")
+    counts = network.routing_counts
+    print(f"routing tables: {Routing.policy} for {counts['routers']} routers x "
+          f"{counts['servers']} servers ({counts['entries']} entries, "
+          f"{counts['unreachable_pairs']} pairs unreachable) in {t3 - t2:.3f}s")
 
     # 4 - setup generators
     for server_name in servers:

@@ -143,15 +143,6 @@ def topology_setup():
     network.graphviz_to_file("dfn.gv")
 
 
-    # some cross check print outs
-    if Verbose.level >= 3:
-        dijkstra_c1 = Graph.dijkstra_algorithm(network, 'c1')
-        print("Network: dijkstra from c1 = " + str(dijkstra_c1))
-        print("Network: dijkstra routing from c1 = " + str(network.dijkstra_to_routing(dijkstra_c1)))
-        dijkstra_c4 = Graph.dijkstra_algorithm(network, 'c4')
-        print("Network: dijkstra from c4 = " + str(dijkstra_c4))
-        print("Network: dijkstra routing from c4 = " + str(network.dijkstra_to_routing(dijkstra_c4)))
-
     # Network
     if Verbose.level >= 3:
         print("Network = ")

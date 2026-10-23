@@ -50,13 +50,11 @@ def topology_setup():
         # test print
         print("graph adjacency list = ")
         graph.print()
-        # test dijkstra_algorithm
         print ("graph nodes = " + str(graph.nodes()))
         print("graph edges = " + str(graph.edges()))
         print("graph edge b->c " + str(graph.contains_edge('b', 'c')) + " " + str(graph.edge('b', 'c')))
         print("graph neighbours b = " + str(graph.neighbours('b')))
         print("graph weight b->c = " + str(graph.weight('b', 'c')))
-        print("graph dijkstra from a = " + str(Graph.dijkstra_algorithm(graph, 'a')))
 
     # graph -> network
     if Verbose.level >= 2:
@@ -108,11 +106,9 @@ def topology_setup():
         print("Network degree e: " + str(network.degree('e')))
         print("Network neighbours c1: " + str(network.neighbours('c1')))
         print("Network degree c1: " + str(network.degree('c1')))
-        print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
-        print("Network: dijkstra from d = " + str(Graph.dijkstra_algorithm(network, 'd')))
         print("Network: unicast forwarding table at d = " + str(network['d'].get_unicast_forwarding_table()))
         print("Network: route from d to s1 = " + str(network['d'].route_to('s1')) +  "  distance: " + str(network['d'].distance_to('s1')) )
-        print("Network: route from s1 to c1  = " + str(network['s1'].route_to('c1')) +  "  distance: " + str(network['s1'].distance_to('c1')) )
+        print("Network: route from s1 to c1  = " + str(network['s1'].neighbours()[0]) +  "  distance: " + str(network.latency_table['s1']['c1']) )
         print("diameter = " + str(network.network_diameter()))
 
     # Set alpha value

@@ -50,7 +50,6 @@ def topology_setup():
     print("graph adjacency list = ")
     graph.print()
 
-    # test dijkstra_algorithm
     print ("graph nodes = " + str(graph.nodes()))
 
     print("graph edges = " + str(graph.edges()))
@@ -61,7 +60,6 @@ def topology_setup():
 
     print("graph weight b->c = " + str(graph.weight('b', 'c')))
 
-    print("graph dijkstra from a = " + str(Graph.dijkstra_algorithm(graph, 'a')))
 
     # graph -> network
 
@@ -113,18 +111,11 @@ def topology_setup():
     print("Network neighbours c1: " + str(network.neighbours('c1')))
     print("Network degree c1: " + str(network.degree('c1')))
 
-    dijkstra_a = Graph.dijkstra_algorithm(network, 'a')
-    print("Network: dijkstra from a = " + str(dijkstra_a))
-    print("Network: dijkstra routing from a = " + str(network.dijkstra_to_routing(dijkstra_a)))
-    dijkstra_c1 = Graph.dijkstra_algorithm(network, 'c1')
-    print("Network: dijkstra from c1 = " + str(dijkstra_c1))
-    print("Network: dijkstra routing from c1 = " + str(network.dijkstra_to_routing(dijkstra_c1)))
-
     print("Network: unicast forwarding table at c1 = " + str(network['c1'].get_unicast_forwarding_table()))
 
-    print("Network: route from c1 to s1 = " + str(network['c1'].route_to('s1')) +  "  distance: " + str(network['c1'].distance_to('s1')) )
+    print("Network: route from c1 to s1 = " + str(network['c1'].neighbours()[0]) +  "  distance: " + str(network.latency_table['c1']['s1']) )
     
-    print("Network: route from s1 to c2  = " + str(network['s1'].route_to('c2')) +  "  distance: " + str(network.path_latency('s1','c2')) )
+    print("Network: route from s1 to c2  = " + str(network['s1'].neighbours()[0]) +  "  distance: " + str(network.latency_table['c2']['s1']) )
     
     # 4 - Now we create the packet generator.
 

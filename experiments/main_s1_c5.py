@@ -48,7 +48,6 @@ def topology_setup():
     print("graph adjacency list = ")
     graph.print()
 
-    # test dijkstra_algorithm
     print ("graph nodes = " + str(graph.nodes()))
 
     print("graph edges = " + str(graph.edges()))
@@ -59,7 +58,6 @@ def topology_setup():
 
     print("graph weight b->c = " + str(graph.weight('b', 'c')))
 
-    print("graph dijkstra from a = " + str(Graph.dijkstra_algorithm(graph, 'a')))
 
     # graph -> network
 
@@ -102,7 +100,7 @@ def topology_setup():
     network.print()
 
     
-    print("Network: route from s1 to c1  = " + str(network['s1'].route_to('c1')) +  "  distance: " + str(network['s1'].distance_to('c1')) )
+    print("Network: route from s1 to c1  = " + str(network['s1'].neighbours()[0]) +  "  distance: " + str(network.latency_table['s1']['c1']) )
     
     # 4 - Now we create the packet generator.
 

@@ -9,6 +9,7 @@ from Verbose import Verbose
 from Utility import Utility
 from units import s_to_ms
 from MetricUtility import MetricUtility
+from Routing import Routing
 from collections import OrderedDict
 from Gml import read_gml, write_gml
 import sys
@@ -53,9 +54,15 @@ class Network:
         self.env = env            # an Environment
         self.latency_table = {}
 
-        # per-router routing tables precomputed in the GML file
-        # (topology tool output): name -> {server_label: (next_hop, delay)}
-        self.precomputed_tables = {}
+        # what route computation (Routing.compute_tables) needs from the GML:
+        # link_key(a, b) -> (type, source, target) for links with a type
+        # (c2p, p2p, internal, hosts, access); source/target keep the GML
+        # order, which gives a c2p link its direction
+        self.link_types = {}
+        # node name -> tier (stub, transit, tier1), to orient c2p links
+        self.node_tiers = {}
+        # nodes marked Internal 0 in the GML: never used as transit
+        self.external_nodes = set()
 
         # every run starts its end-of-run counters from zero
         Router.reset_counters()
@@ -119,10 +126,12 @@ class Network:
                 network.dropped.append(name)
                 continue
             else:
-                # collect any precomputed routing-table attributes
-                # (nextHop "<server>" "<hop>" / delayMs "<server>" <ms>)
-                # before the node is turned into an entity
-                network._capture_precomputed(name, meta_data)
+                # what route computation needs from the node meta data
+                if meta_data is not None:
+                    if 'tier' in meta_data:
+                        network.node_tiers[name] = meta_data['tier']
+                    if meta_data.get('External') == 1 or meta_data.get('Internal') == 0:
+                        network.external_nodes.add(name)
 
                 # check type attribute
                 # this is output by Miguel's topology tool
@@ -226,6 +235,9 @@ class Network:
                         # create the BidirectionalLink
                         if status1 == "create" or status2 == "create":
                             network.links.append(BidirectionalLink(link1, link2))
+                            edge_type = graph.edge_type(name, neighbour_name)
+                            if edge_type is not None:
+                                network.link_types[Network.link_key(name, neighbour_name)] = edge_type
 
         if demand_edges:
             print("Network: ignored {} host-to-host (demand) edges, e.g. {} -- {}".format(len(demand_edges), *demand_edges[0]), file=sys.stderr)
@@ -235,6 +247,11 @@ class Network:
         
         return network
             
+    # the key a link is stored under in link_types: its two end names, sorted
+    @staticmethod
+    def link_key(a, b):
+        return (a, b) if a <= b else (b, a)
+
     # Build a graph from a GML file
     @classmethod
     def from_gml_file(cls, gml_file, env):
@@ -622,68 +639,12 @@ class Network:
             
         return list(filter(lambda l: name in l.links(), self.links))
 
-    # Get dijkstra values from a node
-    def dijkstra_algorithm(self, router):
-        return Graph.dijkstra_algorithm(self, router)
-
-    # calculate the forwarding table for every node
-    def _capture_precomputed(self, name, meta_data):
-        """Collect per-router routing tables precomputed in the GML file.
-
-        The topology tool writes two attribute lines per server into each
-        router node:
-            nextHop "<server label>" "<next hop label>"
-            delayMs "<server label>" <total delay ms>
-        The Gml parser surfaces these as lists of (server, value) pairs in
-        the node meta data. Routers with neither attribute are skipped.
-        """
-        if meta_data is None:
-            return
-
-        hops = meta_data.get('nextHop')
-        delays = meta_data.get('delayMs')
-        if not hops and not delays:
-            return
-
-        # a single entry comes back as a bare pair, several as a list
-        if isinstance(hops, tuple):
-            hops = [hops]
-        if isinstance(delays, tuple):
-            delays = [delays]
-
-        hop_map = dict(hops) if hops else {}
-        delay_map = dict(delays) if delays else {}
-
-        entries = {}
-        for server, hop in hop_map.items():
-            if server in delay_map:
-                entries[server] = (hop, float(delay_map[server]))
-
-        if entries:
-            self.precomputed_tables[name] = entries
-
-    def install_precomputed_tables(self):
-        """Install the routing/latency tables precomputed in the GML file.
-
-        Replaces calculate_forwarding_tables()'s per-router Dijkstra pass.
-        The tables hold, per router and per server, the next hop and total
-        delay of the delay-shortest path, so each router's FIB and latency
-        row toward the servers is filled in directly. Client and server
-        latency rows are derived from the client's access router row plus
-        the attachment link weight. Requests are one-way (client -> server)
-        and every live table lookup is toward a server or from a server to
-        a client, so no router -> router or router -> client entries are
-        needed.
-        """
-        # router rows: FIB entries + latency toward every server
-        for name, entries in self.precomputed_tables.items():
-            fib = [(server, hop, delay) for server, (hop, delay) in entries.items()]
-            self[name].set_unicast_forwarding_table(fib)
-            self.latency_table[name] = {
-                server: delay for server, (hop, delay) in entries.items()
-            }
-
-        # client rows: access router's table + the attachment link weight
+    def install_host_rows(self):
+        """Derive the hosts' latency rows from the routers' rows, then the
+        diameter. Requests are one-way (client -> server) and every live table
+        lookup is toward a server or from a server to a client, so router rows
+        hold only servers and hosts need no forwarding tables."""
+        # client rows: access router's row + the access link weight
         for client in self.clients.values():
             cname = client.id()
             neigh = client.neighbours()
@@ -707,228 +668,21 @@ class Network:
                     row[cname] = client_row[sname]
             self.latency_table[sname] = row
 
-        # the diameter becomes the max entry of the installed table
+        # the diameter is the largest delay in the tables: router -> server,
+        # and client -> server including the client's access link
         self.network_diameter_val = self.network_diameter_fn()
 
     def calculate_forwarding_tables(self):
-        """Calculate the forwarding tables for all nodes"""
-        if self.precomputed_tables:
-            # the tables were precomputed in the GML file
-            self.install_precomputed_tables()
-        else:
-            for node in self.nodes():
-                # calculate the forwarding table for node
-                table = self.forwarding_table(node)
-                # tell the node its unicast_forwarding_table
-                self[node].set_unicast_forwarding_table(table)
+        """Calculate the forwarding tables for all routers, towards every
+        server (src/Routing.py), then the hosts' latency rows and the
+        diameter. Call it after every host is attached."""
+        self.routing_counts = Routing.compute_tables(self)
+        self.install_host_rows()
 
         # the diameter is the delay at which a replica is at its worst.
         # Set here, after an experiment's topology_setup() assignments, because
         # the diameter is the Network's to know, not an experiment's.
         MetricUtility.metric_scale['delay'] = self.network_diameter()
-
-    # calculate a forwarding table for a router r
-    # each entry is (destination, next_hop, weight)
-    # and the latencies from 'r' to other nodes
-    def forwarding_table(self, r):
-        """Calculate the forwarding table for router r"""
-        router = None
-
-        # work with router name
-        if isinstance(r, int):
-            router = self.name_of(r)
-        elif isinstance(r, str):
-            router = r
-        else:
-            router = r.id()
-
-        # calculate Dijkstra's algorithm for the router
-        # this returns a dict of 3 values
-        # the 'source' node, the 'shortest_path' to other nodes,
-        # the 'previous_nodes' for other nodes. 
-
-        dijkstra_r = Graph.dijkstra_algorithm(self, router)
-
-        # we combine shortest_path and previous_nodes to
-        # create the routing table entries
-        table = self.dijkstra_to_routing(dijkstra_r)
-
-        # while in here we use the same dijkstra_r values to
-        # combine the shortest_path and previous_nodes to
-        # convert shortest_path and previous_nodes dicts into 
-        # a list of path latencies
-        latency_table_r = self.dijkstra_to_latency(dijkstra_r)
-
-        self.latency_table.update(latency_table_r)
-
-        if Verbose.level >= 3:
-            print("Net: latency_table: " + router + " = " + str(latency_table_r[router]))
-
-        return table
-
-    # convert shortest_path and previous_nodes dicts into 
-    # a list of  entries like (destination, next_hop, weight)
-    def dijkstra_to_routing(self, dijkstra_tuple):
-        router = dijkstra_tuple['source']
-        shortest_path = dijkstra_tuple['shortest_path']
-        previous_nodes = dijkstra_tuple['previous_nodes']
-
-        return self.dijkstra_to_routing_fn(router, shortest_path, previous_nodes)
-        
-    # convert shortest_path and previous_nodes dicts into 
-    # a list of  entries like (destination, next_hop, weight)
-    def dijkstra_to_routing_fn(self, router, shortest_path, previous_nodes):
-        """Convert dijkstra_algorithm dict into a routing table"""
-        
-        # example inputs are:
-        # 'shortest_path': {'a': 3, 'b': 2, 'c': 5, 'd': 0, 'e': 4, 'f': 6, 's1': 4, 's2': 4, 's3': 4, 's4': 4, 's5': 4, 'c1': 5, 'c2': 5, 'c3': 5, 'c4': 5, 'c5': 5},
-        # 'previous_nodes': {'b': 'd', 'c': 'd', 'e': 'b', 'a': 'b', 's1': 'a', 's2': 'a', 's3': 'a', 's4': 'a', 's5': 'a', 'c1': 'e', 'c2': 'e', 'c3': 'e', 'c4': 'e', 'c5': 'e', 'f': 'c'}
-
-        table = []
-        
-        # visit the shortest_path dict and work out which is the
-        # directly connected node to send to
-        for node, weight in shortest_path.items():
-            # looks like: 'Name': number
-
-            # print("router -> (node, weight) = " + str(router) + " -> (" + str(node) + " " + str(weight) + ")")
-
-            if weight == float('inf'):
-                tuple = (node, router, weight)
-                table.append(tuple)
-
-            else:
-                if node == router:
-                    # found myself - nothing to do
-                    pass
-                else:
-                    # now find the directly connected node
-                    connected = None
-                    lookup = node
-
-                    while True:
-                        # find lookup in previous_nodes
-                        if lookup in previous_nodes:
-                            connected = previous_nodes[lookup]
-
-                        else:
-                            if Verbose.level >= 4:
-                                print("dijkstra_to_routing_fn: dropped: " + str(lookup))
-
-                        if connected == router:
-                            # next is directly connected to router
-                            break
-                        else:
-                            lookup = connected
-
-                    tuple = (node, lookup, weight)
-                    table.append(tuple)
-
-        return table
-
-    # convert shortest_path and previous_nodes dicts into 
-    # a list of  path latencies
-    def dijkstra_to_latency(self, dijkstra_tuple):
-        router = dijkstra_tuple['source']
-        shortest_path = dijkstra_tuple['shortest_path']
-        previous_nodes = dijkstra_tuple['previous_nodes']
-
-        return self.dijkstra_to_latency_fn(router, shortest_path, previous_nodes)
-        
-    # convert shortest_path and previous_nodes dicts into 
-    # a list of  path latencies
-    def dijkstra_to_latency_fn(self, router, shortest_path, previous_nodes):
-        """Convert dijkstra_algorithm dict into latency along the path"""
-        
-        # example inputs are:
-        # {'source': 'a', 'shortest_path': {'a': 0, 'b': 1, 'c': 1, 'd': 2, 'e': 2}, 'previous_nodes': {'b': 'a', 'c': 'a', 'd': 'b', 'e': 'b'}}
-        
-        latency_table = {}
-        
-        # set up a dict for this router
-        latency_table[router] = {}
-
-        
-        # visit the shortest_path dict and work out the latency along the path
-        # the weights in shortest_path are hop count, and so not used here
-        for node in shortest_path.keys():
-            if node == router:
-                # found myself - nothing to do
-                pass
-            else:
-                # now find the path
-                connected = None
-                lookup = node
-                path_latency = 0
-
-                # skip through all nodes until we reach router
-                while True:
-                    # find lookup in previous_nodes
-                    if lookup in previous_nodes:
-                        connected = previous_nodes[lookup]
-
-                        # print("connected = " + str(lookup) + " -> " + str(connected))
-                        
-                        if (lookup in self.dropped):
-                            if Verbose.level >= 4:
-                                print("  dropped " + str(lookup))
-                        else:
-                            # get the link weight of connected to lookup
-                            link_weight = self.weight(connected, lookup)
-
-                            path_latency += link_weight
-
-                            if Verbose.level >= 4:
-                                print("Net: dijkstra_to_latency_fn: link_weight: " + lookup + " -> " + connected + " = " + str(link_weight))
-
-                    else:
-                        connected = None
-                        
-                    if connected == router:
-                        # next we have reached router
-                        # so the path is complete
-                        break
-                    elif connected == None:
-                        break
-                    else:
-                        lookup = connected
-
-                if Verbose.level >= 4:
-                    print("Net: dijkstra_to_latency_fn: latency " + router + " --> " + node + " = " + str(path_latency))
-                    
-                latency_table[router][node] = path_latency
-
-        # before we return, calculate the network diameter
-        # it uses the latency_table values
-        self.network_diameter_val = self.network_diameter_fn()
-        if Verbose.level >= 3:
-            print("Net: network_diameter = " + str(self.network_diameter_val))
-        
-        return latency_table
-
-
-    # Get the latency along a path from src to dst
-    # Relies on the unicast_forwarding_table in each node
-    def path_latency(self, s, d):
-        src = None
-        dst = None
-        
-        if isinstance(s, int):
-            src = self.name_of(s)
-        elif isinstance(s, str):
-            src = s
-        else:
-            src = s.id()
-        
-        if isinstance(d, int):
-            dst = self.name_of(d)
-        elif isinstance(d, str):
-            dst = d
-        else:
-            dst = d.id()
-        
-
-        return self.latency_table[dst][src]   # self[dst].distance_to(src)
 
     # Network diameter
     #
@@ -1102,7 +856,7 @@ class Network:
 
         # Ground truth at arrival time (t_arr):
         # - grab snapshot of load on all replicas.
-        # - get latency from the client to all replicas (from dijkstra).
+        # - get latency from the client to all replicas (from the routing tables).
         # - calculate utility for each.
         utility_values = {}
         load_values = {}

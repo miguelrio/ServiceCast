@@ -1,0 +1,6 @@
+# Python packages the simulator (src/) needs. Versions are the ones it was
+# last tested with; newer versions are expected to work.
+numpy>=2.4
+scipy>=1.18      # routing tables (src/Routing.py)
+simpy>=4.1
+tinydb           # only for src/Router-old.py, the TinyDB baseline
