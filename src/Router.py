@@ -121,6 +121,10 @@ class Router(object):
         # (was a TinyDB table; plain dicts are O(1) for the equality lookups
         # this code does, and avoid TinyDB's per-scan closure overhead)
         self.service_RIB = dict()
+        # forwarding utility of each RIB entry, keyed by replica: computed when
+        # the entry is added or updated, so the FIB update does not re-evaluate
+        # every entry for every announcement
+        self.rib_utility = dict()
 
         # sent announcements: replica -> {neighbour: None} (insertion-ordered
         # set of neighbours the metric was sent to; a dict, not a set, so
@@ -400,33 +404,39 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if (operation == ServerMetricMessageType.Announce):
             # it's an announcement
 
-            # avoid least loaded going everywhere
-            # check the propagation_time
+            # Announcement distance prototype, commented out (Oct 2026). It is not
+            # used yet: announcement_distance was computed for every announcement
+            # but only printed (ANNOUNCEMENT_DISTANCE, verbose >= 2), and every
+            # announcement is processed whatever its value. It was also costly:
+            # average_normalised_load() loops over every server in the network, and
+            # it ran for every announcement at every router, so its cost grew with
+            # servers x messages. Profiled on CAIDA with 1000 servers and 50 clients
+            # (60 s simulated, 35M load messages) it took about 21% of simulation
+            # time. It also reads global state from the Network object (average
+            # load, total capacity, diameter) that a real router would not have.
+            # A real version needs a cheap per-message test using information the
+            # router has locally; see "Announcement Radius" in doc/TODO.md.
 
-            propagation_time = metrics['delay']
+            # # avoid least loaded going everywhere
+            # # check the propagation_time
 
-            network_diameter = self.network.network_diameter()
+            # propagation_time = metrics['delay']
+            # network_diameter = self.network.network_diameter()
+            # normalised_load = self.network.get_normalised_load(replica)
+            # average_normalised_load = self.network.average_normalised_load()
+            # replica_available_capacity = self.network.get_replica_capacity(replica, 'slots')
+            # system_available_capacity = self.network.get_total_replica_capacity('slots')
 
-            normalised_load = self.network.get_normalised_load(replica)
+            # if system_available_capacity == 0:
+            #     if Verbose.level >= 2:
+            #         print("SYSTEM_AVAILABLE_CAPACITY " + "'" + str(self.id()) + "'" + " == 0 announcement_distance 0")
+            #     announcement_distance = 0
+            # else:
+            #     announcement_distance =  (replica_available_capacity / system_available_capacity)  * (normalised_load - average_normalised_load + 1) * network_diameter 
 
-            average_normalised_load = self.network.average_normalised_load()
-
-            replica_available_capacity = self.network.get_replica_capacity(replica, 'slots')
-
-            system_available_capacity = self.network.get_total_replica_capacity('slots')
-
-            
-            if system_available_capacity == 0:
-                if Verbose.level >= 2:
-                    print("SYSTEM_AVAILABLE_CAPACITY " + "'" + str(self.id()) + "'" + " == 0 announcement_distance 0")
-                announcement_distance = 0
-            else:
-                announcement_distance =  (replica_available_capacity / system_available_capacity)  * (normalised_load - average_normalised_load + 1) * network_diameter 
-
-
-            if Verbose.level >= 2:
-                # example:   381.000: POT   ANNOUNCEMENT_DISTANCE msgid: 24 replica: s4 msg time: 379.0  propagation_time: 2 load_utility(s4): 2.0 average_load_utility: 1.9 replica_capacity: 45 system_available_capacity: 232 announcement_distance: 1.494 
-                print("{:.3f}: {:5s} ANNOUNCEMENT_DISTANCE msgid: {} replica: {} msg time: {}  propagation_time: {} normalised_load({}): {} average_normalised_load: {} replica_capacity: {} system_available_capacity: {} announcement_distance: {} ".format(self.env.now, self.id(), msgID, replica, creationTime, round(propagation_time, 6), replica, normalised_load, round(average_normalised_load, 6), replica_available_capacity, system_available_capacity,  round(announcement_distance, 3)))
+            # if Verbose.level >= 2:
+            #     # example:   381.000: POT   ANNOUNCEMENT_DISTANCE msgid: 24 replica: s4 msg time: 379.0  propagation_time: 2 load_utility(s4): 2.0 average_load_utility: 1.9 replica_capacity: 45 system_available_capacity: 232 announcement_distance: 1.494 
+            #     print("{:.3f}: {:5s} ANNOUNCEMENT_DISTANCE msgid: {} replica: {} msg time: {}  propagation_time: {} normalised_load({}): {} average_normalised_load: {} replica_capacity: {} system_available_capacity: {} announcement_distance: {} ".format(self.env.now, self.id(), msgID, replica, creationTime, round(propagation_time, 6), replica, normalised_load, round(average_normalised_load, 6), replica_available_capacity, system_available_capacity,  round(announcement_distance, 3)))
 
             # do the announcement
             self.incoming_server_metrics_packet_announce(link_end, packet)
@@ -507,6 +517,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         if existing is None:
             # nothing found - it must be new, so add it
             self.service_RIB[replica] = { 'replica': replica, 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': int(metrics['no_of_flows']), 'delay': metrics['delay'], 'slots': metrics['slots']  }
+            self.rib_utility[replica] = Utility.eval_forwarding_utility(self.service_RIB[replica])
 
             if Verbose.level >= 2:
                 print ("{:.3f}: {:5s} ADD_METRIC metric from {}".format(self.env.now, self.id(), replica) )
@@ -527,6 +538,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             # replica stays the same
             # update other values
             existing.update({ 'neighbour': neighbour, 'link_end': str(link_end), 'msgID': msgID, 'servicename': servicename, 'creationTime': creationTime, 'load': metrics['load'], 'no_of_flows': metrics['no_of_flows'], 'delay': metrics['delay'], 'slots': metrics['slots'] })
+            self.rib_utility[replica] = Utility.eval_forwarding_utility(existing)
 
             if Verbose.level >= 2:
                 print("{:.3f}: {:5s} UPDATE_METRIC metric {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), replica, msgID, creationTime, metrics['load'], metrics['delay'] ))
@@ -950,13 +962,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     # If the announcement has arrived on a link that is not the one
     # in the forwarding table, for the replica then Drop the message
     def arrived_from_unicast_route(self, replica, link_end):
-        # unicast_forwarding_table entries look like:  's1': ('s1', 'b', 3)
+        # unicast_forwarding_table maps destination -> next hop:  's1': 'b'
 
         if replica in self.unicast_forwarding_table:
-            entry = self.unicast_forwarding_table[replica]
-
-            # get the Dijkstra link for the servicename
-            link = entry[1]
+            # the next hop for the servicename
+            link = self.unicast_forwarding_table[replica]
 
             if link_end.src_node.id() == link:
                 return True
@@ -1166,7 +1176,11 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         for entry_no, entry in enumerate(entries):
             # run the utility pipeline: raw metrics -> metric utilities -> user utility
             # the RIB entry is the dict of raw metrics -- extra keys are ignored
-            utility_i = Utility.eval_forwarding_utility(entry)
+            utility_i = self.rib_utility.get(entry['replica'])
+            if utility_i is None:
+                # not stored yet, or cleared because the delay scale changed
+                utility_i = Utility.eval_forwarding_utility(entry)
+                self.rib_utility[entry['replica']] = utility_i
 
             # keep the calculated utility into the utility table
             utility[entry_no] = utility_i
@@ -1483,9 +1497,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         else:
             # forward the packet using unicast_forwarding_table
              
-            # unicast_forwarding_table entries look like:  's1': ('s1', 'b', 3)
+            # unicast_forwarding_table maps destination -> next hop:  's1': 'b'
 
-            # get the Dijkstra link for the destination
+            # get the next hop for the destination
             if packet.dst in self.unicast_forwarding_table:
 
                 neighbour = self.route_to(packet.dst)
@@ -1548,6 +1562,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def delete_rib_entry(self, metric):
         # remove the entry keyed by replica
         self.service_RIB.pop(metric['replica'], None)
+        self.rib_utility.pop(metric['replica'], None)
         if Verbose.level >= 2:
             print ("{:.3f}: {:5s} REMOVE_METRIC metric {}".format(self.env.now, self.id(), metric) )
         
@@ -1633,12 +1648,18 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # takes a list of  entries like (destination, next_hop, weight)
         # and coverts into the internal forwarding table format
 
+        # stored as destination -> next hop; the weight goes in the
+        # router's latency_table row
+        latency = self.network.latency_table.setdefault(self.id(), {})
         for entry in list_of_routes:
-            self.unicast_forwarding_table[entry[0]] = entry
+            self.unicast_forwarding_table[entry[0]] = entry[1]
+            latency[entry[0]] = entry[2]
 
     # Get the unicast forwarding table
     def get_unicast_forwarding_table(self):
-        """Get the forwarding table"""
+        """Get the forwarding table: {destination: next_hop}"""
+        # the delay to each destination is the router's latency_table row
+        # (see distance_to)
 
         return self.unicast_forwarding_table
 
@@ -1646,23 +1667,22 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def route_to(self, dst):
         """Get the next hop for a route to a destination"""
         if isinstance(dst, str):
-            return self.unicast_forwarding_table[dst][1]
+            return self.unicast_forwarding_table[dst]
         else:
-            return self.unicast_forwarding_table[dst.id()][1]
+            return self.unicast_forwarding_table[dst.id()]
 
     # Get the next hop to a destination, without raising
     def next_hop_to(self, dst):
         """Next hop toward dst, or None if no route"""
-        entry = self.unicast_forwarding_table.get(dst)
-        return entry[1] if entry else None
+        return self.unicast_forwarding_table.get(dst)
 
     # Get the distance to a specific node
     def distance_to(self, dst):
         """Get the distance to a destination"""
         if isinstance(dst, str):
-            return self.unicast_forwarding_table[dst][2]
+            return self.network.latency_table[self.id()][dst]
         else:
-            return self.unicast_forwarding_table[dst.id()][2]
+            return self.network.latency_table[self.id()][dst.id()]
 
 
     def recv(self, packet, link_end):

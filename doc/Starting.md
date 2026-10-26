@@ -16,9 +16,29 @@ This function does this:
     network.calculate_forwarding_tables()
 ```
 
-This will calculate Dijkstra's algorithm for each node, and 
-then convert the shortest path info into a routing table, and inject
-the table into each node.
+This computes, for every router, the next hop and the total delay
+towards every server, and installs them as the router's forwarding
+table and its row of the network's latency table (`src/Routing.py`).
+It runs one shortest-path computation per server with scipy's compiled
+Dijkstra, so it is fast even on large topologies (about 10 s for the
+91K-router CAIDA topology with 100 servers).
+
+- If the links carry business relationships (`type "c2p"` or
+  `"p2p"` in the GML), routes are valley-free (Gao-Rexford): customer
+  routes are preferred over peer routes, then provider routes, and a
+  peer link is never used as transit. Set `Routing.policy =
+  "shortest"` for plain shortest-delay paths instead.
+- Links with no type are treated as `internal` (unrestricted), so a
+  topology without relationships, such as a Topology Zoo file, gets
+  plain shortest-delay paths.
+- Servers, clients and nodes marked `Internal 0` in the GML are never
+  used as transit.
+- A router with no route to a server gets no entry for it.
+
+Call it after every server and client is attached: the clients' latency
+rows and the network diameter are derived from the routers' tables.
+Routing tables written into a GML file (`nextHop` / `delayMs` lines)
+are ignored.
 
 #### Client event generators
 

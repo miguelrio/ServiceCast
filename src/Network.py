@@ -351,7 +351,7 @@ class Network:
         if isinstance(host, Client):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
-            network.clients[host.id()] = host
+            self.clients[host.id()] = host
             # set the count
             host.count = count
 
@@ -375,7 +375,7 @@ class Network:
         if isinstance(host, Server):
             # now add it to the routers and add a link
             self.add_edge(host, router, weight)
-            network.servers[host.id()] = host
+            self.servers[host.id()] = host
 
         elif isinstance(host, str):
             # got a name
@@ -683,6 +683,10 @@ class Network:
         # Set here, after an experiment's topology_setup() assignments, because
         # the diameter is the Network's to know, not an experiment's.
         MetricUtility.metric_scale['delay'] = self.network_diameter()
+        # stored RIB utilities depend on the delay scale: recompute them
+        for router in self.routers.values():
+            if hasattr(router, 'rib_utility'):
+                router.rib_utility.clear()
 
     # Network diameter
     #
@@ -724,7 +728,7 @@ class Network:
     def inject_snapshot_optimal_utility(self, packet, vantage=None):
         """Compute optimal replica utility now and store on packet."""
         vantage_node = vantage if vantage is not None else packet.src
-        servers = [r for r in self.network_nodes() if isinstance(r, Server)]
+        servers = list(self.servers.values())
 
         all_utilities = {}
         all_loads = {}
@@ -852,7 +856,7 @@ class Network:
         now = self.env.now
 
         # filter out server nodes
-        servers = [ r  for r in self.network_nodes() if isinstance(r, Server) ]
+        servers = list(self.servers.values())
 
         # Ground truth at arrival time (t_arr):
         # - grab snapshot of load on all replicas.

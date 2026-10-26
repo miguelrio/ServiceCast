@@ -211,7 +211,8 @@ class Generator(object):
 
         # genB is an iterator 0, then the same number
         # used if background_load is True
-        genB = itertools.chain([0], itertools.repeat(10))
+        # (10 s between background load updates; the clock is ms, src/units.py)
+        genB = itertools.chain([0], itertools.repeat(s_to_ms(10)))
 
         if Verbose.level >= 2:
             print(f"""Server {idstr} server_event_generator parameters:

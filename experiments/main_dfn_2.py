@@ -24,6 +24,7 @@ def topology_setup():
 
     # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
     Router.hop_by_hop = False
+    Router.forward_to_tree_children_only = True
 
     # Default propagation delay (ms: the simulator clock is ms, src/units.py).
     # If this is not configured explicitly here then a default of 1000 ms is
@@ -132,12 +133,6 @@ def topology_setup():
 
     # some cross check print outs
     if Verbose.level >= 3:
-        dijkstra_c1 = Graph.dijkstra_algorithm(network, 'c1')
-        print("Network: dijkstra from c1 = " + str(dijkstra_c1))
-        print("Network: dijkstra routing from c1 = " + str(network.dijkstra_to_routing(dijkstra_c1)))
-        dijkstra_c4 = Graph.dijkstra_algorithm(network, 'c4')
-        print("Network: dijkstra from c4 = " + str(dijkstra_c4))
-        print("Network: dijkstra routing from c4 = " + str(network.dijkstra_to_routing(dijkstra_c4)))
         print("Network = ")
         network.print()
 
@@ -151,7 +146,7 @@ def topology_setup():
     # size_scale_factor is a multiplier for the session duration
     # Example: arrival_lambda=0.5, size_lambda=10, size_scale_factor=10 means an average of 2 requests per second, each lasting on average 100 seconds. This gives an average of 200 concurrent requests in the system. If there are 5 servers, each server will have an average of 40 concurrent requests.
     # Note that it doesn't matter whether we have size_lambda=10, size_scale_factor=10 or size_lambda=100, size_scale_factor=1, the average session duration is the same (100 seconds). The scale factor is just a multiplier for the session duration.
-    generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=0.2, size_lambda=10, size_scale_factor=10, seed=15112022)
+    generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=0.5, size_lambda=10, size_scale_factor=10, seed=15112022)
 
     # 9.5 - configure utility functions
 
@@ -184,7 +179,7 @@ def topology_setup():
     # 10 - run
     if Verbose.level >= 3:
         print("RUN ----------------------------------------------------------------")
-    network.start(until=360)
+    network.start(until=500)
 
 
 # go !

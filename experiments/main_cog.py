@@ -16,7 +16,7 @@ import random
 
 # Use a topology from the DFN gml file
 def topology_setup():
-    Verbose.level = 0
+    Verbose.level = 1
     Verbose.table = 0
 
     # Set client request forwarding mode: hop-by-hop anycast (True) or first-decide unicast (False)
@@ -107,8 +107,8 @@ def topology_setup():
     clients = []
     
     # both servers and clients are connected to local nodes
-    num_servers = 5
-    num_clients = 5
+    num_servers = 50
+    num_clients = 50
     needed = num_servers + num_clients
 
     if len(local) < needed:
@@ -150,15 +150,6 @@ def topology_setup():
     network.graphviz_to_file("cog.gv")
 
 
-    # some cross check print outs
-    if Verbose.level >= 3:
-        dijkstra_c1 = Graph.dijkstra_algorithm(network, 'c1')
-        print("Network: dijkstra from c1 = " + str(dijkstra_c1))
-        print("Network: dijkstra routing from c1 = " + str(network.dijkstra_to_routing(dijkstra_c1)))
-        dijkstra_c4 = Graph.dijkstra_algorithm(network, 'c4')
-        print("Network: dijkstra from c4 = " + str(dijkstra_c4))
-        print("Network: dijkstra routing from c4 = " + str(network.dijkstra_to_routing(dijkstra_c4)))
-
     # Network
     if Verbose.level >= 3:
         print("Network = ")
@@ -186,7 +177,7 @@ def topology_setup():
     if Verbose.level >= 3:
         print("RUN ----------------------------------------------------------------")
 
-    network.start(until=360)
+    network.start(until=3600)
 
 
 # go !

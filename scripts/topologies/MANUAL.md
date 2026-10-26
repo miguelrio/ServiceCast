@@ -198,18 +198,13 @@ example, MTN Nigeria is labelled "Enterprise".
 granularity of model B. Users are therefore concentrated in PoP cities; for
 example, most of Jio's 295M users sit on its Mumbai router.
 
-## 4. Routing tables: `../add_routing_tables_valley_free.py`
+## 4. Routing tables
 
-```bash
-.venv/bin/python3 ../add_routing_tables_valley_free.py caida_servers_100_clients.gml -o caida_servers_100_routing.gml
-```
-
-This computes valley-free (Gao-Rexford) next hops from every router to every
-server. Every router/server pair has a route, because the build step drops
+There is no routing-table step. The simulator computes valley-free
+(Gao-Rexford) next hops and delays from every router to every server at
+start-up (`src/Routing.py`), from the link delays it loads, so the GMLs carry
+no tables. Every router/server pair has a route, because the build step drops
 ASes with no provider path to the Tier-1 clique.
-
-The output has about routers × servers entries. N=10000 gives roughly 980M
-entries, likely tens of GB.
 
 ## Full pipeline
 
@@ -221,7 +216,6 @@ the matching `<DATE>.as-rel.txt` in the build step.
 .venv/bin/python3 build_caida_topology.py 20260801.as-rel.txt -o caida_real.gml
 .venv/bin/python3 place_servers.py caida_real.gml -o caida_servers
 .venv/bin/python3 add_clients.py caida_servers_100.gml -o caida_servers_100_clients.gml --total-clients 1000000
-.venv/bin/python3 ../add_routing_tables_valley_free.py caida_servers_100_clients.gml -o caida_servers_100_routing.gml
 ```
 
 ## Known limitations

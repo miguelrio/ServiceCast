@@ -50,10 +50,7 @@ import time
 import numpy as np
 from scipy.spatial import cKDTree
 
-# add_routing_tables_valley_free.py sits next to this script, or one level up
-# (scripts/ in the ServiceCast repository).
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from add_routing_tables_valley_free import parse_gml
+from gml_lines import parse_gml
 from build_caida_topology import Gazetteer, gml_value, haversine_km, load_peeringdb, log, to_xyz
 
 CLOUD_AS = {"AWS": "16509", "Azure": "8075", "GCP": "15169"}

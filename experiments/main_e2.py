@@ -54,7 +54,6 @@ def topology_setup():
     print("graph adjacency list = ")
     graph.print()
 
-    # test dijkstra_algorithm
     print ("graph nodes = " + str(graph.nodes()))
 
     print("graph edges = " + str(graph.edges()))
@@ -65,7 +64,6 @@ def topology_setup():
 
     #print("graph weight b->c = " + str(graph.weight('b', 'c')))
 
-    #print("graph dijkstra from f = " + str(Graph.dijkstra_algorithm(graph, 'f')))
 
     # graph -> network
 
@@ -112,8 +110,6 @@ def topology_setup():
     #print("Network neighbours c1: " + str(network.neighbours('c1')))
     #print("Network degree c1: " + str(network.degree('c1')))
 
-    #print("Network: dijkstra from a = " + str(Graph.dijkstra_algorithm(network, 'a')))
-    #print("Network: dijkstra from f = " + str(Graph.dijkstra_algorithm(network, 'f')))
 
     #print("Network: unicast forwarding table at f = " + str(network['f'].get_unicast_forwarding_table()))
 

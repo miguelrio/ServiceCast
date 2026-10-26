@@ -114,7 +114,7 @@ class Routing:
                     delays[:, col] = dist[router_indices]
                     class_counts += np.bincount(route_class[router_indices], minlength=4)
 
-        # install, one router at a time; tuples share the name strings
+        # install, one router at a time; next hops share the name strings
         entries = 0
         for i, rname in enumerate(router_names):
             row_hops = next_hops[i].tolist()
@@ -125,7 +125,7 @@ class Routing:
                 if hop != NO_PRED:
                     sname = server_names[j]
                     delay = row_delays[j]
-                    fib[sname] = (sname, names[hop], delay)
+                    fib[sname] = names[hop]
                     latency[sname] = delay
             network.routers[rname].unicast_forwarding_table = fib
             network.latency_table[rname] = latency

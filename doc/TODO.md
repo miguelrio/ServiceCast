@@ -21,6 +21,15 @@ version of the topology generator.
 So the sweep results always record the git commit as "unknown". A
 one-line fix, left for Wes (his script).
 
+#### `quick_stats.py` crashes on an incomplete log
+
+On a log from a run that was stopped early, there is no end-of-run
+`SUMMARY_SERVER_METRICS` line, so announcements + withdrawals is 0 and
+`format_stats` divides by zero (`quick_stats.py`, the "total update
+messages" line). Guard the percentages against a zero total, and say in
+the output that the summary is missing, so partial runs can still be
+inspected.
+
 
 # Issues
 
@@ -89,10 +98,20 @@ Owner: Miguel (2026-10-13). A plan is agreed for the default delay and
 for ms vs s; Miguel fixes them in the next version of the topology
 generator, after further discussion with the group.
 
-Links touching an `Internal 0` node (every server and client attachment)
-never use the GML `delayMs`: `Gml.py` checks for external nodes before
-it reads `delayMs`, so these links get `Graph.default_propagation_delay`.
-`Network.from_graph` also replaces any 0 weight with the default.
+Update: a link touching an `Internal 0` node (every server and client
+attachment) now uses its GML `delayMs` when given and not 0, else
+`Graph.default_server_attachment_delay_ms` (1 ms) or
+`Graph.default_client_attachment_delay_ms` (10 ms); delays are ms
+throughout. The routing tables are computed in the simulator from the
+network's own link weights, so the route adders' copy of the rule is no
+longer needed. `Network.from_graph` still replaces any 0 weight with
+`Graph.default_propagation_delay`. The points below about the default
+value remain open.
+
+Before that change, links touching an `Internal 0` node (every server
+and client attachment) never used the GML `delayMs`: `Gml.py` checked
+for external nodes before it read `delayMs`, so these links got
+`Graph.default_propagation_delay`.
 The default value is set in several places that must agree but are not
 linked to each other:
 
@@ -102,11 +121,11 @@ linked to each other:
   `Importer.py`)
 - `scripts/setup/constants_*.py`: `GRAPH_DELAY = 1` (dfn_2),
   `0.1` (dfn_equiv), `GRAPH_DELAYS = [0.1 ... 4.0]` (v1 sweep)
-- `scripts/add_routing_tables.py` and
-  `scripts/add_routing_tables_valley_free.py`: hard-coded
-  `ENGINE_DEFAULT_PROPAGATION_DELAY = 0.1`, so precomputed tables
-  silently go wrong if an experiment uses any other value
-  (this caused the delay-utility < 0 crash on 2026-10-08)
+- (resolved) `scripts/add_routing_tables.py` and
+  `scripts/add_routing_tables_valley_free.py` hard-coded the default, so
+  precomputed tables silently went wrong if an experiment used any other
+  value (the delay-utility < 0 crash on 2026-10-08). Both scripts are
+  removed: the simulator computes the tables from its own link weights.
 - `Host.add_neighbour` / `Router.add_neighbour`: `propdelay=1` defaults
 
 To do:
@@ -119,6 +138,33 @@ To do:
   on the 1K topology, 16.5 ms on CAIDA).
 - Decide whether access links should use the GML `delayMs` when it is
   present, rather than always using the default.
+
+For the next meeting (checked Oct 2026, after the ms change; the list
+above is partly out of date). Proposal: 10 ms for links with no delay,
+1 ms for servers and 10 ms for clients everywhere. Places that depend on
+the default and would change:
+- `src/Graph.py`: `default_propagation_delay = 1000` (ms); used for GML
+  edges with no delay, hyperedges, 0 weights in `Network.from_graph`,
+  and edges built in code without a weight.
+- `src/Network.py`: `add_server(..., weight=1)` and
+  `add_client(..., weight=1)`: 1 ms defaults, not the agreed 10 ms for
+  clients (relevant for clients added at run time).
+- Experiments that set `Graph.default_propagation_delay = 100` and
+  pass it to `add_server` / `add_client` as the access-link delay:
+  `main_dfn`, `main_dfn_equiv`, `main_dfn_2`, `main_cog`; the same
+  setting only as a fallback in `main_precomputed_t1`, `main_mig_t1`.
+- `Importer` experiments (`main_importer`, `main_dfn_2_import`,
+  `main_dfn_equiv_import`) attach hosts with the default, from
+  `GRAPH_DELAY` in seconds: 0.1 in `constants_dfn_2_importer`,
+  `constants_cog_importer`, `constants_dfn_equiv`; 1 in
+  `constants_dfn_2`.
+- Tests: `tests/bench_rib_store.py` (100), `tests/test_routing.py` (100).
+- Sweeps vary the delay on purpose (`constants_scaling.py` 0.1-4 s,
+  `constants_v1.py` `GRAPH_DELAYS`): keep as an experiment parameter.
+- The old toy experiments (`main_e1` etc.) rely on the defaults: their
+  unweighted links get `default_propagation_delay` (now 1000 ms) while
+  links with a weight in code (e.g. `('c', 4)`) are now 4 ms.
+Changing these changes results of the DFN, COG and toy experiments.
 - Check consistency across the simulator, the topology generator and
   the route adders:
   - units: the simulator reads seconds, but the CAIDA GMLs were written
@@ -129,6 +175,12 @@ To do:
   - the same link-weight rule everywhere
 
 #### Engine-built latency tables leave out server access links
+
+Update: the routing tables no longer use `Network.weight()`; they read
+each link's delay directly, so router -> server delays and the diameter
+now include the server's access link. `Router.weight_edge` itself still
+returns 0 for a host, so any other caller of `Network.weight(router,
+host)` still gets 0.
 
 `Router.weight_edge(dest)` only handles `str` and `Router`, so it
 returns 0 when `dest` is a `Host` (Server or Client). Latency-table
@@ -162,6 +214,26 @@ to
 
 Still to be refined.
 Draft formula not correct.
+
+The prototype in `Router.incoming_server_metrics_packet` is commented
+out (Oct 2026). It computed an `announcement_distance` for every
+announcement at every router but only printed it (verbose >= 2):
+nothing limited propagation. It was costly because
+`Network.average_normalised_load()` loops over every server, so the
+cost grew with servers x messages: about 21% of simulation time on
+CAIDA with 1000 servers and 50 clients. It also used global state
+(average load, total capacity, network diameter) that a router would
+not have. A real version should be O(1) per message and use only
+local information. Options:
+- the origin server computes the radius from its own load and
+  capacity and puts it in the announcement (a budget in ms or hops,
+  like a TTL); each router only compares the propagation time so far
+  with it;
+- routers estimate the "average load" and "available capacity"
+  terms from their own RIB entries, kept as running totals updated
+  when an entry is added, changed or removed;
+- the diameter term: the origin's or the router's own largest delay
+  (its eccentricity), computed once at start-up.
 
 
 #### Client Request Forwarding
@@ -256,9 +328,67 @@ queued in the simulation, per-request records kept for metrics.
 
 After the `Graph.py` lookup fix, loading the full CAIDA GML takes
 147 s (was 834 s), but `Network.from_graph` still takes about 120 s
-at 91K. When the simulator builds its own routing tables (no
-precomputed tables), the 16-server, 1.2K-node sweep topology spends
-2-5 minutes in that before the simulation starts.
+at 91K. The routing tables are now computed with scipy in about 10 s
+at 91K with 100 servers (the old pure-Python Dijkstra took 2-5 minutes
+on the 16-server, 1.2K-node sweep topology).
+
+#### Free the parsed graph once the network is built
+
+To do in the new `main.py`. After `Network.from_graph()` nothing uses
+the parsed `Graph` again (the `Network` keeps its own copies of node
+types, tiers, external flags and link types), but the experiment
+scripts keep it alive in a local variable for the whole run. Only the
+caller can drop that reference (`Network` cannot delete the caller's
+variable, and emptying the graph inside `from_graph` would be a
+surprising side effect). Best: the new `main.py` loads the network
+with one builder call, so the graph never reaches the script and is
+freed when the builder returns. `Network.from_gml_file()` exists but
+needs extending first: use `Graph.from_gml_file` (as
+`main_precomputed_t1.py` does), pass through `drop_external` (CAIDA
+runs need `False`), and report the parse and build times. Scripts
+that build the graph themselves can add `del graph` straight after
+`Network.from_graph()`. Either way the routing tables and the run then
+reuse its memory. Tested (24 Oct 2026) on
+`main_precomputed_t1.py`: output identical at verbose -2 to 3, with
+and without clients. Saving: about 0.5-0.85 GiB per CAIDA x 1000 run
+with a stripped GML (the graph is ~0.9 GiB, and only part of freed
+memory is reused); 1.8 GiB (7.9 -> 6.1 GiB peak) at 100 servers with
+a GML that still carries routing tables, where the graph is larger.
+
+#### Possible speed-ups from the CAIDA x 1000 profile
+
+Not planned; kept for if we need more speed later. From a profile of
+CAIDA with 1000 servers, 50 clients, 60 s simulated,
+`TREE_CHILDREN_ONLY=1` (Oct 2026): 35.5M load messages, simulation
+19,700 s under the profiler. The announcement-distance prototype (21%)
+has already been commented out (see "Announcement Radius").
+- `announce_metrics` (~15% of simulation time): for every update it
+  loops over all of the router's neighbours, calling
+  `neighbour_destination()` twice and the neighbour's `next_hop_to()`
+  for each (1.18 billion and 567M calls). (a) Cache each router's
+  `(neighbour, destination, is_host, destination FIB)` list, updated
+  in `add_neighbour`: same decisions, about 3-5%. (b) Precompute each
+  router's tree children per server (routing is fixed), so the loop
+  only visits them: about 8-12%, but one entry per router-server pair
+  (~1-1.5 GiB as Python lists at CAIDA x 1000, ~0.4 GiB as numpy, so
+  best done with the routing-table arrays).
+- Utility evaluation code (`MetricUtility.evaluate`, `check_in_range`)
+  is generic: a dict comprehension per call, `min(max())`, and an error
+  message string built on every call though only needed on failure.
+  Small now that RIB utilities are stored (most evaluations are gone).
+- Per-request ground-truth records (`Network.py`, the three dicts of
+  utilities, loads and latencies per request) grow memory slowly, about
+  1 MiB per simulated second at CAIDA x 1000 with 50 clients; watch it
+  in very long runs.
+- simpy overhead (~18%): every link hop creates a new simpy process
+  (`Link.put` -> `env.process(_send)`) plus queue events. Scheduling the
+  delivery directly would cut part of it, but changes core simulation
+  code.
+- GML parsing (~26-63 s for full CAIDA, depending on the machine):
+  the tokenizer does ~10 `match.group()` calls, an enum and a namedtuple
+  per token; `match.lastindex` and plain tuples would make it 2-3x
+  faster. Or cache the built network in a binary file per topology.
+  Only worth it for many short runs.
 
 #### `decide_announcements` is quadratic in RIB size
 
@@ -267,8 +397,24 @@ compares each RIB entry with every other one (O(R^2)), then the FIB
 utility loop. This is the main cost per update, and why cost per
 update varies with the number of servers. An incremental version
 (update the non-dominated set for the one changed entry) would cut it.
+Profile (CAIDA x 1000, 50 clients, 60 s, Oct 2026): about 23% of
+simulation time, 1.57 billion `is_better_in_any_metrics` calls (~84
+per accepted update). The biggest remaining time cost, but an algorithm
+change: ties, removals and entries that stop being dominated must come
+out exactly as now, so check with identical logs on several topologies.
 
 ## Enhancements
+
+#### Python 3.9 support (only if a machine needs it)
+
+The simulator needs Python 3.10+ only because of the two `match`
+statements in `ServerMetricMessageType.to_val` / `from_val`
+(`src/Server.py`, added Jan 2023); every other file parses as Python
+3.9. Rewriting them as `if`/`elif` (`is` for the enum members, `==`
+for the strings) behaves identically and costs nothing (about 10 ns per
+call faster). Worth doing only if a machine we want to use has nothing
+newer than 3.9 (on some servers the default `python3` is 3.9, with a
+newer version installed alongside).
 
 #### Scripts can silently run another checkout's code
 
@@ -288,6 +434,22 @@ It is fixed at 0.5, with no environment variable like `TAU` or
 entry when a server is both full and at the network's maximum delay,
 so normal runs never exercise `REMOVED`; validating the FIB counters
 needed alpha 1.0, `TAU=0.1`, `SERVER_SLOTS=1`.
+
+#### One global seed for every random choice
+
+There is no single seed setting. The `Importer` scripts take `SEED`
+from their constants file (`scripts/setup/constants_*.py`), but the
+older `experiments/main_*.py` scripts, including
+`main_precomputed_t1.py`, hard-code `seed=15112022` in each generator
+call, so running another seed needs an edited copy. Add one global
+seed (a `SEED` environment variable or command-line option, with the
+constants file as the default) that reaches everything random: server
+and client placement, server load generators, client request
+generation (arrival times, sizes and which client sends each request)
+and any other draws (`gen2` in `multi_client_event_generator` uses
+seed + 1). Nothing should use numpy's unseeded global generator;
+`multi_client_event_generator` did until its client choice was moved
+to `gen`.
 
 #### `TREE_CHILDREN_ONLY` through `Importer` is untested
 
@@ -328,12 +490,40 @@ logarithmic load utility and a geometric user utility; configs run
 through `Importer` get the linear defaults. Also decide which
 functions are canonical.
 
+#### Set the routing policy through `Importer`
+
+To do with the `Importer` work. `Routing.policy` (`"valley_free"`, the
+default, or `"shortest"`) can only be set in Python before
+`calculate_forwarding_tables()`. Add `("Routing.policy",
+"ROUTING_POLICY")` to the `Importer` mappings, and a `ROUTING_POLICY`
+environment variable to `main_precomputed_t1.py` (like `TAU`). Also
+reject unknown values in `src/Routing.py`: today only `"shortest"` is
+checked, so a typo silently gives valley-free routing
+(`c2p_orientation` already raises). The start-up message prints
+`valley_free` even when the topology has no `c2p`/`p2p` links, where
+the routes are plain shortest-delay paths; say so in the message. Also
+warn when a topology has `p2p` links but no `c2p` links: valley-free
+routing then leaves many router-server pairs unreachable (a route
+learned from a peer is never passed to another peer).
+
 #### Move the old experiments still in use
 
 Agreed (2026-10-13, Stuart's suggestion). Some of the hand-built
 experiments (`main_e1`, `main_e2`, `main_ls_lc`, `main_sa`, `main_sm`,
 `main_small`, `main_sm_cm`, `main_dfn`, `main_mig_t1`) are still used:
 move them to a separate directory rather than deleting them.
+
+Note for the move: the experiments that build their topology in code
+(`main_e1`, `main_e2`, `main_sa`, `main_sm`, `main_sm_cm`,
+`main_ls_lc`, `main_s1_c5`, `main_small`, `tests/multi_*_test1.py`)
+give different output from run to run. Their topologies are Python
+sets (e.g. `'a': {'b', ('c', 4)}`), and `Graph.from_dict` adds the
+edges in set order, which Python randomises per process (string hash
+randomisation). Edge order can decide equal-cost ties, so routes may
+differ between runs. This has always been so; the GML-based
+experiments and the simulator code are not affected. To make them
+repeatable, iterate `sorted(nextLinks, key=str)` in `Graph.from_dict`
+(one line), or run them with `PYTHONHASHSEED=0`.
 
 #### Topology generator improvements
 

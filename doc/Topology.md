@@ -74,14 +74,33 @@ by calling the ```add_node()``` function or ```add_edge()``` function.
 
 
 
-#### Dijkstra Algorithm
+#### Routing
 
-We can run the *Dijkstra* algorithm over the graph to get find the
-shortest path from a specific node.
+Routes are computed on the Network, not the Graph: see
+`network.calculate_forwarding_tables()` in [Starting](Starting.md).
+The Graph keeps each GML edge's `type` (`c2p`, `p2p`, `internal`,
+`hosts`, `access`) so that the routing can follow business
+relationships.
 
-```
-    info = Graph.dijkstra_algorithm(g, 'a')
-```
+#### Link delays from a GML file
+
+Each GML link's delay (its weight) is set as follows; delays are in ms:
+
+- A link touching an `Internal 0` node (a server's or client's
+  attachment link, or a link to a Topology Zoo external peer): its
+  `delayMs` if the GML gives one (and it is not 0), otherwise
+  `Graph.default_client_attachment_delay_ms` (10 ms) for a client link,
+  `Graph.default_server_attachment_delay_ms` (1 ms) for a server link,
+  or `Graph.default_propagation_delay` for any other.
+- A link touching a hyperedge node with no location:
+  `Graph.default_propagation_delay`.
+- Any other link: its `delayMs`, or else the great-circle distance
+  between the two nodes' Latitude/Longitude at 0.009 ms per km.
+- A remaining weight of 0 is replaced by
+  `Graph.default_propagation_delay` when the Network is built.
+
+Hosts attached in code (`add_server`, `add_client`) keep the weight
+passed to them.
 
 
 
