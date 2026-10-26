@@ -12,6 +12,7 @@ routing tables itself at start-up, so the GMLs carry no tables. See
 | `build_caida_topology.py` | place routers (one per PoP) from the as-rel file |
 | `place_servers.py` | add N servers under a deployment scenario |
 | `add_clients.py` | tag eyeball routers with client counts |
+| `add_client_nodes.py` | add client nodes on the N routers with the largest client counts |
 | `gml_lines.py` | line-based GML reader shared by the scripts |
 
 Requires Python 3 with numpy and scipy. Run from this directory:
@@ -21,6 +22,7 @@ Requires Python 3 with numpy and scipy. Run from this directory:
 python3 build_caida_topology.py 20260801.as-rel.txt -o caida_real.gml
 python3 place_servers.py caida_real.gml -o caida_servers
 python3 add_clients.py caida_servers_100.gml -o caida_servers_100_clients.gml
+python3 add_client_nodes.py caida_servers_100_clients.gml caida_servers_100_c5000.gml 5000
 ```
 
 `fetch_location_data.sh` puts the as-rel file in this directory and the rest

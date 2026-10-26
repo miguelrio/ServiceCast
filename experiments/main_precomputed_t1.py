@@ -112,6 +112,8 @@ def topology_setup():
     graph = Graph.from_gml_file(gml_file)
     t1 = time.perf_counter()
     network = Network.from_graph(graph, env, drop_external=False)
+    # the network keeps what it needs; free the parsed graph for the run
+    del graph
     t2 = time.perf_counter()
 
     servers = network.server_names()
