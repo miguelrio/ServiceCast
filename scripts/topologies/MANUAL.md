@@ -207,6 +207,7 @@ Running time is about 75 s.
 .venv/bin/python3 place_servers.py caida_real.gml -o run2 --seed 7                   # different random draw
 .venv/bin/python3 place_servers.py caida_real.gml -o cdn --servers 300 --scenario cdn  # force a scenario
 .venv/bin/python3 place_servers.py caida_real.gml -o s7 --servers 10 100 --site-selection sample --seed 7  # sampled sites
+.venv/bin/python3 place_servers.py caida_real.gml -o mix --servers 1000 --scenario mixed --embedded-share 0.3  # 30% embedded in ISPs
 ```
 
 **What it does.** It writes one GML per server count N. Each N maps to a
@@ -219,6 +220,20 @@ deployment scenario, from centralized cloud to edge cloud:
 | ≤ 100 | cloud-cdn | cloud regions plus metros of major CDNs | greedy k-median |
 | ≤ 1000 | cdn | (CDN AS, metro) sites from PeeringDB (Cloudflare, Akamai, Fastly, …) | weighted sampling by users in each site's catchment |
 | > 1000 | edge | routers of eyeball ISPs | weighted sampling by the router's users |
+| `--scenario mixed` | mixed | a share `--embedded-share` (default 0.5) embedded in eyeball ISPs, the rest at CDN sites | as edge and as cdn |
+
+**Mixed scenario.** Large content networks serve much of their traffic from
+caches embedded in ISPs. `--scenario mixed` places a share
+`--embedded-share` of the servers on eyeball routers (drawn as in edge) and
+the rest at CDN sites (drawn as in cdn). Each embedded server gets
+`embedded 1`, the host ISP as `hostAs`, and a content provider as
+`operator`: Google, Meta, Netflix or Akamai, drawn in proportion to the
+number of ISPs hosting their off-nets in 2021 (3,800, 2,200, 2,100, 1,100;
+Gigis et al., SIGCOMM 2021). A provider's embedded and CDN-site servers
+therefore compete. The simulator limits an embedded server's announcements
+to its host AS's observed customer cone (the `observedCones` sidecar). Other
+servers carry `embedded 0`. At N=1000 two seeds share about half of their
+sites, against 96% in the cdn scenario.
 
 Greedy k-median adds, one at a time, the site that most reduces the
 user-weighted distance to the nearest server. It is deterministic: the seed

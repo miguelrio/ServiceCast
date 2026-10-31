@@ -11,7 +11,15 @@ Each N maps to a deployment scenario (override with --scenario):
   N <= 1000   cdn          (CDN AS, metro) sites of major CDNs, from their
                            PeeringDB facilities and IXPs;
   N >  1000   edge         routers of access ISPs: servers inside eyeball
-                           networks, next to their users.
+                           networks, next to their users;
+  --scenario  mixed        a share --embedded-share of the servers embedded
+                           in eyeball ISPs, drawn as in edge, the rest at CDN
+                           sites, drawn as in cdn. Each embedded server
+                           belongs to a content provider (Google, Meta,
+                           Netflix, Akamai) drawn in proportion to its
+                           off-net footprint (providers.OFFNET_ISPS) and
+                           carries embedded 1; the simulator limits its
+                           announcements to the host AS's observed cone.
 
 Site selection follows Internet users, from APNIC's per-AS user estimates
 of eyeball ASes, spread over their routers exactly as add_clients.py does
@@ -36,7 +44,7 @@ network is the same for every N and seed; a missing router is an error.
 
 Output per N: <prefix>_<N>.gml = the topology with any existing servers,
 hosts and demand edges removed, plus server nodes (at the metro centre,
-attributes operator / hostAs / scenario) and one hosts edge per server. No demand edges are written. The observedCones graph attribute
+attributes operator / hostAs / scenario / embedded) and one hosts edge per server. No demand edges are written. The observedCones graph attribute
 is kept, rewritten relative to the output's directory.
 
 Usage:
@@ -159,7 +167,7 @@ class Scenario:
                              "with the build_caida_topology.py of this version (it builds every site)")
         return rid
 
-    def add_server(self, idx, width, asn, metro, operator, scenario):
+    def add_server(self, idx, width, asn, metro, operator, scenario, embedded=0):
         router = self.router(asn, metro)
         sid = self.next_id
         self.next_id += 1
@@ -175,6 +183,7 @@ class Scenario:
             "hostAs": asn,
             "city": gaz.name[metro],
             "scenario": scenario,
+            "embedded": embedded,
         }
         self.new_edges.append((sid, router, "hosts", self.delay(sid, router)))
 
@@ -279,13 +288,25 @@ def catchment(gaz, metros, metro_users):
     return dict(zip(metros.tolist(), np.bincount(nearest, weights=w_dm, minlength=len(metros))))
 
 
-def choose_sites(scenario, n, topo, gaz, cloud, cdn_sites, rng, router_users, metro_users, selection="kmedian"):
-    """Return [(asn, metro, operator)] for n servers."""
+def choose_sites(scenario, n, topo, gaz, cloud, cdn_sites, rng, router_users, metro_users, selection="kmedian",
+                 embedded_share=0.0, seed=1):
+    """Return [(asn, metro, operator, embedded)] for n servers."""
+    if scenario == "mixed":
+        # Separate generators keep each part nested across N.
+        n_emb = int(round(embedded_share * n))
+        sites = choose_sites("cdn", n - n_emb, topo, gaz, cloud, cdn_sites, np.random.default_rng([seed, 0]),
+                             router_users, metro_users) if n > n_emb else []
+        emb = choose_sites("edge", n_emb, topo, gaz, cloud, cdn_sites, np.random.default_rng([seed, 1]),
+                           router_users, metro_users) if n_emb else []
+        names = sorted(providers.OFFNET_ISPS)
+        cdf = np.cumsum([providers.OFFNET_ISPS[p] for p in names], dtype=float)
+        pick = np.searchsorted(cdf / cdf[-1], np.random.default_rng([seed, 2]).random(n_emb), side="right")
+        return sites + [(asn, m, names[k], 1) for (asn, m, _, _), k in zip(emb, pick)]
     if scenario in ("centralized", "multi-cloud", "cloud-cdn"):
-        providers = ["AWS"] if scenario == "centralized" else list(CLOUD_AS)
+        provs = ["AWS"] if scenario == "centralized" else list(CLOUD_AS)
         by_metro = collections.defaultdict(list)
         for prov, m in cloud:
-            if prov in providers:
+            if prov in provs:
                 by_metro[m].append((CLOUD_AS[prov], prov))
         if scenario == "cloud-cdn":
             for asn, m in cdn_sites:
@@ -302,20 +323,20 @@ def choose_sites(scenario, n, topo, gaz, cloud, cdn_sites, rng, router_users, me
             options = sorted(set(by_metro[m]), key=lambda o: (o[1] not in CLOUD_AS, o))
             best = [o for o in options if (o[1] in CLOUD_AS) == (options[0][1] in CLOUD_AS)]
             asn, op = best[rng.integers(len(best))]
-            sites.append((asn, m, op))
+            sites.append((asn, m, op, 0))
         return sites
 
     if scenario == "cdn":
         weight = catchment(gaz, [m for _, m in cdn_sites], metro_users)
         w = [weight[m] for _, m in cdn_sites]
-        return [(cdn_sites[i][0], cdn_sites[i][1], CDN_AS[cdn_sites[i][0]]) for i in weighted_sample(rng, w, n)]
+        return [(cdn_sites[i][0], cdn_sites[i][1], CDN_AS[cdn_sites[i][0]], 0) for i in weighted_sample(rng, w, n)]
 
     # edge: access-ISP routers weighted by the users they serve.
     cands = sorted(router_users)
     sites = []
     for i in weighted_sample(rng, [router_users[r] for r in cands], n):
         asn = str(topo.nodes[cands[i]]["asId"])
-        sites.append((asn, topo.router_metro[cands[i]], f"AS{asn}"))
+        sites.append((asn, topo.router_metro[cands[i]], f"AS{asn}", 0))
     return sites
 
 
@@ -338,8 +359,10 @@ def main():
     ap.add_argument("-o", "--output-prefix", required=True, help="writes <prefix>_<N>.gml per N")
     ap.add_argument("--servers", type=int, nargs="+", default=[5, 10, 100, 1000, 10000],
                     help="server counts, one output each (default 5 10 100 1000 10000)")
-    ap.add_argument("--scenario", choices=["centralized", "multi-cloud", "cloud-cdn", "cdn", "edge"],
+    ap.add_argument("--scenario", choices=["centralized", "multi-cloud", "cloud-cdn", "cdn", "edge", "mixed"],
                     help="force one scenario for every N instead of choosing it from N")
+    ap.add_argument("--embedded-share", type=float, default=0.5,
+                    help="mixed scenario: share of servers embedded in eyeball ISPs (default 0.5)")
     ap.add_argument("--seed", type=int, default=1, help="random seed (default 1)")
     ap.add_argument("--site-selection", choices=["kmedian", "sample"], default="kmedian",
                     help="centralized, multi-cloud and cloud-cdn: greedy k-median (default, deterministic) "
@@ -366,23 +389,24 @@ def main():
         rng = np.random.default_rng(args.seed)
         try:
             sites = choose_sites(scenario, n, topo, gaz, cloud, cdn_sites, rng, router_users, metro_users,
-                                 args.site_selection)
+                                 args.site_selection, args.embedded_share, args.seed)
         except ValueError as exc:
             log(f"N={n} ({scenario}): {exc}; pick a larger-scale scenario with --scenario")
             sys.exit(1)
         sc = Scenario(topo, gaz, args)
         width = len(str(n))
         try:
-            for i, (asn, m, op) in enumerate(sites, 1):
-                sc.add_server(i, width, asn, m, op, scenario)
+            for i, (asn, m, op, emb) in enumerate(sites, 1):
+                sc.add_server(i, width, asn, m, op, scenario, emb)
         except ValueError as exc:
             log(f"N={n} ({scenario}): {exc}")
             sys.exit(1)
         path = f"{args.output_prefix}_{n}.gml"
         sc.write(path)
-        mean_km, median_km = coverage_km(gaz, [m for _, m, _ in sites], metro_users)
-        ops = collections.Counter(op if not op.startswith("AS") else "access ISPs" for _, _, op in sites)
-        log(f"N={n} ({scenario}): {len({m for _, m, _ in sites})} metros, {len({a for a, _, _ in sites})} host ASes, "
+        mean_km, median_km = coverage_km(gaz, [s[1] for s in sites], metro_users)
+        ops = collections.Counter("access ISPs" if op.startswith("AS") else op + (" (embedded)" if emb else "")
+                                  for _, _, op, emb in sites)
+        log(f"N={n} ({scenario}): {len({s[1] for s in sites})} metros, {len({s[0] for s in sites})} host ASes, "
             f"user->nearest server {mean_km:.0f} km mean, "
             f"{median_km:.0f} km median; operators {dict(ops.most_common(6))} -> {path}")
     log(f"Done in {time.perf_counter() - t0:.1f}s")

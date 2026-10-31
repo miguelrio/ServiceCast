@@ -93,6 +93,12 @@ CDN_AS = {
     "199524": "Gcore", "32934": "Meta", "2906": "Netflix", "714": "Apple",
 }
 
+# Off-net footprints: number of ISPs hosting each content provider's caches
+# in 2021 (Gigis et al., "Seven years in the life of Hypergiants' off-nets",
+# SIGCOMM 2021). Embedded servers of the mixed scenario take their operator
+# in proportion to these.
+OFFNET_ISPS = {"Google": 3800, "Meta": 2200, "Netflix": 2100, "Akamai": 1100}
+
 
 def provider_ases():
     """ASes of all cloud providers and CDNs."""
