@@ -7,7 +7,8 @@ Users come from APNIC's per-AS estimates of Internet users (users of each AS
 in each country, so each AS's share of its country's Internet population is
 preserved). They are spread over routers by place_servers.load_users, the
 same weighting place_servers.py uses:
-  - eyeball AS = at least --min-users APNIC users, and not PeeringDB type
+  - eyeball AS = at least --min-users APNIC users, not one of the server
+    operators in place_servers.py's CDN_AS and CLOUD_AS, and not PeeringDB type
     "Content" (whose "users" are mostly VPN / relay traffic, e.g.
     Cloudflare WARP); other PeeringDB types are ignored because big ISPs are
     often labelled NSP, Enterprise or Network Services;

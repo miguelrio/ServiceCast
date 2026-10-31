@@ -128,9 +128,10 @@ CLOUD_REGIONS = [
 ]
 
 # Major CDN / content ASes whose PeeringDB footprint defines CDN sites.
+# (Edgio, AS22822, shut down in 2025 and is not in the 20260801 CAIDA data.)
 CDN_AS = {
     "13335": "Cloudflare", "20940": "Akamai", "54113": "Fastly", "16509": "AWS",
-    "15169": "Google", "8075": "Microsoft", "22822": "Edgio", "60068": "CDN77",
+    "15169": "Google", "8075": "Microsoft", "60068": "CDN77",
     "199524": "Gcore", "32934": "Meta", "2906": "Netflix", "714": "Apple",
 }
 SCENARIO_LIMITS = [(5, "centralized"), (10, "multi-cloud"), (100, "cloud-cdn"), (1000, "cdn")]
@@ -336,14 +337,18 @@ class Scenario:
 
 
 NON_EYEBALL_TYPES = ("Content",)  # PeeringDB types whose APNIC "users" are mostly VPN/relay traffic
+# The server operators never count as eyeballs, whatever their PeeringDB type:
+# AWS is "Enterprise" but its ~3M APNIC users are VPN, proxy and workload traffic.
+NON_EYEBALL_ASES = frozenset(CDN_AS) | frozenset(CLOUD_AS.values())
 
 
 def load_users(data_dir, topo, gaz, min_users=1000, non_eyeball_types=NON_EYEBALL_TYPES):
     """APNIC users of eyeball ASes, spread over their routers.
 
-    Eyeball AS: at least min_users APNIC users in total, and a PeeringDB
-    type not in non_eyeball_types (PeeringDB types are otherwise too
-    unreliable: big mobile/broadband ISPs are often labelled NSP,
+    Eyeball AS: at least min_users APNIC users in total, not one of the
+    server operators (NON_EYEBALL_ASES: CDN_AS and CLOUD_AS), and a
+    PeeringDB type not in non_eyeball_types (PeeringDB types are otherwise
+    too unreliable: big mobile/broadband ISPs are often labelled NSP,
     Enterprise or Network Services). An AS's users in a country go to its
     routers in that country, in proportion to their geolocated IPv4
     addresses (ipv4Addrs + 1); if it has no router in that country, to all
@@ -381,6 +386,8 @@ def load_users(data_dir, topo, gaz, min_users=1000, non_eyeball_types=NON_EYEBAL
             kind = "not in topology"
         elif as_total[asn] < min_users:
             kind = f"ASes under {min_users} users"
+        elif asn in NON_EYEBALL_ASES:
+            kind = "server operators"
         elif topo.nodes[routers[0]].get("pdbType", "") in non_eyeball_types:
             kind = "non-eyeball (" + "/".join(non_eyeball_types) + ")"
         else:

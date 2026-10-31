@@ -205,10 +205,13 @@ eyeball AS. Nothing else in the file changes, so it works on
   routers left with 0 are not tagged.
 
 **Eyeball AS.** An AS counts as eyeball if it has at least `--min-users`
-APNIC users (default 1000) and is not PeeringDB type "Content". The users of
-Content ASes are mostly VPN or relay traffic, such as Cloudflare WARP. Other
-PeeringDB types are not used, because big ISPs are often mislabelled; for
-example, MTN Nigeria is labelled "Enterprise".
+APNIC users (default 1000), is not one of the server operators
+(`CDN_AS` and `CLOUD_AS` in `place_servers.py`), and is not PeeringDB type
+"Content". The users of these ASes are mostly VPN, relay or workload
+traffic, such as Cloudflare WARP; the operator list catches AWS, whose
+PeeringDB type is "Enterprise" (3.1M users). Other PeeringDB types are not
+used, because big ISPs are often mislabelled; for example, MTN Nigeria is
+labelled "Enterprise".
 
 **Result.** About 4.46B users on ~33k routers in ~24k ASes. By country: China
 18%, India 15%, USA 6%.
