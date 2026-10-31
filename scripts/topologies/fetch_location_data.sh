@@ -18,6 +18,9 @@ if [ ! -s "$BASE/$DATE.as-rel.txt" ]; then
     | bunzip2 > "$BASE/$DATE.as-rel.txt"
 fi
 
+# Customer cones CAIDA observes on BGP paths, for compare_customer_cones.py.
+mkdir -p caida_ppdc
+get "https://publicdata.caida.org/datasets/as-relationships/serial-1/$DATE.ppdc-ases.txt.bz2" "caida_ppdc/$DATE.ppdc-ases.txt.bz2"
 get "https://publicdata.caida.org/datasets/peeringdb/$Y/$M/peeringdb_2_dump_${Y}_${M}_${D}.json" "peeringdb_2_dump_${Y}_${M}_${D}.json"
 get "https://publicdata.caida.org/datasets/routing/routeviews-prefix2as/$Y/$M/routeviews-rv2-${DATE}-1200.pfx2as.gz" "routeviews-rv2-${DATE}-1200.pfx2as.gz"
 DBIP_MONTH=$(date +%Y-%m)

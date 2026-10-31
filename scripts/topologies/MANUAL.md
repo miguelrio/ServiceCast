@@ -81,7 +81,7 @@ a metro share its coordinates.
 - Transit and tier-1 ASes get up to ⌈log2(cone + 1)⌉ PoPs, capped at 8.
   Here cone is the number of ASes in the AS's customer cone: its customers,
   their customers, and so on. That means 1 PoP for a cone of 1 AS, 2 for up
-  to 3 ASes, 3 for up to 7, and 8 from 255.
+  to 3 ASes, 3 for up to 7, and 8 from 128.
 - An AS only gets as many PoPs as it has evidence for.
 
 **Links and delays.**
@@ -114,7 +114,7 @@ Chicago, Los Angeles, Houston, San Francisco.
 
 | Option | Default | Effect |
 |---|---|---|
-| `--max-pops` | 8 | maximum PoPs for transit and tier-1 ASes, reached from a cone of 255 |
+| `--max-pops` | 8 | maximum PoPs for transit and tier-1 ASes, reached from a cone of 128 |
 | `--max-pops-stub` | 1 | maximum PoPs for stubs; 2 adds several thousand routers |
 | `--max-links-per-pair` | 4 | maximum links between two ASes |
 | `--metro-pop` | 500000 | minimum population of a metro centre |

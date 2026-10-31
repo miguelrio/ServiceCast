@@ -37,7 +37,7 @@ picked greedily by score (metros within --diversity-km of an already-picked
 PoP are down-weighted). Stubs get at most --max-pops-stub PoPs. Transit
 and tier1 ASes get at most ceil(log2(cone + 1)) PoPs, cone = number of ASes
 in their customer cone (1 PoP for a cone of 1 AS, 2 up to 3, 3 up to 7,
-..., 8 from 255), capped at --max-pops: small transit ASes with a handful
+..., 8 from 128), capped at --max-pops: small transit ASes with a handful
 of customers carry little transit traffic.
 
 Edges:
