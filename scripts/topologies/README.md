@@ -16,6 +16,7 @@ routing tables itself at start-up, so the GMLs carry no tables. See
 | `add_routing_tables_valley_free.py` | reference valley-free routing tables, to check `src/Routing.py` against |
 | `compare_customer_cones.py` | compare recursive and observed (ppdc) customer cones |
 | `providers.py` | cloud providers, CDNs and their candidate server sites, shared by the builder and `place_servers.py` |
+| `tier1_pops.csv` | curated PoP cities of the tier-1s, with the source of each |
 | `gml_lines.py` | line-based GML reader shared by the scripts |
 
 Requires Python 3 with numpy and scipy. Run from this directory:

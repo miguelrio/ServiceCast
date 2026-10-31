@@ -52,7 +52,10 @@ PoP are down-weighted). Stubs get at most --max-pops-stub PoPs. Transit
 ASes get at most ceil(log2(cone + 1)) PoPs, cone = number of ASes in their
 observed customer cone (1 PoP for a cone of 0 or 1 AS, 2 up to 3, 3 up to
 7, ..., 8 from 128), capped at --max-pops: small transit ASes with a
-handful of customers carry little transit traffic. Tier-1s get --max-pops.
+handful of customers carry little transit traffic. Tier-1s get --max-pops,
+unless they are in --tier1-pops (tier1_pops.csv): a hand-curated list of
+their PoP cities from the operators' network maps and looking glasses, with
+the source of each city. A listed tier-1 gets exactly those PoPs.
 
 Cloud providers and CDNs (providers.py) also get a PoP at every candidate
 server site: their cloud regions and the metros of their PeeringDB
@@ -61,16 +64,16 @@ routers, so the network is the same for every server count and seed.
 
 Edges:
   - internal: full mesh between the PoPs of an AS, except for cloud
-    providers and CDNs, which get a hub backbone (isHub 1 on hubs). Hubs
+    providers, CDNs and tier-1s, which get a hub backbone (isHub 1 on hubs). Hubs
     are the cloud regions (AWS, Azure, GCP) or, for CDNs, the metros with
     the most IXPs, about one per HUB_EVERY PoPs; every continent with PoPs
     has at least one. Each other PoP links to its HUB_HOMING nearest hubs;
     hubs are meshed within a continent and each links to its HUB_HOMING
     nearest hubs on other continents;
   - inter-AS (c2p, p2p): one link in each metro where both ASes have a PoP
-    (best-scoring first, at most --max-links-per-pair, no cap if either is
-    a cloud provider or CDN); if they share none, one link between their
-    closest pair of PoPs;
+    (best-scoring first, at most --max-links-per-pair, --max-links-tier1-pair
+    between two tier-1s, no cap if either is a cloud provider or CDN); if
+    they share none, one link between their closest pair of PoPs;
   - transit: every cloud or CDN PoP with no c2p link from a provider gets
     one from the nearest PoP of one of its providers (in its own metro if
     there is one).
@@ -78,14 +81,15 @@ Edge delay = --link-base-ms + great-circle km * --ms-per-km (0.007 ms/km
 is light in fibre, ~0.005 ms/km, with ~1.4x path inflation).
 
 Each router also gets:
-  locSource  peeringdb, geoip, peeringdb+geoip, rir-country, neighbour, or
-             server-site for cloud/CDN PoPs added at candidate sites
+  locSource  peeringdb, geoip, peeringdb+geoip, rir-country, neighbour,
+             curated (tier1_pops.csv), or server-site for cloud/CDN PoPs
+             added at candidate sites
   ipv4Addrs  geolocated IPv4 addresses of its AS in its metro
   pdbType    the AS's PeeringDB network type (e.g. "Cable/DSL/ISP",
              "Content", "NSP"), empty if the AS is not in PeeringDB
   observedCone  number of other ASes of the topology in its AS's observed
              customer cone
-  isHub      cloud providers and CDNs only: 1 on backbone hubs, else 0
+  isHub      cloud providers, CDNs and tier-1s only: 1 on backbone hubs, else 0
 
 Data files (see fetch_location_data.sh), looked up in --data-dir:
   peeringdb_2_dump_*.json, *.pfx2as.gz, dbip-city-lite-*.csv.gz,
@@ -422,6 +426,24 @@ def choose_pops(gaz, fac, ix, geo, max_pops, min_geo_share, diversity_km):
     return chosen
 
 
+def load_tier1_pops(path, gaz):
+    """Curated tier-1 PoP list (CSV: asn, operator, city, country_iso2,
+    source_url, ...) -> {asn: sorted metros}. Cities GeoNames does not
+    know are reported and skipped."""
+    out, missed = collections.defaultdict(set), []
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            m = gaz.geocode(row["city"], row["country_iso2"])
+            if m is None:
+                missed.append(f"{row['city']} ({row['country_iso2']})")
+            else:
+                out[row["asn"]].add(m)
+    if missed:
+        log(f"Tier-1 PoP list: {len(missed)} cities not found and skipped: {', '.join(sorted(set(missed)))}")
+    log(f"Tier-1 PoP list: {len(out)} ASes, {sum(map(len, out.values()))} metros ({os.path.basename(path)})")
+    return {a: sorted(ms) for a, ms in out.items()}
+
+
 def choose_hubs(gaz, metros, metro_ix, fixed=()):
     """Hub metros of a provider backbone: the fixed ones (cloud regions)
     if any, else the metros with the most IXPs, about 1 per hubs_per PoPs;
@@ -601,6 +623,10 @@ def main():
                     help="locations within this distance snap to a metro centre (default 50)")
     ap.add_argument("--max-links-per-pair", type=int, default=4,
                     help="max parallel links between two ASes sharing several metros (default 4)")
+    ap.add_argument("--max-links-tier1-pair", type=int, default=16,
+                    help="the same between two tier-1s (default 16)")
+    ap.add_argument("--tier1-pops", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "tier1_pops.csv"),
+                    help="curated tier-1 PoP list (default tier1_pops.csv next to this script; '' for none)")
     ap.add_argument("--ms-per-km", type=float, default=0.007, help="propagation delay per km (default 0.007)")
     ap.add_argument("--link-base-ms", type=float, default=0.2, help="fixed delay added to every link (default 0.2)")
     ap.add_argument("--single-pop-internal-delay", type=float, default=1.5,
@@ -623,11 +649,18 @@ def main():
     cone = {a: len(cones.get(a, set()) & in_topo) for a in as_order}
     as_geo, as_addrs = load_geoip(args.data_dir, gaz, set(as_order))
     rir_cc = load_rir_countries(args.data_dir)
+    curated = load_tier1_pops(args.tier1_pops, gaz) if args.tier1_pops else {}
 
     # PoPs per AS.
     pops = {}  # asn -> [(metro, score)]
     source = {}
     for asn in as_order:
+        if as_tier[asn] == "tier1" and curated.get(asn):
+            # Curated footprint from the operator's network map; IXP-rich
+            # metros first, for the links to other tier-1s.
+            pops[asn] = sorted(((m, float(metro_ix[m])) for m in curated[asn]), key=lambda p: (-p[1], p[0]))
+            source[asn] = "curated"
+            continue
         fac, ix, geo = as_fac.get(asn, {}), as_ix.get(asn, set()), as_geo.get(asn, {})
         if as_tier[asn] == "stub":
             cap = args.max_pops_stub
@@ -685,6 +718,11 @@ def main():
         pops[asn] = pops[asn] + [(m, 0.0) for m in sorted(metros - have)]
     for asn in prov_ases:
         hubs[asn] = choose_hubs(gaz, [m for m, _ in pops[asn]], metro_ix, regions.get(asn, ()))
+    # Tier-1s with more than one PoP get the same kind of backbone.
+    tier1_bb = {a for a in as_order if as_tier[a] == "tier1" and len(pops[a]) > 1}
+    for asn in tier1_bb:
+        hubs[asn] = choose_hubs(gaz, [m for m, _ in pops[asn]], metro_ix)
+    backbone_ases = prov_ases | tier1_bb
 
     # Routers.
     out_nodes = []  # (attrs dict) in output order; ids assigned by position
@@ -712,7 +750,7 @@ def main():
                 "pdbType": as_type.get(asn, ""),
                 "observedCone": cone[asn],
             })
-            if asn in prov_ases:
+            if asn in backbone_ases:
                 out_nodes[-1]["isHub"] = int(m in hubs[asn])
         as_routers[asn] = lst
     lat = np.array([n["Latitude"] for n in out_nodes])
@@ -724,7 +762,7 @@ def main():
     out_edges = []
     for asn in as_order:
         rs = as_routers[asn]
-        if asn in prov_ases:
+        if asn in backbone_ases:
             at = {m: r for r, m in rs}
             for a, b in backbone_links(gaz, list(at), hubs[asn]):
                 out_edges.append((at[a], at[b], "internal", delay(at[a], at[b])))
@@ -749,6 +787,8 @@ def main():
             ia, ib = {m: r for r, m in ra}, {m: r for r, m in rb}
             # Cloud providers and CDNs peer in every metro they share.
             cap = None if a in prov_ases or b in prov_ases else args.max_links_per_pair
+            if as_tier[a] == as_tier[b] == "tier1":
+                cap = args.max_links_tier1_pair
             for m in common[:cap]:
                 out_edges.append((ia[m], ib[m], etype, delay(ia[m], ib[m])))
         else:
@@ -796,6 +836,8 @@ def main():
     log(f"Cloud providers and CDNs: {sum(len(as_routers[a]) for a in prov_ases)} PoPs "
         f"({sum(len(v) for v in site_metros.values())} added as server sites), "
         f"{sum(len(hubs[a]) for a in prov_ases)} hubs, {n_transit} transit links added")
+    log(f"Tier-1s: {sum(len(as_routers[a]) for a in as_order if as_tier[a] == 'tier1')} PoPs "
+        f"({len(curated)} curated ASes), {sum(len(hubs[a]) for a in tier1_bb)} hubs")
     n_cap = sum(len(r) == args.max_pops for a, r in as_routers.items() if as_tier[a] == "transit")
     log(f"Observed cones: {sum(c > 0 for c in cone.values())} ASes, {n_entries} entries in {cones_name}; "
         f"{n_cap} transit ASes at {args.max_pops} PoPs")

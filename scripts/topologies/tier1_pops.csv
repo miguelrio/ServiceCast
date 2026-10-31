@@ -1,0 +1,1303 @@
+asn,operator,city,country_iso2,source_url,accessed,notes
+174,Cogent,Buenos Aires,AR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Vienna,AT,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Perth,AU,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Sydney,AU,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Brussels,BE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Sofia,BG,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Fortaleza,BR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Rio de Janeiro,BR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,São Paulo,BR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Montréal,CA,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Toronto,CA,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Vancouver,CA,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Zürich,CH,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Santiago,CL,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Bogotá,CO,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,San José,CR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Prague,CZ,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Berlin,DE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Düsseldorf,DE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Frankfurt am Main,DE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Hamburg,DE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Munich,DE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Nuremberg,DE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Copenhagen,DK,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Tallinn,EE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Barcelona,ES,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Bilbao,ES,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Madrid,ES,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Valencia,ES,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Helsinki,FI,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Bordeaux,FR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Marseille,FR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Paris,FR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,London,GB,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Southport,GB,https://www.cogentco.com/lookingglass.php,2026-10-31,LG label 'Southport' with router code lpl01 (Liverpool)
+174,Cogent,Athens,GR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Guatemala City,GT,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Hong Kong,HK,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Budapest,HU,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Dublin,IE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Milan,IT,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Rome,IT,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Tokyo,JP,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Seoul,KR,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Riga,LV,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Guadalajara,MX,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Mexico City,MX,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Monterrey,MX,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Querétaro,MX,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Amsterdam,NL,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Oslo,NO,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Auckland,NZ,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Panama City,PA,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Lima,PE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Warsaw,PL,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Lisbon,PT,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Porto,PT,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Bucharest,RO,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Stockholm,SE,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Singapore,SG,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Bratislava,SK,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Taipei,TW,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Kharkiv,UA,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Albany,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Atlanta,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Boston,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Chicago,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Cleveland,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Dallas,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Denver,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,El Paso,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Honolulu,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Houston,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Jackson,US,https://www.cogentco.com/lookingglass.php,2026-10-31,"Jackson, MS"
+174,Cogent,Jacksonville,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Kansas City,US,https://www.cogentco.com/lookingglass.php,2026-10-31,"Kansas City, MO"
+174,Cogent,Laredo,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Los Angeles,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,McAllen,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Miami,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Minneapolis,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Nashville,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,New York City,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Omaha,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Orlando,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Philadelphia,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Phoenix,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Portland,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Sacramento,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Salt Lake City,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,San Diego,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,San Francisco,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,San Jose,US,https://www.cogentco.com/lookingglass.php,2026-10-31,"San Jose, CA"
+174,Cogent,Seattle,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Tampa,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Washington,US,https://www.cogentco.com/lookingglass.php,2026-10-31,
+174,Cogent,Johannesburg,ZA,https://www.cogentco.com/lookingglass.php,2026-10-31,
+209,Lumen,Dubai,AE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling); LG groups Dubai under Europe
+209,Lumen,Vienna,AT,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Sydney,AU,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Brussels,BE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Sofia,BG,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Montréal,CA,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Toronto,CA,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Geneva,CH,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Zürich,CH,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Prague,CZ,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Berlin,DE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Düsseldorf,DE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Frankfurt am Main,DE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Hamburg,DE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Munich,DE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Copenhagen,DK,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Alexandria,EG,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Cairo,EG,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Barcelona,ES,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Madrid,ES,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Helsinki,FI,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Marseille,FR,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Paris,FR,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,London,GB,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Manchester,GB,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Hong Kong,HK,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling); LG labels it HongKong-China
+209,Lumen,Zagreb,HR,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Budapest,HU,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Dublin,IE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Milan,IT,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Rome,IT,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Osaka,JP,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Tokyo,JP,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Nairobi,KE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Seoul,KR,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Monaco,MC,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Guadalajara,MX,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Mazatlan,MX,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Mexico City,MX,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Monterrey,MX,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Tijuana,MX,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Kuala Lumpur,MY,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Amsterdam,NL,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Oslo,NO,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Manila,PH,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Warsaw,PL,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Bucharest,RO,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Belgrade,RS,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Stockholm,SE,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Singapore,SG,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Ljubljana,SI,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Ankara,TR,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Istanbul,TR,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Albany,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Albuquerque,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Amarillo,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Atlanta,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Austin,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Baltimore,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Billings,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Boise,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Boston,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Buffalo,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Casper,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Cedar Rapids,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Charlotte,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Chicago,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Cincinnati,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Cleveland,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Dallas,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Denver,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Detroit,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,El Paso,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Fresno,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Honolulu,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Houston,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Indianapolis,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Jackson,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Jacksonville,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Kansas City,US,https://lookingglass.lumen.com/,2026-10-31,"same list as AS3356 (Lumen sibling); listed as Kansas City, KS"
+209,Lumen,Las Vegas,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Little Rock,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Los Angeles,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Louisville,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Madison,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,McAllen,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Miami,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Minneapolis,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Nashville,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,New Orleans,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,New York City,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Newark,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Omaha,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Orlando,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Philadelphia,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Phoenix,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Pittsburgh,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Portland,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Raleigh,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Reno,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Richmond,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Rochester,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Sacramento,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling); spelled 'Sacremento' on LG
+209,Lumen,Salt Lake City,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,San Antonio,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,San Diego,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,San Francisco,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,San Jose,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Seattle,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Spokane,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,St. Louis,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Stamford,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Syracuse,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Tampa,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Tulsa,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Tustin,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Washington,US,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Cape Town,ZA,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+209,Lumen,Johannesburg,ZA,https://lookingglass.lumen.com/,2026-10-31,same list as AS3356 (Lumen sibling)
+286,GTT,Dubai,AE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Buenos Aires,AR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Vienna,AT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Melbourne,AU,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Sydney,AU,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Brussels,BE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Sofia,BG,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,São Paulo,BR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Calgary,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Halifax,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Montréal,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Toronto,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Vancouver,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Zürich,CH,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Santiago,CL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Beijing,CN,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Shanghai,CN,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Bogotá,CO,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Prague,CZ,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Berlin,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Düsseldorf,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Frankfurt am Main,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Hamburg,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Munich,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Copenhagen,DK,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Barcelona,ES,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Madrid,ES,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Marseille,FR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Paris,FR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,London,GB,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Manchester,GB,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Hong Kong,HK,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Budapest,HU,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Dublin,IE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Chennai,IN,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Mumbai,IN,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Milan,IT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Rome,IT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Turin,IT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Osaka,JP,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Tokyo,JP,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Seoul,KR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Luxembourg,LU,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Mexico City,MX,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Kuala Lumpur,MY,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Amsterdam,NL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Oude Meer,NL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257; Schiphol area; listed separately from Amsterdam on GTT map"
+286,GTT,Rotterdam,NL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Oslo,NO,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Manila,PH,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Warsaw,PL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Lisbon,PT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Bucharest,RO,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Stockholm,SE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Singapore,SG,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Bratislava,SK,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Bangkok,TH,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Istanbul,TR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Ashburn,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Atlanta,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Boston,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Charlotte,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Chicago,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Columbus,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Dallas,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Denver,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Detroit,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Honolulu,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Houston,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Kansas City,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Las Vegas,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Los Angeles,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,McAllen,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Miami,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Minneapolis,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,New York City,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Orlando,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Philadelphia,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Phoenix,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Pittsburgh,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Salt Lake City,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,San Francisco,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Seattle,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,St. Louis,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Tampa,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+286,GTT,Johannesburg,ZA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,"former KPN International backbone, now GTT; same list as AS3257"
+701,Verizon,Buenos Aires,AR,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,São Paulo,BR,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Calgary,CA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Montréal,CA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Toronto,CA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Vancouver,CA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Santiago,CL,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Bogotá,CO,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Huixquilucan,MX,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,Mexico City metro
+701,Verizon,Monterrey,MX,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Panama City,PA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Panama City, Panama"
+701,Verizon,Ashburn,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Atlanta,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Aurora,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Aurora, CO"
+701,Verizon,Austin,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Baltimore,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Billerica,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Bloomington,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Bloomington, CA"
+701,Verizon,Cambridge,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Cambridge, MA"
+701,Verizon,Charlotte,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Charlton,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Charlton, MA"
+701,Verizon,Chicago,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Cleveland,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Cologne,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Cologne, MN"
+701,Verizon,Culpeper,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Dallas,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Detroit,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Downers Grove,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,East Concord,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"East Concord, NY"
+701,Verizon,Elmsford,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Englewood,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Englewood, CO"
+701,Verizon,Glen Allen,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"LG spells 'Glenallen, VA'"
+701,Verizon,Hartford,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Hilliard,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Hilliard, OH"
+701,Verizon,Hillsboro,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Hillsboro, OR"
+701,Verizon,Houston,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Indianapolis,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Irving,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Irving, TX"
+701,Verizon,Kansas City,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Kansas City, MO"
+701,Verizon,Kent,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Kent, WA"
+701,Verizon,Kernersville,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Kirkland,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Las Vegas,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Los Angeles,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Memphis,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Miami,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,New Orleans,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,New Palestine,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,New York City,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"LG lists both 'New York, NY' and 'Manhattan, NY'; merged"
+701,Verizon,Newark,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Newark, NJ"
+701,Verizon,North Royalton,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Orlando,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Palo Alto,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Philadelphia,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Phoenix,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Piscataway,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Pittsburgh,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Pompano Beach,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Pottstown,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Raleigh,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Richardson,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Richardson, TX"
+701,Verizon,Riverdale,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Riverdale, IL"
+701,Verizon,Salt Lake City,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,San Antonio,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,San Diego,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,San Francisco,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,San Jose,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"San Jose, CA"
+701,Verizon,Santa Clara,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Seattle,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,St. Louis,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Tampa,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Washington,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+701,Verizon,Waynesville,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"Waynesville, OH"
+701,Verizon,West Sacramento,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,
+1299,Arelion,Vienna,AT,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Brussels,BE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Sofia,BG,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Montréal,CA,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Toronto,CA,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Vancouver,CA,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Geneva,CH,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Zurich,CH,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Prague,CZ,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Berlin,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Cologne,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Düsseldorf,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Frankfurt am Main,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Hamburg,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Hanover,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Munich,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Nuremberg,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Stuttgart,DE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Copenhagen,DK,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Tallinn,EE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Barcelona,ES,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Madrid,ES,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Valencia,ES,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Helsinki,FI,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Lyon,FR,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Marseille,FR,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Paris,FR,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,London,GB,https://lg.twelve99.net/,2026-10-31,LG 'London' includes Equinix LD5 Slough
+1299,Arelion,Manchester,GB,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Hong Kong,HK,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Zagreb,HR,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Budapest,HU,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Dublin,IE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Milan,IT,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Rome,IT,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Osaka,JP,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Tokyo,JP,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Kaunas,LT,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Vilnius,LT,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Bettembourg,LU,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Riga,LV,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Guadalajara,MX,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Mexico City,MX,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Monterrey,MX,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Mérida,MX,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Querétaro,MX,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,San Luis Potosí,MX,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Tijuana,MX,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Amsterdam,NL,https://lg.twelve99.net/,2026-10-31,LG lists Amsterdam sites incl. Haarlem and Schiphol
+1299,Arelion,Rotterdam,NL,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Kristiansand,NO,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Oslo,NO,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Poznań,PL,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Warsaw,PL,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Lisbon,PT,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Bucharest,RO,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Belgrade,RS,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Moscow,RU,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Saint Petersburg,RU,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Gothenburg,SE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Stockholm,SE,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Singapore,SG,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Bratislava,SK,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Kyiv,UA,https://lg.twelve99.net/,2026-10-31,LG label 'Kiev'
+1299,Arelion,Ashburn,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Atlanta,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Austin,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Boca Raton,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Boston,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Buffalo,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Charlotte,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Chattanooga,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Chicago,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Cleveland,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Columbus,US,https://lg.twelve99.net/,2026-10-31,Ohio assumed from LG ordering; LG says only 'Columbus'
+1299,Arelion,Dallas,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Denver,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Des Moines,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Detroit,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,El Paso,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Houston,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Indianapolis,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Jacksonville,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Kansas City,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Laredo,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Las Vegas,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Los Angeles,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Manassas,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,McAllen,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Memphis,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Miami,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Minneapolis,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Nashville,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,New York City,US,https://lg.twelve99.net/,2026-10-31,LG 'New York City' includes Secaucus NJ (Equinix NY5)
+1299,Arelion,Omaha,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Palo Alto,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Philadelphia,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Phoenix,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Piscataway,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Pittsburgh,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Portland,US,https://lg.twelve99.net/,2026-10-31,Oregon (EdgeConneX POR01 / Flexential PDX02)
+1299,Arelion,Raleigh,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Reno,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Reston,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Richmond,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Sacramento,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Salt Lake City,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,San Antonio,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,San Diego,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,San Jose,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Santa Clara,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Seattle,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,St. Louis,US,https://lg.twelve99.net/,2026-10-31,
+1299,Arelion,Tampa,US,https://lg.twelve99.net/,2026-10-31,
+2828,XO Communications (Verizon),Buenos Aires,AR,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),São Paulo,BR,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Calgary,CA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Montréal,CA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Toronto,CA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Vancouver,CA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Santiago,CL,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Bogotá,CO,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Huixquilucan,MX,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Mexico City metro"
+2828,XO Communications (Verizon),Monterrey,MX,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Panama City,PA,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Panama City, Panama"
+2828,XO Communications (Verizon),Ashburn,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Atlanta,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Aurora,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Aurora, CO"
+2828,XO Communications (Verizon),Austin,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Baltimore,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Billerica,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Bloomington,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Bloomington, CA"
+2828,XO Communications (Verizon),Cambridge,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Cambridge, MA"
+2828,XO Communications (Verizon),Charlotte,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Charlton,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Charlton, MA"
+2828,XO Communications (Verizon),Chicago,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Cleveland,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Cologne,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Cologne, MN"
+2828,XO Communications (Verizon),Culpeper,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Dallas,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Detroit,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Downers Grove,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),East Concord,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; East Concord, NY"
+2828,XO Communications (Verizon),Elmsford,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Englewood,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Englewood, CO"
+2828,XO Communications (Verizon),Glen Allen,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; LG spells 'Glenallen, VA'"
+2828,XO Communications (Verizon),Hartford,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Hilliard,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Hilliard, OH"
+2828,XO Communications (Verizon),Hillsboro,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Hillsboro, OR"
+2828,XO Communications (Verizon),Houston,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Indianapolis,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Irving,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Irving, TX"
+2828,XO Communications (Verizon),Kansas City,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Kansas City, MO"
+2828,XO Communications (Verizon),Kent,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Kent, WA"
+2828,XO Communications (Verizon),Kernersville,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Kirkland,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Las Vegas,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Los Angeles,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Memphis,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Miami,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),New Orleans,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),New Palestine,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),New York City,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; LG lists both 'New York, NY' and 'Manhattan, NY'; merged"
+2828,XO Communications (Verizon),Newark,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Newark, NJ"
+2828,XO Communications (Verizon),North Royalton,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Orlando,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Palo Alto,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Philadelphia,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Phoenix,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Piscataway,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Pittsburgh,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Pompano Beach,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Pottstown,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Raleigh,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Richardson,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Richardson, TX"
+2828,XO Communications (Verizon),Riverdale,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Riverdale, IL"
+2828,XO Communications (Verizon),Salt Lake City,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),San Antonio,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),San Diego,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),San Francisco,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),San Jose,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; San Jose, CA"
+2828,XO Communications (Verizon),Santa Clara,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Seattle,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),St. Louis,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Tampa,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Washington,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2828,XO Communications (Verizon),Waynesville,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701; Waynesville, OH"
+2828,XO Communications (Verizon),West Sacramento,US,https://www.verizon.com/business/why-verizon/looking-glass/ (data: https://www.verizon.com/business/api/lg.js),2026-10-31,"no XO-specific map found; Verizon backbone (LG) list used, PeeringDB says AS2828 is routing behind AS701"
+2914,NTT Global IP Network,Vienna,AT,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Sydney,AU,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Brussels,BE,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Sofia,BG,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,São Paulo,BR,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Toronto,CA,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Berlin,DE,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Düsseldorf,DE,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Frankfurt am Main,DE,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Barcelona,ES,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Madrid,ES,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Marseille,FR,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Paris,FR,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,London,GB,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Manchester,GB,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Hong Kong,HK,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Dublin,IE,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Milan,IT,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Osaka,JP,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Tokyo,JP,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Seoul,KR,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Luxembourg,LU,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Kuala Lumpur,MY,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Amsterdam,NL,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Warsaw,PL,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Bucharest,RO,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Stockholm,SE,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Singapore,SG,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Bangkok,TH,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Taipei,TW,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Ashburn,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,map label 'Northern Virginia Area'
+2914,NTT Global IP Network,Atlanta,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Boston,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Chicago,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Dallas,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Denver,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Houston,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Los Angeles,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Miami,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,New York City,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,map label 'New York City/Newark'
+2914,NTT Global IP Network,Phoenix,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,Sacramento,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+2914,NTT Global IP Network,San Jose,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,map label 'Bay Area/Silicon Valley'
+2914,NTT Global IP Network,Seattle,US,https://www.gin.ntt.net/wp-content/uploads/NTT.Maps_052125_NA_web-scaled.jpg,2026-10-31,
+3257,GTT,Dubai,AE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Buenos Aires,AR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Vienna,AT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Melbourne,AU,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Sydney,AU,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Brussels,BE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Sofia,BG,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,São Paulo,BR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Calgary,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Halifax,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Montréal,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Toronto,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Vancouver,CA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Zürich,CH,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Santiago,CL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Beijing,CN,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Shanghai,CN,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Bogotá,CO,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Prague,CZ,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Berlin,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Düsseldorf,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Frankfurt am Main,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Hamburg,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Munich,DE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Copenhagen,DK,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Barcelona,ES,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Madrid,ES,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Marseille,FR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Paris,FR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,London,GB,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Manchester,GB,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Hong Kong,HK,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Budapest,HU,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Dublin,IE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Chennai,IN,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Mumbai,IN,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Milan,IT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Rome,IT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Turin,IT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Osaka,JP,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Tokyo,JP,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Seoul,KR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Luxembourg,LU,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Mexico City,MX,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Kuala Lumpur,MY,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Amsterdam,NL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Oude Meer,NL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,Schiphol area; listed separately from Amsterdam on GTT map
+3257,GTT,Rotterdam,NL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Oslo,NO,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Manila,PH,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Warsaw,PL,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Lisbon,PT,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Bucharest,RO,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Stockholm,SE,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Singapore,SG,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Bratislava,SK,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Bangkok,TH,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Istanbul,TR,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Ashburn,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Atlanta,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Boston,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Charlotte,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Chicago,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Columbus,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Dallas,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Denver,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Detroit,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Honolulu,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Houston,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Kansas City,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Las Vegas,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Los Angeles,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,McAllen,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Miami,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Minneapolis,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,New York City,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Orlando,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Philadelphia,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Phoenix,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Pittsburgh,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Salt Lake City,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,San Francisco,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Seattle,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,St. Louis,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Tampa,US,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3257,GTT,Johannesburg,ZA,https://www.gtt.net/about-us/network/ (data: https://www.gtt.net/wp-json/network-map/v1/data),2026-10-31,
+3320,Deutsche Telekom,Vienna,AT,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,São Paulo,BR,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,"facility address Tamboré, Barueri"
+3320,Deutsche Telekom,Toronto,CA,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Geneva,CH,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,"facility at CERN, Meyrin"
+3320,Deutsche Telekom,Zurich,CH,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Berlin,DE,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Düsseldorf,DE,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Frankfurt am Main,DE,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Hamburg,DE,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Munich,DE,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Copenhagen,DK,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,facility address Glostrup
+3320,Deutsche Telekom,Barcelona,ES,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Madrid,ES,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Marseille,FR,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Paris,FR,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,London,GB,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Hong Kong,HK,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Milan,IT,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Amsterdam,NL,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Warsaw,PL,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Stockholm,SE,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Ashburn,US,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,map label 'Washington DC'; facility address Ashburn VA
+3320,Deutsche Telekom,Dallas,US,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Los Angeles,US,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Miami,US,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,New York City,US,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3320,Deutsche Telekom,Palo Alto,US,https://wholesale.telekom.com/fileadmin/user_upload/map/iptransit.json,2026-10-31,
+3356,Lumen,Dubai,AE,https://lookingglass.lumen.com/,2026-10-31,LG groups Dubai under Europe
+3356,Lumen,Vienna,AT,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Sydney,AU,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Brussels,BE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Sofia,BG,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Montréal,CA,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Toronto,CA,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Geneva,CH,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Zürich,CH,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Prague,CZ,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Berlin,DE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Düsseldorf,DE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Frankfurt am Main,DE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Hamburg,DE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Munich,DE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Copenhagen,DK,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Alexandria,EG,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Cairo,EG,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Barcelona,ES,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Madrid,ES,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Helsinki,FI,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Marseille,FR,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Paris,FR,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,London,GB,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Manchester,GB,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Hong Kong,HK,https://lookingglass.lumen.com/,2026-10-31,LG labels it HongKong-China
+3356,Lumen,Zagreb,HR,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Budapest,HU,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Dublin,IE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Milan,IT,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Rome,IT,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Osaka,JP,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Tokyo,JP,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Nairobi,KE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Seoul,KR,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Monaco,MC,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Guadalajara,MX,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Mazatlan,MX,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Mexico City,MX,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Monterrey,MX,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Tijuana,MX,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Kuala Lumpur,MY,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Amsterdam,NL,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Oslo,NO,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Manila,PH,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Warsaw,PL,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Bucharest,RO,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Belgrade,RS,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Stockholm,SE,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Singapore,SG,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Ljubljana,SI,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Ankara,TR,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Istanbul,TR,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Albany,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Albuquerque,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Amarillo,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Atlanta,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Austin,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Baltimore,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Billings,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Boise,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Boston,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Buffalo,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Casper,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Cedar Rapids,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Charlotte,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Chicago,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Cincinnati,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Cleveland,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Dallas,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Denver,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Detroit,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,El Paso,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Fresno,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Honolulu,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Houston,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Indianapolis,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Jackson,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Jacksonville,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Kansas City,US,https://lookingglass.lumen.com/,2026-10-31,"listed as Kansas City, KS"
+3356,Lumen,Las Vegas,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Little Rock,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Los Angeles,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Louisville,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Madison,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,McAllen,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Miami,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Minneapolis,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Nashville,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,New Orleans,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,New York City,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Newark,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Omaha,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Orlando,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Philadelphia,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Phoenix,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Pittsburgh,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Portland,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Raleigh,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Reno,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Richmond,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Rochester,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Sacramento,US,https://lookingglass.lumen.com/,2026-10-31,spelled 'Sacremento' on LG
+3356,Lumen,Salt Lake City,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,San Antonio,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,San Diego,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,San Francisco,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,San Jose,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Seattle,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Spokane,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,St. Louis,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Stamford,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Syracuse,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Tampa,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Tulsa,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Tustin,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Washington,US,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Cape Town,ZA,https://lookingglass.lumen.com/,2026-10-31,
+3356,Lumen,Johannesburg,ZA,https://lookingglass.lumen.com/,2026-10-31,
+3491,PCCW Global (Console Connect),Dubai,AE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Fujairah,AE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Luanda,AO,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Buenos Aires,AR,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Brisbane,AU,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Perth,AU,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Sydney,AU,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Brussels,BE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Gosselies,BE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Sofia,BG,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),São Paulo,BR,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Montréal,CA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Toronto,CA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Zurich,CH,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Abidjan,CI,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Santiago,CL,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Bogotá,CO,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Prague,CZ,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Frankfurt am Main,DE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Munich,DE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,"LG label 'Manchen Germany' (code mch03), read as München"
+3491,PCCW Global (Console Connect),Djibouti,DJ,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,LG label 'Djibouti' (country/city name identical)
+3491,PCCW Global (Console Connect),Cairo,EG,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Madrid,ES,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Addis Ababa,ET,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Marseille,FR,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Paris,FR,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),London,GB,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Accra,GH,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Athens,GR,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Hong Kong,HK,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Jakarta,ID,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Milan,IT,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Aqaba,JO,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Osaka,JP,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Tokyo,JP,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Mombasa,KE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Nairobi,KE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Phnom Penh,KH,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Seoul,KR,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Casablanca,MA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Lilongwe,MW,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Limbe,MW,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Mexico City,MX,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Kuala Lumpur,MY,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Maputo,MZ,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Lagos,NG,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Amsterdam,NL,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Panama City,PA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Lima,PE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Manila,PH,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Lisbon,PT,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Doha,QA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Bucharest,RO,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Belgrade,RS,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,LG label 'Novi Beograd'
+3491,PCCW Global (Console Connect),Jeddah,SA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,LG label 'Jeda'
+3491,PCCW Global (Console Connect),Riyadh,SA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Stockholm,SE,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Singapore,SG,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Dakar,SN,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Bangkok,TH,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Taipei,TW,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Dar es Salaam,TZ,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Kampala,UG,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Andover,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Ashburn,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Atlanta,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Bethlehem,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,Pennsylvania
+3491,PCCW Global (Console Connect),Chicago,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Dallas,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Germantown,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,Maryland
+3491,PCCW Global (Console Connect),Herndon,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Jacksonville,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Kansas City,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,Missouri
+3491,PCCW Global (Console Connect),Laredo,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Las Vegas,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Los Angeles,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),McAllen,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Mesa,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,LG label 'Meza Arizona'
+3491,PCCW Global (Console Connect),Miami,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),New York City,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Raleigh,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Reston,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),San Jose,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Seattle,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Wall Township,US,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,New Jersey
+3491,PCCW Global (Console Connect),Hanoi,VN,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Ho Chi Minh City,VN,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Cape Town,ZA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Johannesburg,ZA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Mtunzini,ZA,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+3491,PCCW Global (Console Connect),Lusaka,ZM,https://lookingglass.consoleconnect.com/js/v2/lg-bgp.js,2026-10-31,
+5511,Orange (OpenTransit),Vienna,AT,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Brussels,BE,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Zurich,CH,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Abidjan,CI,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Copenhagen,DK,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Barcelona,ES,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Madrid,ES,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Seville,ES,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Bordeaux,FR,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Lyon,FR,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Marseille,FR,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Paris,FR,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),London,GB,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Hong Kong,HK,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Amman,JO,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Tokyo,JP,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Mombasa,KE,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Amsterdam,NL,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Warsaw,PL,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Lisbon,PT,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Saint-Denis,RE,https://lg.opentransit.net/,2026-10-31,LG label 'Saint denis de la Réunion'
+5511,Orange (OpenTransit),Bucharest,RO,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Stockholm,SE,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Singapore,SG,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Bratislava,SK,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Ashburn,US,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Chicago,US,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Dallas,US,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Los Angeles,US,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Miami,US,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),New York City,US,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),San Jose,US,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Cape Town,ZA,https://lg.opentransit.net/,2026-10-31,
+5511,Orange (OpenTransit),Johannesburg,ZA,https://lg.opentransit.net/,2026-10-31,
+6453,Tata Communications,Vienna,AT,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Melbourne,AU,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Sydney,AU,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Brussels,BE,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Sofia,BG,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Gadong,BN,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,São Paulo,BR,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Montréal,CA,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Toronto,CA,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Vancouver,CA,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Zurich,CH,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Bogotá,CO,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Prague,CZ,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Frankfurt am Main,DE,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Copenhagen,DK,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Barcelona,ES,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Bilbao,ES,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Madrid,ES,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Marseille,FR,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Paris,FR,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,High Wycombe,GB,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,London,GB,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Slough,GB,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Hong Kong,HK,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Budapest,HU,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Dublin,IE,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Chennai,IN,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Gorakhpur,IN,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Kolkata,IN,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Mumbai,IN,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Patna,IN,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Milan,IT,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Rome,IT,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Chiba,JP,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Osaka,JP,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Tokyo,JP,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Seongnam-si,KR,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Seoul,KR,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Oral,KZ,https://lg.as6453.net/lg/,2026-10-31,LG label 'Uralsk'
+6453,Tata Communications,Luxembourg,LU,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Monterrey,MX,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Cyberjaya,MY,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Johor Bahru,MY,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Kuala Lumpur,MY,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Amsterdam,NL,https://lg.as6453.net/lg/,2026-10-31,LG also lists 'Nikhef' and Haarlem
+6453,Tata Communications,Haarlem,NL,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Oslo,NO,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Manila,PH,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Warsaw,PL,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Lisbon,PT,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Porto,PT,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Bucharest,RO,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Jeddah,SA,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Stockholm,SE,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Singapore,SG,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Bangkok,TH,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Ankara,TR,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Gebze,TR,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Istanbul,TR,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Taipei,TW,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Ashburn,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Atlanta,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Chicago,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Dallas,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Denver,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Hillsboro,US,https://lg.as6453.net/lg/,2026-10-31,Oregon
+6453,Tata Communications,Kansas City,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Laredo,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Las Vegas,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Los Angeles,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Manassas,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,McAllen,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Miami,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,New York City,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Newark,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Palo Alto,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Phoenix,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,San Francisco,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,San Jose,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Santa Clara,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Seattle,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Secaucus,US,https://lg.as6453.net/lg/,2026-10-31,
+6453,Tata Communications,Johannesburg,ZA,https://lg.as6453.net/lg/,2026-10-31,
+6461,Zayo,Vienna,AT,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Sydney,AU,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Brussels,BE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Sofia,BG,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,São Paulo,BR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Calgary,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Edmonton,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Halifax,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,London,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,London Ontario (label next to Toronto)
+6461,Zayo,Montréal,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Ottawa,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Québec,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Regina,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Saskatoon,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Toronto,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Vancouver,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Winnipeg,CA,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Zürich,CH,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Berlin,DE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Düsseldorf,DE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Frankfurt am Main,DE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Hamburg,DE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Munich,DE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Stuttgart,DE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Madrid,ES,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Besançon,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Bordeaux,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Lille,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Lyon,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Marseille,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Metz,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Montpellier,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Nancy,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Nantes,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Nice,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Paris,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Strasbourg,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Toulouse,FR,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Edinburgh,GB,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Glasgow,GB,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Leeds,GB,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,London,GB,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Manchester,GB,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Newcastle upon Tyne,GB,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Slough,GB,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Hong Kong,HK,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Dublin,IE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Bergamo,IT,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Milan,IT,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Rome,IT,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Tokyo,JP,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Luxembourg,LU,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Guadalajara,MX,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Monterrey,MX,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Amsterdam,NL,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Warsaw,PL,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Bucharest,RO,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Stockholm,SE,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Singapore,SG,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Akron,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Ohio
+6461,Zayo,Albuquerque,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Amarillo,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Ashburn,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Virginia
+6461,Zayo,Atlanta,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Austin,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Baltimore,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Bend,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Oregon
+6461,Zayo,Billings,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Bismarck,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Boise,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Boston,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Bozeman,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Butte,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Montana
+6461,Zayo,Casper,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Charlotte,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Charlottesville,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Chattanooga,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Cheyenne,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Chicago,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Cincinnati,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Clarksburg,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: West Virginia
+6461,Zayo,Cleveland,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Colorado Springs,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Columbus,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Ohio
+6461,Zayo,Dallas,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Texas
+6461,Zayo,Denver,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Des Moines,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Detroit,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,East Wenatchee,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,El Paso,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Texas
+6461,Zayo,Eugene,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Evansville,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Fargo,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Fort Wayne,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Great Falls,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Helena,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Houston,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Indianapolis,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Jacksonville,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Florida
+6461,Zayo,Kansas City,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Missouri
+6461,Zayo,Knoxville,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Lakeland,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Florida
+6461,Zayo,Lansing,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Michigan
+6461,Zayo,Laredo,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Texas
+6461,Zayo,Las Vegas,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Los Angeles,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Louisville,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,McAllen,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Texas
+6461,Zayo,Melbourne,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Florida
+6461,Zayo,Memphis,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Miami,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Minneapolis,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Missoula,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Nashville,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,New Orleans,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,New York City,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Omaha,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Orlando,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Philadelphia,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Phoenix,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Pittsburgh,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Portland,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Oregon
+6461,Zayo,Quincy,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Washington
+6461,Zayo,Reno,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Richmond,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Virginia
+6461,Zayo,Sacramento,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Salt Lake City,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,San Antonio,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,San Diego,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: California
+6461,Zayo,San Jose,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: California
+6461,Zayo,Seattle,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,South Bend,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Spokane,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,St. George,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Utah
+6461,Zayo,St. Louis,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Stamford,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Connecticut
+6461,Zayo,Tallahassee,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Tampa,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Terre Haute,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Toledo,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Ohio
+6461,Zayo,Tucson,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Tulsa,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Wheeling,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: West Virginia
+6461,Zayo,Wichita,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Wilmington,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,state: Delaware
+6461,Zayo,Yakima,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6461,Zayo,Youngstown,US,https://www.zayo.com/wp-content/uploads/Global-IP-Network_2026.png,2026-10-31,
+6762,Telecom Italia Sparkle,Buenos Aires,AR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Vienna,AT,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Sofia,BG,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Brasília,BR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Fortaleza,BR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Rio de Janeiro,BR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Salvador,BR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,São Paulo,BR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; facilities in Barueri/Cotia/Santana de Parnaíba (São Paulo metro)
+6762,Telecom Italia Sparkle,Santiago,CL,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Bogotá,CO,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Frankfurt am Main,DE,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Djibouti,DJ,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Madrid,ES,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; incl. Equinix MD2 Alcobendas
+6762,Telecom Italia Sparkle,Helsinki,FI,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Marseille,FR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Paris,FR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; incl. Vitry-sur-Seine and Courbevoie facilities
+6762,Telecom Italia Sparkle,London,GB,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; incl. Equinix LD5 Slough
+6762,Telecom Italia Sparkle,Athens,GR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; facility in Metamorfosi (Athens metro); Sparkle Greece IDC
+6762,Telecom Italia Sparkle,Hong Kong,HK,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Genoa,IT,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Milan,IT,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; incl. Cornaredo and Siziano facilities
+6762,Telecom Italia Sparkle,Palermo,IT,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; Sicily Hub
+6762,Telecom Italia Sparkle,Rome,IT,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Aqaba,JO,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Querétaro,MX,https://www.gruppotim.it/en/press-archive/sparkle/2025/PR-Sparkle-Expands-Its-Reach-in-the-US-with-a-Point-of-Presence-in-San-Diego.html,2026-10-31,official Sparkle press release (TIM group site); PeeringDB facility KIO QRO1 in El Marqués
+6762,Telecom Italia Sparkle,Kuala Lumpur,MY,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Lagos,NG,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Amsterdam,NL,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Panama City,PA,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; PeeringDB city: Distrito de Panamá
+6762,Telecom Italia Sparkle,Lima,PE,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; facility in Santiago de Surco (Lima)
+6762,Telecom Italia Sparkle,Warsaw,PL,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Carolina,PR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; HUB787 data center (San Juan metro)
+6762,Telecom Italia Sparkle,Lisbon,PT,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Bucharest,RO,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Stockholm,SE,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Singapore,SG,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Istanbul,TR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,Ashburn,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; state: Virginia
+6762,Telecom Italia Sparkle,Dallas,US,https://www.gruppotim.it/en/press-archive/sparkle/2025/PR-Sparkle-Expands-Its-Reach-in-the-US-with-a-Point-of-Presence-in-San-Diego.html,2026-10-31,official Sparkle press release (TIM group site); state: Texas
+6762,Telecom Italia Sparkle,El Paso,US,https://www.gruppotim.it/en/press-archive/sparkle/2025/PR-Sparkle-Expands-Its-Reach-in-the-US-with-a-Point-of-Presence-in-San-Diego.html,2026-10-31,official Sparkle press release (TIM group site); state: Texas
+6762,Telecom Italia Sparkle,Jacksonville,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; state: Florida
+6762,Telecom Italia Sparkle,Los Angeles,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,McAllen,US,https://www.gruppotim.it/en/press-archive/sparkle/2025/PR-Sparkle-Expands-Its-Reach-in-the-US-with-a-Point-of-Presence-in-San-Diego.html,2026-10-31,official Sparkle press release (TIM group site); state: Texas
+6762,Telecom Italia Sparkle,Miami,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6762,Telecom Italia Sparkle,New York City,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; incl. Equinix Secaucus NJ
+6762,Telecom Italia Sparkle,Newark,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; 165 Halsey St; state: New Jersey
+6762,Telecom Italia Sparkle,Palo Alto,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net; state: California
+6762,Telecom Italia Sparkle,San Diego,US,https://www.gruppotim.it/en/press-archive/sparkle/2025/PR-Sparkle-Expands-Its-Reach-in-the-US-with-a-Point-of-Presence-in-San-Diego.html,2026-10-31,official Sparkle press release (TIM group site); state: California
+6762,Telecom Italia Sparkle,Johannesburg,ZA,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 31 (local_asn 6762); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Vienna,AT,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Brussels,BE,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Geneva,CH,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Zürich,CH,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net; incl. Glattbrugg facility
+6830,Liberty Global,Prague,CZ,https://www.peeringdb.com/api/netixlan?asn=6830,2026-10-31,PeeringDB IX membership (fallback); IX only (Peering.cz); no facility listed
+6830,Liberty Global,Frankfurt am Main,DE,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Paris,FR,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,London,GB,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Dublin,IE,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Milan,IT,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net; incl. Equinix ML5 Settimo Milanese
+6830,Liberty Global,Amsterdam,NL,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Bratislava,SK,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Ashburn,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net; state: Virginia
+6830,Liberty Global,Chicago,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,Miami,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,New York City,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net
+6830,Liberty Global,San Jose,US,https://www.peeringdb.com/api/netfac,2026-10-31,PeeringDB net_id 346 (local_asn 6830); PeeringDB fallback (not operator page): facility list for this net; state: California
+12956,Telxius,Buenos Aires,AR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Mendoza,AR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Fortaleza,BR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,Rio de Janeiro,BR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Salvador,BR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,Santos,BR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,São Paulo,BR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Santiago,CL,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Barranquilla,CO,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,Bogotá,CO,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Düsseldorf,DE,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Frankfurt am Main,DE,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Santo Domingo,DO,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Barcelona,ES,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Derio,ES,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,Madrid,ES,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Santander,ES,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,Marseille,FR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Paris,FR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,London,GB,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Guatemala City,GT,https://telxius.com/network/Telxius_map.pdf,2026-10-31,map label: Guatemala
+12956,Telxius,Cancún,MX,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,Amsterdam,NL,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Balboa,PA,https://telxius.com/network/Telxius_map.pdf,2026-10-31,PoP dot beside Balboa landing gateway
+12956,Telxius,Lima,PE,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Lurín,PE,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,San Juan,PR,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,Lisbon,PT,https://telxius.com/network/Telxius_map.pdf,2026-10-31,map label: Lisboa
+12956,Telxius,Ashburn,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,state: Virginia
+12956,Telxius,Boca Raton,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC
+12956,Telxius,Dallas,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,state: Texas
+12956,Telxius,Jacksonville,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,state: Florida
+12956,Telxius,Laredo,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,state: Texas
+12956,Telxius,McAllen,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,state: Texas
+12956,Telxius,Miami,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Myrtle Beach,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,state: South Carolina
+12956,Telxius,New York City,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Philadelphia,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,
+12956,Telxius,Reston,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,state: Virginia
+12956,Telxius,Richmond,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,state: Virginia
+12956,Telxius,Virginia Beach,US,https://telxius.com/network/Telxius_map.pdf,2026-10-31,landing gateway & edge DC

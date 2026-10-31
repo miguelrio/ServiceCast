@@ -98,7 +98,8 @@ a metro share its coordinates.
 - Transit ASes get up to ⌈log2(cone + 1)⌉ PoPs, capped at 8. Here cone is
   the number of ASes in the AS's observed customer cone. That means 1 PoP
   for a cone of 0 or 1 AS, 2 for up to 3 ASes, 3 for up to 7, and 8 from 128.
-- Tier-1s get up to 8 PoPs.
+- Tier-1s listed in `tier1_pops.csv` get exactly the PoPs listed there
+  (below); the others get up to 8.
 - An AS only gets as many PoPs as it has evidence for.
 
 **Links and delays.**
@@ -130,10 +131,43 @@ every server count and seed.
 - Transit: a PoP with no link from one of the AS's providers gets one, from
   the nearest provider PoP (in its own metro if there is one).
 
+**Tier-1s.** Automatic placement suits tier-1s badly: their PeeringDB
+entries are thin or sit under sibling ASNs, and geolocation leans towards
+headquarters (Lumen ended up centred on Monroe, AS286 was one router in New
+York). `tier1_pops.csv` lists the PoP cities of 17 of the 18 clique ASes,
+one row per city with its source URL, taken from the operators' looking
+glasses and network maps (accessed 31 Oct 2026):
+
+| AS | Operator | Cities | Source |
+|---|---|---|---|
+| 174 | Cogent | 97 | cogentco.com looking glass |
+| 209, 3356 | Lumen | 119 | lookingglass.lumen.com (Latin American sites, sold in 2022, left out) |
+| 286, 3257 | GTT | 86 | gtt.net network map (POP entries); AS286 is the former KPN backbone, now GTT |
+| 701 | Verizon | 74 | verizon.com looking glass, AS701 sites (AS702/703 regions left out) |
+| 1299 | Arelion | 114 | lg.twelve99.net |
+| 2828 | XO | 74 | Verizon's AS701 list: XO is being routed behind AS701 |
+| 2914 | NTT | 44 | gin.ntt.net network map |
+| 3320 | Deutsche Telekom | 27 | wholesale.telekom.com IP Transit map data |
+| 3491 | PCCW Global | 91 | Console Connect looking glass |
+| 5511 | Orange | 34 | lg.opentransit.net |
+| 6453 | Tata | 83 | lg.as6453.net (likely cable landings left out) |
+| 6461 | Zayo | 147 | zayo.com Global IP Network map |
+| 6762 | Sparkle | 49 | 5 from a Sparkle press release, 44 from PeeringDB (no usable operator list) |
+| 6830 | Liberty Global | 17 | PeeringDB only (no operator list) |
+| 12956 | Telxius | 41 | telxius.com network map |
+
+AT&T (7018) has no public PoP list and keeps its automatic placement (New
+York, Washington, Atlanta, Dallas, Chicago, Los Angeles, Houston, San
+Francisco). Cities that GeoNames does not list (small towns of under 15k
+people, about 20 rows) are skipped with a message. Tier-1s get a hub
+backbone like the cloud providers and CDNs, and two tier-1s get up to 16
+links (`--max-links-tier1-pair`), one per shared metro. With the lists,
+1% of tier-1 inter-AS links are longer than 30 ms, against 10% before.
+
 **Rationale.** Valley-free routing means stub ASes never carry transit
 traffic, so internal geography only matters for ASes that do. Small transit
 ASes with a handful of customers carry little transit traffic, so the number
-of PoPs grows with the size of the observed customer cone. The result is about 95.9k
+of PoPs grows with the size of the observed customer cone. The result is about 97.0k
 routers in about 8.3k metros. Tier-1s and large ISPs get realistic
 footprints; for example, AT&T: New York, Washington, Atlanta, Dallas,
 Chicago, Los Angeles, Houston, San Francisco.
@@ -142,11 +176,11 @@ Chicago, Los Angeles, Houston, San Francisco.
 
 | Attribute | Meaning |
 |---|---|
-| `locSource` | where the location came from: `peeringdb`, `geoip`, `peeringdb+geoip`, `rir-country`, `neighbour`, or `server-site` for cloud and CDN PoPs added at candidate sites |
+| `locSource` | where the location came from: `peeringdb`, `geoip`, `peeringdb+geoip`, `rir-country`, `neighbour`, `curated` (tier-1 list), or `server-site` for cloud and CDN PoPs added at candidate sites |
 | `ipv4Addrs` | geolocated IPv4 addresses of the AS in that metro |
 | `pdbType` | the AS's PeeringDB network type |
 | `observedCone` | number of other ASes of the topology in the AS's observed customer cone |
-| `isHub` | cloud providers and CDNs: 1 on backbone hubs, 0 elsewhere |
+| `isHub` | cloud providers, CDNs and tier-1s: 1 on backbone hubs, 0 elsewhere |
 
 **Useful options.**
 
@@ -156,6 +190,8 @@ Chicago, Los Angeles, Houston, San Francisco.
 | `--max-pops` | 8 | maximum PoPs for transit and tier-1 ASes, reached from an observed cone of 128 |
 | `--max-pops-stub` | 1 | maximum PoPs for stubs; 2 adds several thousand routers |
 | `--max-links-per-pair` | 4 | maximum links between two ASes |
+| `--max-links-tier1-pair` | 16 | maximum links between two tier-1s |
+| `--tier1-pops` | `tier1_pops.csv` | curated tier-1 PoP list; `''` for automatic placement |
 | `--metro-pop` | 500000 | minimum population of a metro centre |
 | `--metro-radius-km` | 50 | merge radius for metros |
 | `--ms-per-km` | 0.007 | propagation delay per km |
