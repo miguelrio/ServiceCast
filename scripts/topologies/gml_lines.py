@@ -3,9 +3,12 @@
 
 parse_gml() returns the file's lines plus its nodes, edges and the line range
 of each node block, so a script can rewrite a GML in place (place_servers.py
-uses it). Moved here from the retired scripts/add_routing_tables_valley_free.py;
-the simulator now computes routing tables itself (src/Routing.py).
+uses it). graph_attrs() returns the graph-level attributes, such as the
+observedCones sidecar file. Moved here from scripts/add_routing_tables_valley_free.py
+(now scripts/topologies/add_routing_tables_valley_free.py).
 """
+import bz2
+import os
 import re
 
 
@@ -77,6 +80,47 @@ def parse_gml(path):
             i += 1
 
     return lines, nodes, edges, node_blocks
+
+
+def graph_attrs(lines):
+    """Graph-level `key value` attributes written before the first node, as
+    the topology scripts write them, excluding `directed`."""
+    attrs = {}
+    kv_re = re.compile(r'^\s*(\w+)\s+(.+?)\s*$')
+    depth = 0
+    for line in lines:
+        s = line.strip()
+        if s == "node [" or s == "edge [":
+            break
+        if s.endswith("["):
+            depth += 1
+        elif depth == 1:
+            m = kv_re.match(line)
+            if m and m.group(1) != "directed":
+                attrs[m.group(1)] = _coerce(m.group(2))
+    return attrs
+
+
+def observed_cones_path(gml_path, attrs):
+    """Absolute path of the observed-cone sidecar a GML names, or None."""
+    name = attrs.get("observedCones")
+    if not name:
+        return None
+    return os.path.join(os.path.dirname(os.path.abspath(gml_path)), name)
+
+
+def read_cones(path):
+    """Sidecar or CAIDA ppdc-ases file -> {asn: set of the other ASes in its
+    observed customer cone}."""
+    cones = {}
+    opener = bz2.open if path.endswith(".bz2") else open
+    with opener(path, "rt") as f:
+        for line in f:
+            if line.startswith("#") or not line.strip():
+                continue
+            asn, *members = line.split()
+            cones[asn] = set(members) - {asn}
+    return cones
 
 
 def _coerce(raw):

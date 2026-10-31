@@ -34,7 +34,8 @@ neighbour AS present in that metro, following the builder's rule (at most
 Output per N: <prefix>_<N>.gml = the topology with any existing servers,
 hosts and demand edges removed, plus the new routers, server nodes (at the
 metro centre, attributes operator / hostAs / scenario) and one hosts edge
-per server. No demand edges are written.
+per server. No demand edges are written. The observedCones graph attribute
+is kept, rewritten relative to the output's directory.
 
 Usage:
   .venv/bin/python3 place_servers.py caida_real.gml -o caida_servers --servers 5 10 100 1000 10000
@@ -50,7 +51,7 @@ import time
 import numpy as np
 from scipy.spatial import cKDTree
 
-from gml_lines import parse_gml
+from gml_lines import graph_attrs, observed_cones_path, parse_gml
 from build_caida_topology import Gazetteer, gml_value, haversine_km, load_peeringdb, log, to_xyz
 
 CLOUD_AS = {"AWS": "16509", "Azure": "8075", "GCP": "15169"}
@@ -183,6 +184,8 @@ class Topology:
 
     def __init__(self, path, gaz):
         self.lines, nodes, edges, self.node_blocks = parse_gml(path)
+        self.path = path
+        self.graph_attrs = graph_attrs(self.lines)
         drop = {nid for nid, a in nodes.items() if a.get("type") == "server"}
         self.nodes = {nid: a for nid, a in nodes.items() if nid not in drop}
         self.edges = [e for e in edges if e.get("type") not in ("hosts", "demand")
@@ -273,6 +276,7 @@ class Scenario:
             "locSource": "server-site",
             "ipv4Addrs": 0,
             "pdbType": template.get("pdbType", ""),
+            "observedCone": template.get("observedCone", 0),
         }
         for other in existing.values():
             self.new_edges.append((other, rid, "internal", self.delay(other, rid)))
@@ -308,8 +312,15 @@ class Scenario:
         self.new_edges.append((sid, router, "hosts", self.delay(sid, router)))
 
     def write(self, path):
+        attrs = dict(self.t.graph_attrs)
+        cones = observed_cones_path(self.t.path, attrs)
+        if cones:
+            # Keep naming the same sidecar file, relative to the new GML.
+            attrs["observedCones"] = os.path.relpath(cones, os.path.dirname(os.path.abspath(path)))
         with open(path, "w") as f:
             f.write("graph [\n  directed 0\n")
+            for k, v in attrs.items():
+                f.write(f"  {k} {gml_value(v)}\n")
             for nid in list(self.t.nodes) + list(self.new_nodes):
                 f.write(f"  node [\n    id {nid}\n")
                 for k, v in self.attrs(nid).items():

@@ -13,6 +13,8 @@ routing tables itself at start-up, so the GMLs carry no tables. See
 | `place_servers.py` | add N servers under a deployment scenario |
 | `add_clients.py` | tag eyeball routers with client counts |
 | `add_client_nodes.py` | add client nodes on the N routers with the largest client counts |
+| `add_routing_tables_valley_free.py` | reference valley-free routing tables, to check `src/Routing.py` against |
+| `compare_customer_cones.py` | compare recursive and observed (ppdc) customer cones |
 | `gml_lines.py` | line-based GML reader shared by the scripts |
 
 Requires Python 3 with numpy and scipy. Run from this directory:

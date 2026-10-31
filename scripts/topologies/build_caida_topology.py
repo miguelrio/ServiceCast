@@ -6,11 +6,25 @@ from a CAIDA AS-relationship file (e.g. 20260801.as-rel.txt).
 The as-rel file gives the ASes and their relationships: `a|b|-1` (a is b's
 provider) becomes a c2p edge written provider -> customer, `a|b|0` a p2p
 edge. Tiers: the "# input clique" ASes are tier1, ASes with customers are
-transit, the rest are stubs. ASes outside the clique's customer cones
+transit, the rest are stubs. IXP route servers (PeeringDB type "Route
+Server") are dropped first: they take no part in forwarding, but CAIDA
+lists some of them as providers. ASes outside the clique's customer cones
 (no provider in the file, or only providers with no provider path to the
-clique) are dropped: under valley-free routing they could only reach their
-peers' customer cones, so some routes would be missing. Servers and clients are added afterwards by
-place_servers.py and add_clients.py.
+clique) are then dropped: under valley-free routing they could only reach
+their peers' customer cones, so some routes would be missing. Servers and
+clients are added afterwards by place_servers.py and add_clients.py.
+
+Observed customer cones: following every c2p link of the as-rel file
+gives some ASes customer cones far larger than CAIDA sees on BGP paths
+(Cloudflare 22,319 ASes against 1,012 observed), and under Gao-Rexford one
+such link pulls routes down chains nobody uses. The builder therefore also
+reads CAIDA's ppdc-ases file of the same date (the cone each AS is observed
+to carry routes for) and writes it, restricted to the topology's ASes, to a
+sidecar file next to the GML, <output>.cones.txt, named by the graph
+attribute observedCones. Routing (add_routing_tables_valley_free.py and the
+simulator) lets AS p use a customer route to AS d only if d is in p's
+observed cone; tier-1s are unrestricted. Each router carries its AS's
+observed cone size (observedCone).
 
 Each AS is given one router per point of presence (PoP, "model B"), placed
 in metros where the AS actually is, using, in order of trust:
@@ -35,10 +49,10 @@ that metro) and is eligible if it has PeeringDB presence, holds at least
 geolocated addresses, or is the AS's top geolocated metro. PoPs are
 picked greedily by score (metros within --diversity-km of an already-picked
 PoP are down-weighted). Stubs get at most --max-pops-stub PoPs. Transit
-and tier1 ASes get at most ceil(log2(cone + 1)) PoPs, cone = number of ASes
-in their customer cone (1 PoP for a cone of 1 AS, 2 up to 3, 3 up to 7,
-..., 8 from 128), capped at --max-pops: small transit ASes with a handful
-of customers carry little transit traffic.
+ASes get at most ceil(log2(cone + 1)) PoPs, cone = number of ASes in their
+observed customer cone (1 PoP for a cone of 0 or 1 AS, 2 up to 3, 3 up to
+7, ..., 8 from 128), capped at --max-pops: small transit ASes with a
+handful of customers carry little transit traffic. Tier-1s get --max-pops.
 
 Edges:
   - internal: full mesh between the PoPs of an AS;
@@ -53,10 +67,13 @@ Each router also gets:
   ipv4Addrs  geolocated IPv4 addresses of its AS in its metro
   pdbType    the AS's PeeringDB network type (e.g. "Cable/DSL/ISP",
              "Content", "NSP"), empty if the AS is not in PeeringDB
+  observedCone  number of other ASes of the topology in its AS's observed
+             customer cone
 
 Data files (see fetch_location_data.sh), looked up in --data-dir:
   peeringdb_2_dump_*.json, *.pfx2as.gz, dbip-city-lite-*.csv.gz,
-  cities15000.zip, countryInfo.txt, delegated-*-extended-latest
+  cities15000.zip, countryInfo.txt, delegated-*-extended-latest,
+  caida_ppdc/<date>.ppdc-ases.txt.bz2 (date taken from the as-rel file name)
 IP geolocation by DB-IP.com (https://db-ip.com), licensed CC BY 4.0.
 
 Usage:
@@ -77,6 +94,8 @@ import zipfile
 
 import numpy as np
 from scipy.spatial import cKDTree
+
+from gml_lines import read_cones
 
 
 EARTH_RADIUS_KM = 6371.0
@@ -391,13 +410,14 @@ def gml_value(v):
     return str(v)
 
 
-def load_as_rel(path):
+def load_as_rel(path, exclude=frozenset()):
     """CAIDA as-rel file -> (AS list sorted by number, tier per AS,
     [(source AS, target AS, type)]). c2p links are written provider ->
     customer, as in CAIDA's `provider|customer|-1` lines (the routing
-    script auto-detects this from the tiers)."""
+    script auto-detects this from the tiers). ASes in exclude are dropped
+    with their links before the check for a provider path to the clique."""
     clique, links, ases = set(), [], set()
-    has_customers = set()
+    has_customers, excluded = set(), set()
     with open(path) as f:
         for line in f:
             if line.startswith("# input clique:"):
@@ -405,12 +425,17 @@ def load_as_rel(path):
             if line.startswith("#") or not line.strip():
                 continue
             a, b, rel = line.strip().split("|")[:3]
+            if a in exclude or b in exclude:
+                excluded.update({a, b} & exclude)
+                continue
             ases.update((a, b))
             if rel == "-1":
                 links.append((a, b, "c2p"))
                 has_customers.add(a)
             elif rel == "0":
                 links.append((a, b, "p2p"))
+    if excluded:
+        log(f"Excluded {len(excluded)} ASes before the clique check (route servers)")
     if not clique:
         log(f"No '# input clique:' line in {path}; no AS will be tier1.")
     else:
@@ -441,6 +466,39 @@ def load_as_rel(path):
     return order, tier, links
 
 
+def load_observed_cones(data_dir, as_rel_path, ppdc_path=None):
+    """CAIDA ppdc-ases file of the as-rel file's date: {asn: set of the
+    other ASes in its observed customer cone}."""
+    if ppdc_path is None:
+        date = re.match(r"\d{8}", os.path.basename(as_rel_path))
+        if not date:
+            log(f"Cannot tell the date of {as_rel_path}; pass --ppdc.")
+            sys.exit(1)
+        ppdc_path = find_one(data_dir, f"caida_ppdc/{date.group(0)}.ppdc-ases.txt*")
+    cones = read_cones(ppdc_path)
+    log(f"Observed customer cones: {len(cones)} ASes ({os.path.basename(ppdc_path)})")
+    return cones
+
+
+def write_cones(path, cones, as_order):
+    """Sidecar file: one line per AS of the topology with a non-empty
+    observed cone, the AS then the cone's members in the topology (CAIDA's
+    ppdc-ases format)."""
+    keep = set(as_order)
+    n = 0
+    with open(path, "w") as f:
+        f.write("# Observed customer cones (CAIDA ppdc-ases), restricted to the ASes of the topology.\n"
+                "# Format: <AS> <customer cone member> ... (the AS itself is not repeated).\n"
+                "# Rule: AS p may use a customer route to AS d only if d is in p's line here;\n"
+                "# tier-1s (tier \"tier1\" in the GML) are unrestricted. An AS with no line has an empty cone.\n")
+        for a in as_order:
+            members = sorted(cones.get(a, set()) & keep, key=lambda x: (len(x), x))
+            if members:
+                f.write(a + " " + " ".join(members) + "\n")
+                n += len(members)
+    return n
+
+
 def customer_cone_sizes(links):
     """Number of ASes in each AS's customer cone (customers, their
     customers, ...), excluding itself."""
@@ -465,7 +523,8 @@ def main():
     ap.add_argument("as_rel", help="CAIDA AS-relationship file (e.g. 20260801.as-rel.txt)")
     ap.add_argument("-o", "--output", required=True, help="output GML path")
     ap.add_argument("--data-dir", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"))
-    ap.add_argument("--max-pops", type=int, default=8, help="max PoPs (routers) per transit/tier1 AS; fewer for small customer cones (default 8)")
+    ap.add_argument("--ppdc", help="CAIDA ppdc-ases file (default: data/caida_ppdc/<as-rel date>.ppdc-ases.txt.bz2)")
+    ap.add_argument("--max-pops", type=int, default=8, help="max PoPs (routers) per transit/tier1 AS; fewer for small observed customer cones (default 8)")
     ap.add_argument("--max-pops-stub", type=int, default=1, help="max PoPs per stub AS (default 1; stubs never carry transit)")
     ap.add_argument("--min-geo-share", type=float, default=0.10,
                     help="min share of an AS's addresses for a geolocated metro to become a PoP (default 0.10)")
@@ -490,13 +549,15 @@ def main():
         log("Refusing to overwrite the input file; pass a different -o path.")
         sys.exit(1)
 
-    as_order, as_tier, links = load_as_rel(args.as_rel)
-    cone = customer_cone_sizes(links)
-    log(f"Input: {len(as_order)} ASes ({dict(collections.Counter(as_tier.values()))}), "
-        f"{sum(t == 'c2p' for *_, t in links)} c2p and {sum(t == 'p2p' for *_, t in links)} p2p links ({args.as_rel})")
-
     gaz = Gazetteer(args.data_dir, args.metro_pop, args.metro_radius_km)
     as_fac, as_ix, as_type = load_peeringdb(args.data_dir, gaz)
+    route_servers = {a for a, t in as_type.items() if t == "Route Server"}
+    as_order, as_tier, links = load_as_rel(args.as_rel, exclude=route_servers)
+    log(f"Input: {len(as_order)} ASes ({dict(collections.Counter(as_tier.values()))}), "
+        f"{sum(t == 'c2p' for *_, t in links)} c2p and {sum(t == 'p2p' for *_, t in links)} p2p links ({args.as_rel})")
+    cones = load_observed_cones(args.data_dir, args.as_rel, args.ppdc)
+    in_topo = set(as_order)
+    cone = {a: len(cones.get(a, set()) & in_topo) for a in as_order}
     as_geo, as_addrs = load_geoip(args.data_dir, gaz, set(as_order))
     rir_cc = load_rir_countries(args.data_dir)
 
@@ -507,9 +568,11 @@ def main():
         fac, ix, geo = as_fac.get(asn, {}), as_ix.get(asn, set()), as_geo.get(asn, {})
         if as_tier[asn] == "stub":
             cap = args.max_pops_stub
+        elif as_tier[asn] == "tier1":
+            cap = args.max_pops
         else:
-            # 1 PoP for a cone of 1 AS, 2 up to 3, 3 up to 7, ..., capped.
-            cap = min(args.max_pops, max(1, int(np.ceil(np.log2(cone.get(asn, 0) + 1)))))
+            # 1 PoP for an observed cone of 0 or 1 AS, 2 up to 3, 3 up to 7, ..., capped.
+            cap = min(args.max_pops, max(1, int(np.ceil(np.log2(cone[asn] + 1)))))
         min_share = args.min_geo_share if as_tier[asn] == "stub" else args.min_geo_share_transit
         chosen = choose_pops(gaz, fac, ix, geo, cap, min_share, args.diversity_km)
         if chosen:
@@ -569,6 +632,7 @@ def main():
                 "locSource": source[asn],
                 "ipv4Addrs": int(round(as_addrs.get(asn, {}).get(m, 0))),
                 "pdbType": as_type.get(asn, ""),
+                "observedCone": cone[asn],
             })
         as_routers[asn] = lst
     lat = np.array([n["Latitude"] for n in out_nodes])
@@ -606,8 +670,10 @@ def main():
             out_edges.append((u, v, etype, delay(u, v)))
     n_inter = len(out_edges) - n_internal
 
+    cones_name = re.sub(r"\.gml$", "", os.path.basename(args.output)) + ".cones.txt"
+    n_entries = write_cones(os.path.join(os.path.dirname(os.path.abspath(args.output)), cones_name), cones, as_order)
     with open(args.output, "w") as f:
-        f.write("graph [\n  directed 0\n")
+        f.write(f'graph [\n  directed 0\n  observedCones "{cones_name}"\n')
         for i, n in enumerate(out_nodes):
             f.write(f"  node [\n    id {i}\n")
             for k, v in n.items():
@@ -623,6 +689,9 @@ def main():
     log(f"Location source per AS: {dict(collections.Counter(source.values()).most_common())}")
     log(f"Routers: {n_routers} in {len(cities)} metros; ASes by router count {sorted(per_as.items())}")
     log(f"Edges: {n_internal} internal, {n_inter} inter-AS for {len(seen_pairs)} AS pairs ({dict(pair_kinds)})")
+    n_cap = sum(len(r) == args.max_pops for a, r in as_routers.items() if as_tier[a] == "transit")
+    log(f"Observed cones: {sum(c > 0 for c in cone.values())} ASes, {n_entries} entries in {cones_name}; "
+        f"{n_cap} transit ASes at {args.max_pops} PoPs")
     log(f"Wrote {args.output} in {time.perf_counter() - t0:.1f}s")
 
 

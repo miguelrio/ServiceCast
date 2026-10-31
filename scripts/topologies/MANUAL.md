@@ -54,12 +54,29 @@ publications.
 
 The routing script detects the c2p direction from these tiers.
 
-**Dropped ASes.** ASes outside the customer cones of the Tier-1 clique are
-dropped, with their links: 516 ASes in the 20260801 snapshot. 453 of them have
-no provider in the file; the rest only have providers in that group. Under
+**Dropped ASes.** IXP route servers (PeeringDB type "Route Server", 111 ASes
+in the 20260801 snapshot) are dropped first: they take no part in forwarding,
+but CAIDA lists 63 of them as providers. Then ASes outside the customer cones
+of the Tier-1 clique are dropped, with their links: 471 ASes in the 20260801
+snapshot. 416 of them have no provider in the file; the rest only have
+providers in that group. Under
 valley-free routing such an AS can only reach its peers' customer cones. The
 real AS has upstreams, but CAIDA misses them. Dropping these ASes means every
 router has a valley-free route to every server.
+
+**Observed customer cones.** Following every c2p link of the as-rel file
+(the recursive customer cone) gives some ASes cones far larger than the ones
+CAIDA sees on BGP paths: Cloudflare 22,319 ASes against 1,012 observed,
+AS1000 22,702 against 35. Under Gao-Rexford a customer route beats every
+other route, so one such link pulls routes down chains nobody uses (routes
+of about 230 ms). The builder reads CAIDA's observed cones (ppdc-ases, same
+date, `data/caida_ppdc/`) and writes them, restricted to the topology's
+ASes, to a sidecar file next to the GML, `<output>.cones.txt`, in the same
+format: an AS, then the members of its observed cone. The GML names it in
+the graph attribute `observedCones` (a path relative to the GML). Routing
+uses the rule: AS p may use a customer route to AS d only if d is in p's
+line of that file; tier-1s are unrestricted. `compare_customer_cones.py`
+compares the two kinds of cone.
 
 **Router placement.** Each AS gets one router per point of presence (model
 B), placed in real metros using this evidence, in order of trust:
@@ -78,10 +95,10 @@ a metro share its coordinates.
 **How many PoPs.**
 
 - Stubs get 1 PoP.
-- Transit and tier-1 ASes get up to ⌈log2(cone + 1)⌉ PoPs, capped at 8.
-  Here cone is the number of ASes in the AS's customer cone: its customers,
-  their customers, and so on. That means 1 PoP for a cone of 1 AS, 2 for up
-  to 3 ASes, 3 for up to 7, and 8 from 128.
+- Transit ASes get up to ⌈log2(cone + 1)⌉ PoPs, capped at 8. Here cone is
+  the number of ASes in the AS's observed customer cone. That means 1 PoP
+  for a cone of 0 or 1 AS, 2 for up to 3 ASes, 3 for up to 7, and 8 from 128.
+- Tier-1s get up to 8 PoPs.
 - An AS only gets as many PoPs as it has evidence for.
 
 **Links and delays.**
@@ -97,8 +114,8 @@ a metro share its coordinates.
 **Rationale.** Valley-free routing means stub ASes never carry transit
 traffic, so internal geography only matters for ASes that do. Small transit
 ASes with a handful of customers carry little transit traffic, so the number
-of PoPs grows with the size of the customer cone. The result is about 96.9k
-routers in about 8.5k metros. Tier-1s and large ISPs get realistic
+of PoPs grows with the size of the observed customer cone. The result is about 94.9k
+routers in about 8.3k metros. Tier-1s and large ISPs get realistic
 footprints; for example, AT&T: New York, Washington, Atlanta, Dallas,
 Chicago, Los Angeles, Houston, San Francisco.
 
@@ -109,12 +126,14 @@ Chicago, Los Angeles, Houston, San Francisco.
 | `locSource` | where the location came from: `peeringdb`, `geoip`, `peeringdb+geoip`, `rir-country` or `neighbour` |
 | `ipv4Addrs` | geolocated IPv4 addresses of the AS in that metro |
 | `pdbType` | the AS's PeeringDB network type |
+| `observedCone` | number of other ASes of the topology in the AS's observed customer cone |
 
 **Useful options.**
 
 | Option | Default | Effect |
 |---|---|---|
-| `--max-pops` | 8 | maximum PoPs for transit and tier-1 ASes, reached from a cone of 128 |
+| `--ppdc` | `data/caida_ppdc/<date>.ppdc-ases.txt.bz2` | CAIDA observed-cone file of the as-rel date |
+| `--max-pops` | 8 | maximum PoPs for transit and tier-1 ASes, reached from an observed cone of 128 |
 | `--max-pops-stub` | 1 | maximum PoPs for stubs; 2 adds several thousand routers |
 | `--max-links-per-pair` | 4 | maximum links between two ASes |
 | `--metro-pop` | 500000 | minimum population of a metro centre |
@@ -200,11 +219,29 @@ example, most of Jio's 295M users sit on its Mumbai router.
 
 ## 4. Routing tables
 
-There is no routing-table step. The simulator computes valley-free
-(Gao-Rexford) next hops and delays from every router to every server at
-start-up (`src/Routing.py`), from the link delays it loads, so the GMLs carry
-no tables. Every router/server pair has a route, because the build step drops
-ASes with no provider path to the Tier-1 clique.
+The simulator computes valley-free (Gao-Rexford) next hops and delays from
+every router to every server at start-up (`src/Routing.py`), from the link
+delays it loads, so the GMLs carry no tables.
+
+`add_routing_tables_valley_free.py` computes the same tables and writes them
+into a GML. It is the reference the simulator's routes are checked against:
+
+```bash
+.venv/bin/python3 add_routing_tables_valley_free.py caida_servers_100.gml -o caida_servers_100_routing.gml
+```
+
+Both apply two rules beyond plain Gao-Rexford:
+
+- **Observed cones.** A router of AS p holds a customer route to a server in
+  AS d only if p is d, p is a tier-1, or d is in p's observed cone (the
+  sidecar file named by `observedCones`). Otherwise it falls back to peer and
+  provider routes. `--no-observed-cones` turns this off.
+- **Crossing delay.** A single-router AS stands for a whole network, so its
+  router carries `internalDelayMs` (1.5 ms by default). It is added once each
+  time a route passes through that router, but not at the route's source or
+  at the server's hosting router. `--ignore-internal-delay` leaves it out.
+
+The output has about routers × servers entries; N=1000 gives about 95M.
 
 ## Full pipeline
 
@@ -227,8 +264,9 @@ the matching `<DATE>.as-rel.txt` in the build step.
   over many cities.
 - **Data dates.** DB-IP, RIR and APNIC data are current, while PeeringDB and
   prefix2as match the CAIDA snapshot date.
-- **CAIDA relationship data.** 516 ASes (0.6%) are dropped because CAIDA
-  gives them no provider path to the Tier-1 clique. Their users are missing
+- **CAIDA relationship data.** 471 ASes (0.6%) are dropped because CAIDA
+  gives them no provider path to the Tier-1 clique once route servers are
+  removed. Their users are missing
   from `add_clients.py` and `place_servers.py`: about 1.1M users, 0.02%.
 - **Cloud region list.** The list of cloud regions is hard-coded at the top of
   `place_servers.py`; keep it current.
