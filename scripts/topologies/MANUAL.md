@@ -103,7 +103,8 @@ a metro share its coordinates.
 
 **Links and delays.**
 
-- Internal links form a full mesh between the PoPs of an AS.
+- Internal links form a full mesh between the PoPs of an AS, except for
+  cloud providers and CDNs (below).
 - Two ASes are linked in each metro they share, up to 4 links. If they share
   no metro, they get one link between their closest PoPs.
 - Link delay is 0.2 ms + 0.007 ms/km. That is light in fibre (about 0.005
@@ -111,10 +112,28 @@ a metro share its coordinates.
 - The output has routers only. Servers and clients are added by the next two
   scripts.
 
+**Cloud providers and CDNs.** The ASes in `providers.py` (AWS, Azure, GCP
+and 11 CDNs) get a PoP at every candidate server site: their cloud regions
+and the metros of their PeeringDB facilities and IXPs, about 1,100 PoPs.
+Servers are only attached to these routers, so the network is the same for
+every server count and seed.
+
+- Backbone: hubs are the cloud regions for AWS, Azure and GCP, and for CDNs
+  the metros with the most IXPs, about one per 10 PoPs. Every continent with
+  PoPs has a hub. Each other PoP links to its 2 nearest hubs; hubs are
+  meshed within a continent, and each links to its 2 nearest hubs on other
+  continents. Hubs carry `isHub 1`. Compared with a full mesh, the internal
+  path between two PoPs is 1.14× the direct delay at the median (6.8 ms
+  more), 2.2× at the 95th percentile.
+- Peering: these ASes link to a neighbour in every metro they share, with
+  no cap.
+- Transit: a PoP with no link from one of the AS's providers gets one, from
+  the nearest provider PoP (in its own metro if there is one).
+
 **Rationale.** Valley-free routing means stub ASes never carry transit
 traffic, so internal geography only matters for ASes that do. Small transit
 ASes with a handful of customers carry little transit traffic, so the number
-of PoPs grows with the size of the observed customer cone. The result is about 94.9k
+of PoPs grows with the size of the observed customer cone. The result is about 95.9k
 routers in about 8.3k metros. Tier-1s and large ISPs get realistic
 footprints; for example, AT&T: New York, Washington, Atlanta, Dallas,
 Chicago, Los Angeles, Houston, San Francisco.
@@ -123,10 +142,11 @@ Chicago, Los Angeles, Houston, San Francisco.
 
 | Attribute | Meaning |
 |---|---|
-| `locSource` | where the location came from: `peeringdb`, `geoip`, `peeringdb+geoip`, `rir-country` or `neighbour` |
+| `locSource` | where the location came from: `peeringdb`, `geoip`, `peeringdb+geoip`, `rir-country`, `neighbour`, or `server-site` for cloud and CDN PoPs added at candidate sites |
 | `ipv4Addrs` | geolocated IPv4 addresses of the AS in that metro |
 | `pdbType` | the AS's PeeringDB network type |
 | `observedCone` | number of other ASes of the topology in the AS's observed customer cone |
+| `isHub` | cloud providers and CDNs: 1 on backbone hubs, 0 elsewhere |
 
 **Useful options.**
 
@@ -150,6 +170,7 @@ Running time is about 75 s.
 .venv/bin/python3 place_servers.py caida_real.gml -o caida_servers --servers 50 500  # other sizes
 .venv/bin/python3 place_servers.py caida_real.gml -o run2 --seed 7                   # different random draw
 .venv/bin/python3 place_servers.py caida_real.gml -o cdn --servers 300 --scenario cdn  # force a scenario
+.venv/bin/python3 place_servers.py caida_real.gml -o s7 --servers 10 100 --site-selection sample --seed 7  # sampled sites
 ```
 
 **What it does.** It writes one GML per server count N. Each N maps to a
@@ -164,14 +185,24 @@ deployment scenario, from centralized cloud to edge cloud:
 | > 1000 | edge | routers of eyeball ISPs | weighted sampling by the router's users |
 
 Greedy k-median adds, one at a time, the site that most reduces the
-user-weighted distance to the nearest server. Weighted sampling is seeded and
-draws without replacement, so a run with the same `--seed` is reproducible.
+user-weighted distance to the nearest server. It is deterministic: the seed
+only breaks ties between providers in a metro. For variety across seeds up to
+100 servers, `--site-selection sample` draws the metros instead, weighted by
+their user catchment.
+
+Weighted sampling is seeded by `--seed` alone and draws without replacement,
+so a run with the same seed is reproducible, and within one scenario the
+sites for a smaller N are a subset of those for a larger N. Scaling runs
+should pass `--scenario` so every N uses the same scenario. At N=1000 the cdn
+scenario draws 1,000 of 1,089 sites, so two seeds share at least 91% of
+sites.
 
 **How servers are attached.** Each server is a node at the metro centre with
 the attributes `operator`, `hostAs`, `scenario` and `city`. It is linked by a
-`hosts` edge to a router of its hosting AS in that metro. If the hosting AS
-has no router there, one is added, linked to the AS's other routers and to
-neighbouring ASes present in that metro. No demand edges are written.
+`hosts` edge to the router of its hosting AS in that metro. The builder has
+already built a router at every candidate site, so the network is the same
+for every N and seed; a missing router stops the script with an error. No
+demand edges are written.
 
 **Rationale.** Server counts correspond to real deployment models. A few
 servers means a few cloud regions chosen for coverage. Thousands of servers

@@ -54,21 +54,38 @@ observed customer cone (1 PoP for a cone of 0 or 1 AS, 2 up to 3, 3 up to
 7, ..., 8 from 128), capped at --max-pops: small transit ASes with a
 handful of customers carry little transit traffic. Tier-1s get --max-pops.
 
+Cloud providers and CDNs (providers.py) also get a PoP at every candidate
+server site: their cloud regions and the metros of their PeeringDB
+facilities and IXPs. place_servers.py only attaches servers to these
+routers, so the network is the same for every server count and seed.
+
 Edges:
-  - internal: full mesh between the PoPs of an AS;
+  - internal: full mesh between the PoPs of an AS, except for cloud
+    providers and CDNs, which get a hub backbone (isHub 1 on hubs). Hubs
+    are the cloud regions (AWS, Azure, GCP) or, for CDNs, the metros with
+    the most IXPs, about one per HUB_EVERY PoPs; every continent with PoPs
+    has at least one. Each other PoP links to its HUB_HOMING nearest hubs;
+    hubs are meshed within a continent and each links to its HUB_HOMING
+    nearest hubs on other continents;
   - inter-AS (c2p, p2p): one link in each metro where both ASes have a PoP
-    (best-scoring first, at most --max-links-per-pair); if they share none,
-    one link between their closest pair of PoPs.
+    (best-scoring first, at most --max-links-per-pair, no cap if either is
+    a cloud provider or CDN); if they share none, one link between their
+    closest pair of PoPs;
+  - transit: every cloud or CDN PoP with no c2p link from a provider gets
+    one from the nearest PoP of one of its providers (in its own metro if
+    there is one).
 Edge delay = --link-base-ms + great-circle km * --ms-per-km (0.007 ms/km
 is light in fibre, ~0.005 ms/km, with ~1.4x path inflation).
 
 Each router also gets:
-  locSource  peeringdb, geoip, peeringdb+geoip, rir-country or neighbour
+  locSource  peeringdb, geoip, peeringdb+geoip, rir-country, neighbour, or
+             server-site for cloud/CDN PoPs added at candidate sites
   ipv4Addrs  geolocated IPv4 addresses of its AS in its metro
   pdbType    the AS's PeeringDB network type (e.g. "Cable/DSL/ISP",
              "Content", "NSP"), empty if the AS is not in PeeringDB
   observedCone  number of other ASes of the topology in its AS's observed
              customer cone
+  isHub      cloud providers and CDNs only: 1 on backbone hubs, else 0
 
 Data files (see fetch_location_data.sh), looked up in --data-dir:
   peeringdb_2_dump_*.json, *.pfx2as.gz, dbip-city-lite-*.csv.gz,
@@ -95,10 +112,13 @@ import zipfile
 import numpy as np
 from scipy.spatial import cKDTree
 
+import providers
 from gml_lines import read_cones
 
 
 EARTH_RADIUS_KM = 6371.0
+HUB_EVERY = 10  # CDN backbones: about one hub per this many PoPs
+HUB_HOMING = 2  # each PoP links to this many nearest hubs
 W_FAC = 0.8
 W_IX = 0.5
 CONTINENTS = {
@@ -230,7 +250,7 @@ class Gazetteer:
 
 def load_peeringdb(data_dir, gaz):
     """Per AS: Counter of metro -> number of facilities, set of IXP metros,
-    and PeeringDB network type."""
+    and PeeringDB network type; and Counter of metro -> number of IXPs."""
     path = find_one(data_dir, "peeringdb_2_dump_*.json")
     with open(path, encoding="utf-8") as f:
         d = json.load(f)
@@ -269,7 +289,7 @@ def load_peeringdb(data_dir, gaz):
     as_type = {str(n["asn"]): n.get("info_type") or "" for n in d["net"]["data"]}
     log(f"PeeringDB: {len(fac_metro)} facilities, {len(ix_metro)} IXPs located; "
         f"{len(as_fac)} ASes with facilities, {len(as_ix)} with IXPs ({os.path.basename(path)})")
-    return as_fac, as_ix, as_type
+    return as_fac, as_ix, as_type, collections.Counter(ix_metro.values())
 
 
 def ipv4_to_int(s):
@@ -400,6 +420,49 @@ def choose_pops(gaz, fac, ix, geo, max_pops, min_geo_share, diversity_km):
             if haversine_km(gaz.lat[m], gaz.lon[m], gaz.lat[k], gaz.lon[k]) < diversity_km:
                 eligible[k] *= 0.25
     return chosen
+
+
+def choose_hubs(gaz, metros, metro_ix, fixed=()):
+    """Hub metros of a provider backbone: the fixed ones (cloud regions)
+    if any, else the metros with the most IXPs, about 1 per hubs_per PoPs;
+    plus the best metro of every continent that has none."""
+    continent = {m: gaz.country(gaz.cc[m])[1] for m in metros}
+    rank = sorted(metros, key=lambda m: (-metro_ix[m], -gaz.pop[m], m))
+    hubs = [m for m in rank if m in set(fixed)]
+    for c in sorted(set(continent.values())):
+        if not any(continent[h] == c for h in hubs):
+            hubs.append(next(m for m in rank if continent[m] == c))
+    if not fixed:
+        target = int(np.ceil(len(metros) / HUB_EVERY))
+        hubs += [m for m in rank if m not in hubs][: max(0, target - len(hubs))]
+    return hubs
+
+
+def backbone_links(gaz, metros, hubs):
+    """Metro pairs of a hub backbone: each other PoP to its HUB_HOMING
+    nearest hubs; hubs meshed within a continent, and each hub to its
+    HUB_HOMING nearest hubs on other continents."""
+    continent = {m: gaz.country(gaz.cc[m])[1] for m in metros}
+    h = np.array(hubs)
+
+    def km(m, others):
+        return haversine_km(gaz.lat[m], gaz.lon[m], gaz.lat[others], gaz.lon[others])
+
+    pairs = set()
+    for m in metros:
+        if m in hubs:
+            continue
+        for j in np.argsort(km(m, h), kind="stable")[:HUB_HOMING]:
+            pairs.add(frozenset((m, int(h[j]))))
+    for i, a in enumerate(hubs):
+        for b in hubs[i + 1:]:
+            if continent[a] == continent[b]:
+                pairs.add(frozenset((a, b)))
+        abroad = np.array([b for b in hubs if continent[b] != continent[a]])
+        if abroad.size:
+            for j in np.argsort(km(a, abroad), kind="stable")[:HUB_HOMING]:
+                pairs.add(frozenset((a, int(abroad[j]))))
+    return sorted(tuple(sorted(p)) for p in pairs)
 
 
 def gml_value(v):
@@ -550,7 +613,7 @@ def main():
         sys.exit(1)
 
     gaz = Gazetteer(args.data_dir, args.metro_pop, args.metro_radius_km)
-    as_fac, as_ix, as_type = load_peeringdb(args.data_dir, gaz)
+    as_fac, as_ix, as_type, metro_ix = load_peeringdb(args.data_dir, gaz)
     route_servers = {a for a, t in as_type.items() if t == "Route Server"}
     as_order, as_tier, links = load_as_rel(args.as_rel, exclude=route_servers)
     log(f"Input: {len(as_order)} ASes ({dict(collections.Counter(as_tier.values()))}), "
@@ -608,6 +671,21 @@ def main():
         as_order = [a for a in as_order if a in pops]
         links = [(a, b, t) for a, b, t in links if a in pops and b in pops]
 
+    # Cloud providers and CDNs: a PoP at every candidate server site, so
+    # placing servers never changes the network, and a hub backbone.
+    prov_ases = providers.provider_ases() & set(as_order)
+    site_metros = {}  # asn -> metros added as server sites
+    hubs = {}  # asn -> hub metros
+    regions = collections.defaultdict(set)
+    for prov, m in providers.cloud_sites(gaz, prov_ases):
+        regions[providers.CLOUD_AS[prov]].add(m)
+    for asn, metros in providers.sites_by_as(gaz, as_fac, as_ix, prov_ases).items():
+        have = {m for m, _ in pops[asn]}
+        site_metros[asn] = metros - have
+        pops[asn] = pops[asn] + [(m, 0.0) for m in sorted(metros - have)]
+    for asn in prov_ases:
+        hubs[asn] = choose_hubs(gaz, [m for m, _ in pops[asn]], metro_ix, regions.get(asn, ()))
+
     # Routers.
     out_nodes = []  # (attrs dict) in output order; ids assigned by position
     as_routers = {}  # asn -> [(node index, metro)]
@@ -629,11 +707,13 @@ def main():
                 "city": gaz.name[m],
                 "continent": continent,
                 "internalDelayMs": args.single_pop_internal_delay if single else 0,
-                "locSource": source[asn],
+                "locSource": "server-site" if m in site_metros.get(asn, ()) else source[asn],
                 "ipv4Addrs": int(round(as_addrs.get(asn, {}).get(m, 0))),
                 "pdbType": as_type.get(asn, ""),
                 "observedCone": cone[asn],
             })
+            if asn in prov_ases:
+                out_nodes[-1]["isHub"] = int(m in hubs[asn])
         as_routers[asn] = lst
     lat = np.array([n["Latitude"] for n in out_nodes])
     lon = np.array([n["Longitude"] for n in out_nodes])
@@ -644,6 +724,11 @@ def main():
     out_edges = []
     for asn in as_order:
         rs = as_routers[asn]
+        if asn in prov_ases:
+            at = {m: r for r, m in rs}
+            for a, b in backbone_links(gaz, list(at), hubs[asn]):
+                out_edges.append((at[a], at[b], "internal", delay(at[a], at[b])))
+            continue
         for i in range(len(rs)):
             for j in range(i + 1, len(rs)):
                 out_edges.append((rs[i][0], rs[j][0], "internal", delay(rs[i][0], rs[j][0])))
@@ -662,12 +747,31 @@ def main():
         if common:
             pair_kinds["shared metro"] += 1
             ia, ib = {m: r for r, m in ra}, {m: r for r, m in rb}
-            for m in common[: args.max_links_per_pair]:
+            # Cloud providers and CDNs peer in every metro they share.
+            cap = None if a in prov_ases or b in prov_ases else args.max_links_per_pair
+            for m in common[:cap]:
                 out_edges.append((ia[m], ib[m], etype, delay(ia[m], ib[m])))
         else:
             pair_kinds["closest PoPs"] += 1
             u, v = min(((u, v) for u, _ in ra for v, _ in rb), key=lambda p: delay(*p))
             out_edges.append((u, v, etype, delay(u, v)))
+    # Every cloud or CDN PoP buys transit: a c2p link from the nearest PoP
+    # of one of its providers (in its own metro if possible), unless it
+    # already has one.
+    up = {v for u, v, t, _ in out_edges if t == "c2p"}
+    upstreams = collections.defaultdict(set)
+    for a, b, t in links:
+        if t == "c2p" and b in prov_ases:
+            upstreams[b].add(a)
+    n_transit = 0
+    for asn in sorted(prov_ases):
+        cand = np.array([r for p in sorted(upstreams[asn]) for r, _ in as_routers[p]])
+        for r, _ in as_routers[asn]:
+            if r in up or not cand.size:
+                continue
+            u = int(cand[np.argmin(haversine_km(lat[r], lon[r], lat[cand], lon[cand]))])
+            out_edges.append((u, r, "c2p", delay(u, r)))
+            n_transit += 1
     n_inter = len(out_edges) - n_internal
 
     cones_name = re.sub(r"\.gml$", "", os.path.basename(args.output)) + ".cones.txt"
@@ -689,6 +793,9 @@ def main():
     log(f"Location source per AS: {dict(collections.Counter(source.values()).most_common())}")
     log(f"Routers: {n_routers} in {len(cities)} metros; ASes by router count {sorted(per_as.items())}")
     log(f"Edges: {n_internal} internal, {n_inter} inter-AS for {len(seen_pairs)} AS pairs ({dict(pair_kinds)})")
+    log(f"Cloud providers and CDNs: {sum(len(as_routers[a]) for a in prov_ases)} PoPs "
+        f"({sum(len(v) for v in site_metros.values())} added as server sites), "
+        f"{sum(len(hubs[a]) for a in prov_ases)} hubs, {n_transit} transit links added")
     n_cap = sum(len(r) == args.max_pops for a, r in as_routers.items() if as_tier[a] == "transit")
     log(f"Observed cones: {sum(c > 0 for c in cone.values())} ASes, {n_entries} entries in {cones_name}; "
         f"{n_cap} transit ASes at {args.max_pops} PoPs")
