@@ -9,7 +9,7 @@ from Verbose import Verbose
 from Utility import Utility
 from units import s_to_ms
 from MetricUtility import MetricUtility
-from Routing import Routing
+from Routing import Routing, read_observed_cones
 from collections import OrderedDict
 from Gml import read_gml, write_gml
 import sys
@@ -63,6 +63,18 @@ class Network:
         self.node_tiers = {}
         # nodes marked Internal 0 in the GML: never used as transit
         self.external_nodes = set()
+        # router name -> AS (GML asId), for the observed-cone rule
+        self.node_as = {}
+        # router name -> internalDelayMs: the cost of crossing a single-router
+        # AS, added to routes through it (Routing) and to the delay metric of
+        # ServerMetrics it forwards (Router)
+        self.crossing_delay = {}
+        # servers marked embedded 1 (caches inside an ISP): announced only
+        # within the host AS's observed customer cone
+        self.embedded_servers = set()
+        # AS -> the ASes in its observed customer cone, from the sidecar file
+        # the GML's observedCones attribute names; None if it names none
+        self.observed_cones = None
 
         # every run starts its end-of-run counters from zero
         Router.reset_counters()
@@ -132,6 +144,13 @@ class Network:
                         network.node_tiers[name] = meta_data['tier']
                     if meta_data.get('External') == 1 or meta_data.get('Internal') == 0:
                         network.external_nodes.add(name)
+                    if meta_data.get('type', 'router') == 'router':
+                        if 'asId' in meta_data:
+                            network.node_as[name] = str(meta_data['asId'])
+                        if float(meta_data.get('internalDelayMs', 0)):
+                            network.crossing_delay[name] = float(meta_data['internalDelayMs'])
+                    elif meta_data.get('type') == 'server' and meta_data.get('embedded') == 1:
+                        network.embedded_servers.add(name)
 
                 # check type attribute
                 # this is output by Miguel's topology tool
@@ -169,6 +188,12 @@ class Network:
                     router = Router(name, network)
                     # now add it to the routers
                     network.routers[name] = router
+
+        # the observed customer cones, from the sidecar file the GML names
+        cones_name = graph_meta_data.get('observedCones')
+        if cones_name:
+            base = os.path.dirname(graph.source_file) if graph.source_file else ""
+            network.observed_cones = read_observed_cones(os.path.join(base, str(cones_name)))
 
         # now add the links
         demand_edges = []

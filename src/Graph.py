@@ -30,6 +30,8 @@ class Graph:
         # edges whose GML entry has a `type` (c2p, p2p, internal, hosts, ...);
         # source/target keep the GML order, which gives a c2p edge its direction
         self._edge_types = {}
+        # the GML file read (Gml.read_gml), or None for a graph built in code
+        self.source_file = None
 
     # index into graph by index or node name
     # returns a name

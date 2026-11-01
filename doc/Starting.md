@@ -33,6 +33,18 @@ Dijkstra, so it is fast even on large topologies (about 10 s for the
   plain shortest-delay paths.
 - Servers, clients and nodes marked `Internal 0` in the GML are never
   used as transit.
+- If the GML names an observed-cone file (graph attribute
+  `observedCones`, written by the CAIDA topology builder), a router of
+  AS p holds a customer route to a server in AS d only if p is d, p is
+  a tier-1, or d is in p's observed customer cone; otherwise it falls
+  back to peer and provider routes. A server marked `embedded 1` (a
+  cache inside an ISP) is announced only within its host AS's observed
+  cone, so routers outside it get no route to it. Set
+  `Routing.observed_cones = False` to turn both off.
+- A router with `internalDelayMs` (a single-router AS standing for a
+  whole network) adds that delay to every route passing through it, but
+  not to routes that start or end there; the ServerMetric delay metric
+  includes it too. Set `Routing.crossing_delay = False` to leave it out.
 - A router with no route to a server gets no entry for it.
 
 Call it after every server and client is attached: the clients' latency

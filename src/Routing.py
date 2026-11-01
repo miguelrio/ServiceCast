@@ -22,9 +22,28 @@
 # GML are never used as transit (an Internal 0 router still announces the
 # servers attached to it).
 #
-# The weights are the network's own link delays, so the tables always match
-# the delays packets experience.
+# Observed customer cones: when the GML names a sidecar file (graph
+# attribute observedCones, written by build_caida_topology.py), a router of
+# AS p may hold a customer route to a server in AS d only if p == d, p is a
+# tier-1, or d is in p's observed cone; other routers fall back to peer and
+# provider routes. This stops routes following c2p links that CAIDA infers
+# but never sees used on BGP paths. An embedded server (embedded 1: a cache
+# inside an ISP) is announced only within its host AS's observed cone, so
+# only routers of the host AS and of the ASes in that cone get a route to it.
+#
+# Crossing delay: a single-router AS stands for a whole network, so its
+# router carries internalDelayMs. It is added once each time a route passes
+# through that router, but not at the route's source or at the router
+# hosting the server. Router adds the same to the delay metric of the
+# ServerMetrics it receives, so tables and metrics agree.
+#
+# Both rules are the same as in scripts/topologies/add_routing_tables_valley_free.py.
+#
+# The weights are the network's own link delays plus crossing delays, so the
+# tables match the delay metric. Packets in flight are not held for crossing
+# delays: only link delays set their timing.
 
+import bz2
 import sys
 from collections import Counter
 
@@ -53,6 +72,12 @@ class Routing:
     # "auto" infers it from the nodes' tier attribute (stub < transit < tier1)
     c2p_orientation = "auto"
 
+    # use the observed customer cones when the GML names a sidecar file
+    observed_cones = True
+
+    # add each router's internalDelayMs to the routes that cross it
+    crossing_delay = True
+
     # servers per scipy call for the customer-route pass
     chunk_size = 32
 
@@ -80,39 +105,71 @@ class Routing:
 
         ignore_policy = cls.policy == "shortest"
 
+        cones = None
+        if cls.observed_cones and not ignore_policy and network.observed_cones is not None:
+            cones = ObservedCones(network.observed_cones, names, network.node_as, network.node_tiers)
+        counts["observed_cones"] = cones is not None
+
+        if not cls.crossing_delay:
+            # Router reads the same values for the delay metric
+            network.crossing_delay = {}
+        cross = np.zeros(n, dtype=np.float64)
+        for name, value in network.crossing_delay.items():
+            if name in idx:
+                cross[idx[name]] = value
+        counts["crossing_delay_routers"] = int(np.count_nonzero(cross))
+
         router_names = [name for name in names if name not in hosts]
         router_indices = np.array([idx[name] for name in router_names], dtype=np.int64)
         server_names = list(network.servers)
         server_indices = np.array([idx[name] for name in server_names], dtype=np.int64)
 
-        # A no-transit router still announces the servers attached to it: those
-        # servers are computed with that one router's flag cleared.
+        # Servers that share a route computation are grouped by:
+        #   origin: a no-transit router still announces the servers attached
+        #     to it, so those servers are computed with its flag cleared;
+        #   scope: the host AS of an embedded server, whose routes stay within
+        #     that AS's observed cone;
+        #   destination AS: whose observed cone rule decides which routers
+        #     may hold a customer route.
         hosting = dict(zip(classified["hosts"][0].tolist(), classified["hosts"][1].tolist()))
         groups = {}
+        embedded_limited = 0
         for col, s in enumerate(server_indices.tolist()):
             r = hosting.get(s)
-            key = r if r is not None and no_transit[r] else None
-            groups.setdefault(key, []).append(col)
+            origin = r if r is not None and no_transit[r] else None
+            dest_as = cones.as_of(r) if cones is not None and r is not None else None
+            scope = None
+            if dest_as is not None and server_names[col] in network.embedded_servers:
+                scope = dest_as
+                embedded_limited += 1
+            groups.setdefault((origin, scope), {}).setdefault(dest_as, []).append(col)
+        counts["embedded_servers_limited"] = embedded_limited
 
         # next hop and delay, router x server
         next_hops = np.full((len(router_names), len(server_names)), NO_PRED, dtype=np.int32)
         delays = np.zeros((len(router_names), len(server_names)), dtype=np.float64)
         class_counts = np.zeros(4, dtype=np.int64)
-        for origin, cols in groups.items():
+        out_of_scope = 0   # router x embedded server pairs outside the server's scope
+        for (origin, scope), by_as in groups.items():
             flags = no_transit
             if origin is not None:
                 flags = no_transit.copy()
                 flags[origin] = False
-            routing = PolicyRouting(classified, n, flags, ignore_policy=ignore_policy)
-            cols = np.array(cols, dtype=np.int64)
-            for start in range(0, len(cols), cls.chunk_size):
-                chunk_cols = cols[start:start + cls.chunk_size]
-                dist_c, pred_c = routing.customer_routes(server_indices[chunk_cols])
-                for k, col in enumerate(chunk_cols.tolist()):
-                    dist, next_hop, route_class = routing.complete(dist_c[k], pred_c[k])
-                    next_hops[:, col] = next_hop[router_indices]
-                    delays[:, col] = dist[router_indices]
-                    class_counts += np.bincount(route_class[router_indices], minlength=4)
+            reach = None if scope is None else cones.cone_mask(scope)
+            if reach is not None:
+                out_of_scope += int((~reach[router_indices]).sum()) * sum(len(c) for c in by_as.values())
+            routing = PolicyRouting(classified, n, flags, ignore_policy=ignore_policy, cross=cross, reach=reach)
+            for dest_as, cols in by_as.items():
+                graph = routing.customer_graph(None if dest_as is None else cones.allowed(dest_as))
+                cols = np.array(cols, dtype=np.int64)
+                for start in range(0, len(cols), cls.chunk_size):
+                    chunk_cols = cols[start:start + cls.chunk_size]
+                    dist_c, pred_c = routing.customer_routes(server_indices[chunk_cols], graph)
+                    for k, col in enumerate(chunk_cols.tolist()):
+                        dist, next_hop, route_class = routing.complete(dist_c[k], pred_c[k], server_indices[col])
+                        next_hops[:, col] = next_hop[router_indices]
+                        delays[:, col] = dist[router_indices]
+                        class_counts += np.bincount(route_class[router_indices], minlength=4)
 
         # install, one router at a time; next hops share the name strings
         entries = 0
@@ -135,12 +192,25 @@ class Routing:
         counts["servers"] = len(server_names)
         counts["entries"] = entries
         counts["unreachable_pairs"] = len(router_names) * len(server_names) - entries
+        # expected: routers outside an embedded server's announcement scope;
+        # any other unreachable pair means the topology lacks a valley-free path
+        counts["unreachable_out_of_scope"] = out_of_scope
+        counts["unreachable_other"] = counts["unreachable_pairs"] - out_of_scope
         for c, cname in ROUTE_CLASS_NAMES.items():
             counts[cname + "_routes"] = int(class_counts[c])
 
         if Verbose.level >= 0:
-            print("Routing: {} tables, {} routers x {} servers, {} entries, {} pairs unreachable".format(
-                cls.policy, counts["routers"], counts["servers"], entries, counts["unreachable_pairs"]))
+            print("Routing: {} tables, {} routers x {} servers, {} entries, {} pairs unreachable "
+                  "({} outside embedded servers' scope, expected; {} others{})".format(
+                      cls.policy, counts["routers"], counts["servers"], entries, counts["unreachable_pairs"],
+                      out_of_scope, counts["unreachable_other"],
+                      ": no valley-free path, check the topology" if counts["unreachable_other"] else ""))
+            print("Routing: observed customer cones {}; {} embedded servers announced within their host's cone; "
+                  "crossing delay on {} routers".format("on" if cones is not None else "off",
+                                                       embedded_limited, counts["crossing_delay_routers"]))
+        if network.embedded_servers and cones is None and Verbose.level >= 0:
+            print("Routing: {} embedded servers but no observed cones: announced everywhere".format(
+                len(network.embedded_servers)))
         if counts.get("untyped_links_in_typed_topology") and Verbose.level >= 0:
             print("Routing: {} router links have no type in a topology with typed links; "
                   "treated as internal".format(counts["untyped_links_in_typed_topology"]))
@@ -245,15 +315,23 @@ class PolicyRouting:
     direction: an edge y -> x means x may use a route it learned from y, so
     the Dijkstra predecessor of x is x's next hop towards the destination.
     A node marked no_transit never passes a route on: every edge out of it
-    is dropped, so it can learn routes but no one learns through it."""
+    is dropped, so it can learn routes but no one learns through it.
 
-    def __init__(self, classified, n, no_transit, ignore_policy=False):
+    cross: per-node crossing delay, charged on every edge a route is learned
+    over, at the node it is learned from. reach: optional mask of the only
+    nodes the routes may use (an embedded server's announcement scope)."""
+
+    def __init__(self, classified, n, no_transit, ignore_policy=False, cross=None, reach=None):
         self.n = n
         self.ignore_policy = ignore_policy
+        self.cross = np.zeros(n) if cross is None else cross
 
         def passes(src, dst, w):
             ok = ~no_transit[src]
-            return src[ok], dst[ok], w[ok]
+            if reach is not None:
+                ok &= reach[src] & reach[dst]
+            src, dst = src[ok], dst[ok]
+            return src, dst, w[ok] + self.cross[src]
 
         ia, ib, iw = classified["internal"]
         cc, cp, cw = classified["c2p"]
@@ -280,20 +358,41 @@ class PolicyRouting:
             c_src += [self.down_from, self.peer_from]
             c_dst += [self.down_to, self.peer_to]
             c_w += [self.down_w, self.peer_w]
-        self.graph_c = directed_csr(np.concatenate(c_src), np.concatenate(c_dst), np.concatenate(c_w), n)
+        self.c_src, self.c_dst, self.c_w = np.concatenate(c_src), np.concatenate(c_dst), np.concatenate(c_w)
+        self.graph_c = directed_csr(self.c_src, self.c_dst, self.c_w, n)
 
-    def customer_routes(self, dest_indices):
-        return scipy_dijkstra(self.graph_c, directed=True, indices=dest_indices, return_predecessors=True)
+    def customer_graph(self, allowed=None):
+        """The customer-route graph, keeping only edges into the nodes of the
+        optional mask allowed (the observed-cone rule)."""
+        if allowed is None:
+            return self.graph_c
+        keep = allowed[self.c_dst]
+        return directed_csr(self.c_src[keep], self.c_dst[keep], self.c_w[keep], self.n)
 
-    def complete(self, dist_c, pred_c):
+    def customer_routes(self, dest_indices, graph=None):
+        graph = self.graph_c if graph is None else graph
+        return scipy_dijkstra(graph, directed=True, indices=dest_indices, return_predecessors=True)
+
+    def complete(self, dist_c, pred_c, dest):
         """Given one destination's customer-route tree, add peer and provider
         routes. Returns (dist, next_hop, route_class) arrays over all nodes."""
         dist = dist_c.copy()
         next_hop = pred_c.astype(np.int64)
         route_class = np.where(np.isfinite(dist), ROUTE_CUSTOMER, ROUTE_NONE)
-        if self.ignore_policy:
-            return dist, next_hop, route_class
+        if not self.ignore_policy:
+            self._peer_and_provider(dist, next_hop, route_class)
 
+        # Every route ends at the router hosting the destination server. Its
+        # crossing delay was charged to every route through it, so take it
+        # back off: a route pays for the routers it crosses, not where it ends.
+        hosts = np.flatnonzero(next_hop == dest)
+        if hosts.size == 1 and self.cross[hosts[0]]:
+            routed = np.isfinite(dist)
+            routed[[dest, hosts[0]]] = False
+            dist[routed] -= self.cross[hosts[0]]
+        return dist, next_hop, route_class
+
+    def _peer_and_provider(self, dist, next_hop, route_class):
         # Peer routes: learned over a p2p link from a neighbour holding a
         # customer route (at this point every routed node is a customer
         # route), then spread over internal links.
@@ -317,7 +416,6 @@ class PolicyRouting:
             np.concatenate([self.int_dst, self.down_to[chain]]),
             np.concatenate([self.int_w, self.down_w[chain]]),
         )
-        return dist, next_hop, route_class
 
     def _extend(self, dist, next_hop, route_class, cls, seed_to, seed_via, seed_cost, prop_src, prop_dst, prop_w):
         """Multi-source Dijkstra from seed costs (via a virtual super-source
@@ -349,3 +447,62 @@ class PolicyRouting:
         dist[new] = d[new]
         next_hop[new] = p[new]
         route_class[new] = cls
+
+
+class ObservedCones:
+    """The observed-cone rule as masks over the route computation's nodes.
+    Tier-1s and nodes with no AS (hosts) are never restricted."""
+
+    def __init__(self, cones, names, node_as, node_tiers):
+        as_of = [node_as.get(name) for name in names]
+        self.as_names = sorted({a for a in as_of if a is not None})
+        self.index = index = {a: i for i, a in enumerate(self.as_names)}
+        self.node_as = np.array([index[a] if a is not None else -1 for a in as_of], dtype=np.int64)
+        tier1 = np.array([node_tiers.get(name) == "tier1" for name in names], dtype=bool)
+        self.no_as = self.node_as < 0
+        self.base = tier1 | self.no_as
+        # AS -> the ASes of its cone; AS -> the ASes whose cone holds it
+        cone, holders = {}, {}
+        for p, members in cones.items():
+            if p not in index:
+                continue
+            cone[p] = [index[d] for d in members if d in index]
+            for d in members:
+                holders.setdefault(d, []).append(index[p])
+        self.cone = {p: np.array(v, dtype=np.int64) for p, v in cone.items()}
+        self.holders = {d: np.array(v, dtype=np.int64) for d, v in holders.items()}
+
+    def as_of(self, i):
+        a = self.node_as[i]
+        return self.as_names[a] if a >= 0 else None
+
+    def _nodes_of(self, asn, others):
+        ok = np.zeros(len(self.as_names) + 1, dtype=bool)   # last slot: node_as -1
+        ok[self.index[asn]] = True
+        ok[others.get(asn, np.zeros(0, dtype=np.int64))] = True
+        return ok[self.node_as]
+
+    def allowed(self, dest_as):
+        """Nodes that may hold a customer route to a server in dest_as: its
+        own routers and those of the ASes whose observed cone holds it."""
+        return self.base | self._nodes_of(dest_as, self.holders)
+
+    def cone_mask(self, host_as):
+        """Nodes an embedded server in host_as is announced to: routers of
+        host_as and of the ASes in its observed cone."""
+        return self.no_as | self._nodes_of(host_as, self.cone)
+
+
+def read_observed_cones(path):
+    """Observed-cone sidecar (or CAIDA ppdc-ases file, plain or .bz2) ->
+    {AS: the other ASes in its observed customer cone}. An AS with no line
+    has an empty cone."""
+    cones = {}
+    opener = bz2.open if path.endswith(".bz2") else open
+    with opener(path, "rt") as f:
+        for line in f:
+            if line.startswith("#") or not line.strip():
+                continue
+            asn, *members = line.split()
+            cones[asn] = [d for d in members if d != asn]
+    return cones

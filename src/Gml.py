@@ -226,7 +226,10 @@ def read_gml(path, label="label", destringizer=None):
         next_progress_bytes = 10 * 1024 * 1024
         try:
             with open(path, "r", encoding=encoding) as file:
-                return parse_gml_lines(filter_lines(file), label, destringizer)
+                G = parse_gml_lines(filter_lines(file), label, destringizer)
+            # files the GML names (e.g. observedCones) are relative to it
+            G.source_file = str(Path(path).resolve())
+            return G
         except UnicodeDecodeError:
             if Verbose.level >= 0:
                 print("GML: {} is not {}; trying the next encoding".format(path, encoding))

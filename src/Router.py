@@ -370,6 +370,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         # add the delay of the last hop to the metrics
         metrics['delay'] +=  link_end.propagation_delay
 
+        # and the cost of crossing the router it came from, unless that router
+        # hosts the replica (as in the routing tables, see Routing)
+        crossing = getattr(self.network, 'crossing_delay', None)
+        if crossing:
+            sender = link_end.src_node.id()
+            if sender in crossing and replica not in link_end.src_node.outgoing_ports:
+                metrics['delay'] += crossing[sender]
+
 
         # If the announcement has arrived on a link that is not the one
         # in the forwarding table, for the replica then Drop the message
