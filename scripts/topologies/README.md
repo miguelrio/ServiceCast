@@ -12,6 +12,7 @@ routing tables itself at start-up, so the GMLs carry no tables. See
 | `build_caida_topology.py` | place routers (one per PoP) from the as-rel file |
 | `place_servers.py` | add N servers under a deployment scenario |
 | `add_clients.py` | tag eyeball routers with client counts |
+| `subset_caida_topology.py` | cut the topology down to about 1K or 10K ASes for quick tests |
 | `add_client_nodes.py` | add client nodes on the N routers with the largest client counts |
 | `add_routing_tables_valley_free.py` | reference valley-free routing tables, to check `src/Routing.py` against |
 | `compare_customer_cones.py` | compare recursive and observed (ppdc) customer cones |

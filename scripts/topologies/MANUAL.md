@@ -7,7 +7,8 @@ into a realistic router-level simulation input:
 2. `place_servers.py` adds N servers under a deployment scenario.
 3. `add_clients.py` tags routers of eyeball ASes with their number of clients.
 
-Run them in that order. The first reads the as-rel file; the others read a
+Run them in that order. `subset_caida_topology.py` cuts the first one's
+output down to about 1K or 10K ASes for quick tests (section 5). The first reads the as-rel file; the others read a
 GML file and write a new one. No input file is ever modified. All commands
 run from the project directory, with the project's Python environment.
 
@@ -327,6 +328,67 @@ Both apply two rules beyond plain Gao-Rexford:
   at the server's hosting router. `--ignore-internal-delay` leaves it out.
 
 The output has about routers × servers entries; N=1000 gives about 95M.
+
+## 5. Smaller topologies: `subset_caida_topology.py`
+
+For quick tests, cut the full topology down to about 1,000 or 10,000 ASes,
+then place servers and clients on the subset as usual:
+
+```bash
+.venv/bin/python3 subset_caida_topology.py caida_real.gml -o caida_1k.gml --ases 1000
+.venv/bin/python3 place_servers.py caida_1k.gml -o caida_1k_servers --servers 10 100 1000
+```
+
+**Which ASes are kept.** First, a fixed base of 377 ASes: the 18 tier-1s,
+the cloud providers and CDNs of `providers.py`, and every AS whose observed
+cone contains one of them. Then eyeball ASes (APNIC users, counted as in
+`place_servers.py`) in an order drawn by weighted sampling without
+replacement, weight = users. Each comes with every AS whose observed cone
+contains it, so its provider chains up to the tier-1s are kept. Drawing
+stops at the first eyeball AS that would take the total past `--ases`. The
+order depends on `--seed` alone (default 1), so for one seed the 1K subset
+is contained in the 10K subset.
+
+**What is kept.** Every router of a kept AS and every edge between two kept
+routers, unchanged: PoPs, backbones, hubs, inter-AS links and delays are
+those of the full topology. An AS keeps only the neighbours that are in the
+subset. Servers and clients are kept when every router they link to is
+kept, so a GML with servers can be cut too; all server sites are kept,
+since every cloud and CDN PoP is. The observed cones are restricted to the
+kept ASes in a new sidecar file, and each router's `observedCone` is
+recomputed. Graph attributes `subsetOf`, `subsetAses` and `subsetSeed`
+record how the file was made.
+
+Observed cones are not transitive, so an AS brought in this way can still
+have none of its own providers in the subset (AS3630, whose only provider
+AS3755 does not list the eyeball behind it). Such an AS also brings its
+providers in the same way, so every kept AS other than a tier-1 has a
+provider in the subset.
+
+**Result** (seed 1, from the full topology of 97,026 routers):
+
+| | 1K | 10K |
+|---|---|---|
+| ASes (eyeball ASes drawn) | 1,000 (400) | 10,000 (7,956) |
+| Routers | 6,328 | 22,867 |
+| Users of the full topology | 73% | 97.5% |
+| ASes that are transit | 84% | 55% |
+| Median neighbours a kept AS keeps | 31% | 83% |
+
+With the same 1,000 server sites (cdn, seed 1), every router reaches every
+server, and the routes of the kept routers barely change: 99.3% (1K) and
+99.7% (10K) of router-server delays are identical to the full topology's,
+none is shorter, and 0.5% and 0.2% of AS paths change. The distributions
+over all routers do change, because the subsets keep relatively more of the
+core: mean AS-path length 3.09 (1K), 3.67 (10K) and 4.03 (full).
+
+**Limits.** The tier-1s and the 1,117 cloud and CDN PoPs alone come to
+2,349 routers, so a 1K subset has about 6K routers. With few eyeball
+routers, the 1K subset cannot take `edge` at 10,000 servers (3,109
+candidates). Stubs without users (enterprises, hosting) are never drawn,
+so the AS degree distribution is shifted up: median 12 neighbours at 1K,
+4 at 10K, against 2 in the full topology. Use subsets for quick tests and
+check conclusions on the full topology.
 
 ## Full pipeline
 
