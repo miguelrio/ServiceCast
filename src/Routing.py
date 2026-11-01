@@ -133,7 +133,7 @@ class Routing:
         #     may hold a customer route.
         hosting = dict(zip(classified["hosts"][0].tolist(), classified["hosts"][1].tolist()))
         groups = {}
-        embedded_limited = 0
+        scoped_cols = []
         for col, s in enumerate(server_indices.tolist()):
             r = hosting.get(s)
             origin = r if r is not None and no_transit[r] else None
@@ -141,23 +141,21 @@ class Routing:
             scope = None
             if dest_as is not None and server_names[col] in network.embedded_servers:
                 scope = dest_as
-                embedded_limited += 1
+                scoped_cols.append(col)
             groups.setdefault((origin, scope), {}).setdefault(dest_as, []).append(col)
+        embedded_limited = len(scoped_cols)
         counts["embedded_servers_limited"] = embedded_limited
 
         # next hop and delay, router x server
         next_hops = np.full((len(router_names), len(server_names)), NO_PRED, dtype=np.int32)
         delays = np.zeros((len(router_names), len(server_names)), dtype=np.float64)
         class_counts = np.zeros(4, dtype=np.int64)
-        out_of_scope = 0   # router x embedded server pairs outside the server's scope
         for (origin, scope), by_as in groups.items():
             flags = no_transit
             if origin is not None:
                 flags = no_transit.copy()
                 flags[origin] = False
             reach = None if scope is None else cones.cone_mask(scope)
-            if reach is not None:
-                out_of_scope += int((~reach[router_indices]).sum()) * sum(len(c) for c in by_as.values())
             routing = PolicyRouting(classified, n, flags, ignore_policy=ignore_policy, cross=cross, reach=reach)
             for dest_as, cols in by_as.items():
                 graph = routing.customer_graph(None if dest_as is None else cones.allowed(dest_as))
@@ -192,18 +190,19 @@ class Routing:
         counts["servers"] = len(server_names)
         counts["entries"] = entries
         counts["unreachable_pairs"] = len(router_names) * len(server_names) - entries
-        # expected: routers outside an embedded server's announcement scope;
+        # expected: pairs of an embedded server, whose routes stay within its
+        # host's cone (some routers in the cone may still have no path there);
         # any other unreachable pair means the topology lacks a valley-free path
-        counts["unreachable_out_of_scope"] = out_of_scope
-        counts["unreachable_other"] = counts["unreachable_pairs"] - out_of_scope
+        counts["unreachable_embedded"] = int(np.count_nonzero(next_hops[:, scoped_cols] == NO_PRED))
+        counts["unreachable_other"] = counts["unreachable_pairs"] - counts["unreachable_embedded"]
         for c, cname in ROUTE_CLASS_NAMES.items():
             counts[cname + "_routes"] = int(class_counts[c])
 
         if Verbose.level >= 0:
             print("Routing: {} tables, {} routers x {} servers, {} entries, {} pairs unreachable "
-                  "({} outside embedded servers' scope, expected; {} others{})".format(
+                  "({} for embedded servers, expected; {} others{})".format(
                       cls.policy, counts["routers"], counts["servers"], entries, counts["unreachable_pairs"],
-                      out_of_scope, counts["unreachable_other"],
+                      counts["unreachable_embedded"], counts["unreachable_other"],
                       ": no valley-free path, check the topology" if counts["unreachable_other"] else ""))
             print("Routing: observed customer cones {}; {} embedded servers announced within their host's cone; "
                   "crossing delay on {} routers".format("on" if cones is not None else "off",

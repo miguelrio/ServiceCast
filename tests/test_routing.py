@@ -331,7 +331,7 @@ def test_embedded_server_announced_within_host_cone():
     assert hop(network, "T", "e") is None
     assert hop(network, "D", "e") is None
     # T and D lack a route to e by design, not for want of a path
-    assert network.routing_counts["unreachable_out_of_scope"] == 2
+    assert network.routing_counts["unreachable_embedded"] == 2
     assert network.routing_counts["unreachable_other"] == 0
     for r in ("T", "H", "C", "D"):
         assert hop(network, r, "s") is not None
