@@ -55,7 +55,8 @@ observed customer cone (1 PoP for a cone of 0 or 1 AS, 2 up to 3, 3 up to
 handful of customers carry little transit traffic. Tier-1s get --max-pops,
 unless they are in --tier1-pops (tier1_pops.csv): a hand-curated list of
 their PoP cities from the operators' network maps and looking glasses, with
-the source of each city. A listed tier-1 gets exactly those PoPs.
+the source of each city (and coordinates for towns GeoNames does not list or
+would resolve to another place). A listed tier-1 gets exactly those PoPs.
 
 Cloud providers and CDNs (providers.py) also get a PoP at every candidate
 server site: their cloud regions and the metros of their PeeringDB
@@ -67,12 +68,16 @@ Edges:
     providers, CDNs and tier-1s, which get a hub backbone (isHub 1 on hubs). Hubs
     are the cloud regions (AWS, Azure, GCP) or, for CDNs, the metros with
     the most IXPs, about one per HUB_EVERY PoPs; every continent with PoPs
-    has at least one. Each other PoP links to its HUB_HOMING nearest hubs;
+    has at least one, and every backbone at least HUB_HOMING (or all its
+    PoPs, if fewer), so none is a single-hub star. Each other PoP links to
+    its HUB_HOMING nearest hubs;
     hubs are meshed within a continent and each links to its HUB_HOMING
     nearest hubs on other continents;
   - inter-AS (c2p, p2p): one link in each metro where both ASes have a PoP
     (best-scoring first, at most --max-links-per-pair, --max-links-tier1-pair
-    between two tier-1s, no cap if either is a cloud provider or CDN); if
+    between two tier-1s that are not siblings, no cap if either is a cloud
+    provider or CDN); siblings are ASes of one organisation in CAIDA's
+    AS2Org data or with the same operator in tier1_pops.csv; if
     they share none, one link between their closest pair of PoPs;
   - transit: every cloud or CDN PoP with no c2p link from a provider gets
     one from the nearest PoP of one of its providers (in its own metro if
@@ -94,7 +99,8 @@ Each router also gets:
 Data files (see fetch_location_data.sh), looked up in --data-dir:
   peeringdb_2_dump_*.json, *.pfx2as.gz, dbip-city-lite-*.csv.gz,
   cities15000.zip, countryInfo.txt, delegated-*-extended-latest,
-  caida_ppdc/<date>.ppdc-ases.txt.bz2 (date taken from the as-rel file name)
+  caida_ppdc/<date>.ppdc-ases.txt.bz2 (date taken from the as-rel file name),
+  as2org/*.as-org2info.txt.gz (optional; sibling tier-1s)
 IP geolocation by DB-IP.com (https://db-ip.com), licensed CC BY 4.0.
 
 Usage:
@@ -428,12 +434,19 @@ def choose_pops(gaz, fac, ix, geo, max_pops, min_geo_share, diversity_km):
 
 def load_tier1_pops(path, gaz):
     """Curated tier-1 PoP list (CSV: asn, operator, city, country_iso2,
-    source_url, ...) -> {asn: sorted metros}. Cities GeoNames does not
-    know are reported and skipped."""
-    out, missed = collections.defaultdict(set), []
+    source_url, accessed, notes, lat, lon) -> ({asn: sorted metros},
+    {asn: operator}). A row's lat/lon, when given, place it (towns
+    GeoNames does not list, or names it would resolve to another place,
+    e.g. Quincy WA); otherwise the city name is looked up. Cities that are
+    still not found are reported and skipped."""
+    out, operator, missed = collections.defaultdict(set), {}, []
     with open(path, encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            m = gaz.geocode(row["city"], row["country_iso2"])
+            operator[row["asn"]] = row["operator"]
+            if row.get("lat") and row.get("lon"):
+                m = int(gaz.snap(float(row["lat"]), float(row["lon"]))[0])
+            else:
+                m = gaz.geocode(row["city"], row["country_iso2"])
             if m is None:
                 missed.append(f"{row['city']} ({row['country_iso2']})")
             else:
@@ -441,22 +454,46 @@ def load_tier1_pops(path, gaz):
     if missed:
         log(f"Tier-1 PoP list: {len(missed)} cities not found and skipped: {', '.join(sorted(set(missed)))}")
     log(f"Tier-1 PoP list: {len(out)} ASes, {sum(map(len, out.values()))} metros ({os.path.basename(path)})")
-    return {a: sorted(ms) for a, ms in out.items()}
+    return {a: sorted(ms) for a, ms in out.items()}, operator
+
+
+def load_as_orgs(data_dir):
+    """CAIDA AS-to-organisation file (data/as2org/*.as-org2info.txt.gz, the
+    latest one) -> {asn: org id}, or {} if there is none."""
+    paths = sorted(glob.glob(os.path.join(data_dir, "as2org", "*.as-org2info.txt.gz")))
+    if not paths:
+        log("No CAIDA AS-to-organisation file in data/as2org/; siblings come from tier1_pops.csv only.")
+        return {}
+    org, fmt = {}, []
+    with gzip.open(paths[-1], "rt", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if line.startswith("# format:"):
+                fmt = line[len("# format:"):].strip().split("|")
+            elif not line.startswith("#") and fmt and fmt[0] == "aut":
+                row = dict(zip(fmt, line.rstrip("\n").split("|")))
+                org[row["aut"]] = row["org_id"]
+    log(f"AS organisations: {len(org)} ASes ({os.path.basename(paths[-1])})")
+    return org
 
 
 def choose_hubs(gaz, metros, metro_ix, fixed=()):
     """Hub metros of a provider backbone: the fixed ones (cloud regions)
-    if any, else the metros with the most IXPs, about 1 per hubs_per PoPs;
-    plus the best metro of every continent that has none."""
+    if any, else the metros with the most IXPs, about 1 per HUB_EVERY PoPs;
+    plus the best metro of every continent that has none. Every backbone
+    has at least HUB_HOMING hubs (or all its PoPs, if fewer), so each PoP
+    is homed to more than one hub: a network on one continent with 10 PoPs
+    or fewer (AT&T) is no longer a single-hub star. A continent can still
+    have one hub; its other PoPs then also home to the nearest hub abroad."""
     continent = {m: gaz.country(gaz.cc[m])[1] for m in metros}
     rank = sorted(metros, key=lambda m: (-metro_ix[m], -gaz.pop[m], m))
     hubs = [m for m in rank if m in set(fixed)]
     for c in sorted(set(continent.values())):
         if not any(continent[h] == c for h in hubs):
             hubs.append(next(m for m in rank if continent[m] == c))
+    target = min(HUB_HOMING, len(metros))
     if not fixed:
-        target = int(np.ceil(len(metros) / HUB_EVERY))
-        hubs += [m for m in rank if m not in hubs][: max(0, target - len(hubs))]
+        target = max(target, int(np.ceil(len(metros) / HUB_EVERY)))
+    hubs += [m for m in rank if m not in hubs][: max(0, target - len(hubs))]
     return hubs
 
 
@@ -624,7 +661,7 @@ def main():
     ap.add_argument("--max-links-per-pair", type=int, default=4,
                     help="max parallel links between two ASes sharing several metros (default 4)")
     ap.add_argument("--max-links-tier1-pair", type=int, default=16,
-                    help="the same between two tier-1s (default 16)")
+                    help="the same between two tier-1s that are not siblings (default 16)")
     ap.add_argument("--tier1-pops", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "tier1_pops.csv"),
                     help="curated tier-1 PoP list (default tier1_pops.csv next to this script; '' for none)")
     ap.add_argument("--ms-per-km", type=float, default=0.007, help="propagation delay per km (default 0.007)")
@@ -649,7 +686,13 @@ def main():
     cone = {a: len(cones.get(a, set()) & in_topo) for a in as_order}
     as_geo, as_addrs = load_geoip(args.data_dir, gaz, set(as_order))
     rir_cc = load_rir_countries(args.data_dir)
-    curated = load_tier1_pops(args.tier1_pops, gaz) if args.tier1_pops else {}
+    curated, t1_operator = load_tier1_pops(args.tier1_pops, gaz) if args.tier1_pops else ({}, {})
+    as_org = load_as_orgs(args.data_dir)
+
+    def siblings(a, b):
+        """Same organisation (CAIDA AS2Org) or same operator in the tier-1 list."""
+        return (as_org.get(a) is not None and as_org.get(a) == as_org.get(b)) or \
+            (a in t1_operator and t1_operator[a] == t1_operator.get(b))
 
     # PoPs per AS.
     pops = {}  # asn -> [(metro, score)]
@@ -775,6 +818,7 @@ def main():
     # Inter-AS links, one AS pair at a time.
     seen_pairs = set()
     pair_kinds = collections.Counter()
+    sibling_t1 = set()
     for a, b, etype in links:
         if frozenset((a, b)) in seen_pairs:
             continue
@@ -788,7 +832,14 @@ def main():
             # Cloud providers and CDNs peer in every metro they share.
             cap = None if a in prov_ases or b in prov_ases else args.max_links_per_pair
             if as_tier[a] == as_tier[b] == "tier1":
-                cap = args.max_links_tier1_pair
+                # Sibling tier-1s (Lumen 209/3356, GTT 286/3257, Verizon
+                # 701/2828) share a footprint; they get the ordinary cap,
+                # not one link in every shared metro.
+                if siblings(a, b):
+                    sibling_t1.add(frozenset((a, b)))
+                    cap = args.max_links_per_pair
+                else:
+                    cap = args.max_links_tier1_pair
             for m in common[:cap]:
                 out_edges.append((ia[m], ib[m], etype, delay(ia[m], ib[m])))
         else:
@@ -837,7 +888,9 @@ def main():
         f"({sum(len(v) for v in site_metros.values())} added as server sites), "
         f"{sum(len(hubs[a]) for a in prov_ases)} hubs, {n_transit} transit links added")
     log(f"Tier-1s: {sum(len(as_routers[a]) for a in as_order if as_tier[a] == 'tier1')} PoPs "
-        f"({len(curated)} curated ASes), {sum(len(hubs[a]) for a in tier1_bb)} hubs")
+        f"({len(curated)} curated ASes), {sum(len(hubs[a]) for a in tier1_bb)} hubs; "
+        f"sibling tier-1 pairs at {args.max_links_per_pair} links: "
+        f"{', '.join('/'.join(sorted(p, key=int)) for p in sorted(sibling_t1, key=lambda p: sorted(p, key=int)))}")
     n_cap = sum(len(r) == args.max_pops for a, r in as_routers.items() if as_tier[a] == "transit")
     log(f"Observed cones: {sum(c > 0 for c in cone.values())} ASes, {n_entries} entries in {cones_name}; "
         f"{n_cap} transit ASes at {args.max_pops} PoPs")

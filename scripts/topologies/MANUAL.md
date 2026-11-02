@@ -31,6 +31,7 @@ This downloads `<DATE>.as-rel.txt` into the project directory, plus about
 | GeoNames cities15000 and countryInfo | city coordinates, population, country names |
 | RIR delegation files (current) | country of each AS number (fallback) |
 | APNIC AS population (current) | estimated Internet users per AS and country |
+| CAIDA AS-to-organisation (`data/as2org/`, latest file; optional) | sibling ASes among the tier-1s |
 
 DB-IP is licensed CC BY 4.0 and APNIC asks for attribution, so cite both in
 publications.
@@ -106,9 +107,11 @@ a metro share its coordinates.
 **Links and delays.**
 
 - Internal links form a full mesh between the PoPs of an AS, except for
-  cloud providers and CDNs (below).
-- Two ASes are linked in each metro they share, up to 4 links. If they share
-  no metro, they get one link between their closest PoPs.
+  cloud providers, CDNs and tier-1s, which get a hub backbone (below).
+- Two ASes are linked in each metro they share: up to 4 links, up to 16
+  between two tier-1s that are not siblings, and with no cap for cloud
+  providers and CDNs. If they share no metro, they get one link between
+  their closest PoPs.
 - Link delay is 0.2 ms + 0.007 ms/km. That is light in fibre (about 0.005
   ms/km) with about 1.4× path inflation.
 - The output has routers only. Servers and clients are added by the next two
@@ -122,7 +125,9 @@ every server count and seed.
 
 - Backbone: hubs are the cloud regions for AWS, Azure and GCP, and for CDNs
   the metros with the most IXPs, about one per 10 PoPs. Every continent with
-  PoPs has a hub. Each other PoP links to its 2 nearest hubs; hubs are
+  PoPs has a hub, and every backbone at least 2, so no network is a
+  single-hub star (AT&T, all in North America, has hubs in Washington and
+  Chicago). Each other PoP links to its 2 nearest hubs; hubs are
   meshed within a continent, and each links to its 2 nearest hubs on other
   continents. Hubs carry `isHub 1`. Compared with a full mesh, the internal
   path between two PoPs is 1.14× the direct delay at the median (6.8 ms
@@ -142,12 +147,12 @@ glasses and network maps (accessed 31 Oct 2026):
 | AS | Operator | Cities | Source |
 |---|---|---|---|
 | 174 | Cogent | 97 | cogentco.com looking glass |
-| 209, 3356 | Lumen | 119 | lookingglass.lumen.com (Latin American sites, sold in 2022, left out) |
+| 209, 3356 | Lumen | 119 | lookingglass.lumen.com; it lists no South or Central American sites (that business went to Cirion in 2022) but still 5 Mexican cities, which are kept |
 | 286, 3257 | GTT | 86 | gtt.net network map (POP entries); AS286 is the former KPN backbone, now GTT |
 | 701 | Verizon | 74 | verizon.com looking glass, AS701 sites (AS702/703 regions left out) |
 | 1299 | Arelion | 114 | lg.twelve99.net |
 | 2828 | XO | 74 | Verizon's AS701 list: XO is being routed behind AS701 |
-| 2914 | NTT | 44 | gin.ntt.net network map |
+| 2914 | NTT | 44 | gin.ntt.net Global IP Network map (one world map, though its file name ends in NA) |
 | 3320 | Deutsche Telekom | 27 | wholesale.telekom.com IP Transit map data |
 | 3491 | PCCW Global | 91 | Console Connect looking glass |
 | 5511 | Orange | 34 | lg.opentransit.net |
@@ -159,11 +164,19 @@ glasses and network maps (accessed 31 Oct 2026):
 
 AT&T (7018) has no public PoP list and keeps its automatic placement (New
 York, Washington, Atlanta, Dallas, Chicago, Los Angeles, Houston, San
-Francisco). Cities that GeoNames does not list (small towns of under 15k
-people, about 20 rows) are skipped with a message. Tier-1s get a hub
+Francisco). Cities are looked up by name in GeoNames, except for rows
+with `lat` and `lon`: towns GeoNames lists only below 15k people (Glen
+Allen VA, East Wenatchee WA), places it does not list at all (Oude Meer,
+approximate coordinates, marked in `notes`), and names that would resolve
+to a larger town of the same name (Quincy WA, not Quincy MA; also
+Bloomington CA, Riverdale IL, Wheeling WV, Wilmington DE). Coordinates come
+from GeoNames `cities500`, cited by id in `notes`. Tier-1s get a hub
 backbone like the cloud providers and CDNs, and two tier-1s get up to 16
-links (`--max-links-tier1-pair`), one per shared metro. With the lists,
-1% of tier-1 inter-AS links are longer than 30 ms, against 10% before.
+links (`--max-links-tier1-pair`), one per shared metro. Siblings, which
+share a footprint, get the ordinary 4: ASes of one organisation in CAIDA's
+AS2Org data, or with the same operator in `tier1_pops.csv` (Lumen
+209/3356, GTT 286/3257, Verizon 701/2828). With the lists, 1% of tier-1
+inter-AS links are longer than 30 ms, against 10% before.
 
 **Rationale.** Valley-free routing means stub ASes never carry transit
 traffic, so internal geography only matters for ASes that do. Small transit
@@ -191,7 +204,7 @@ Chicago, Los Angeles, Houston, San Francisco.
 | `--max-pops` | 8 | maximum PoPs for transit and tier-1 ASes, reached from an observed cone of 128 |
 | `--max-pops-stub` | 1 | maximum PoPs for stubs; 2 adds several thousand routers |
 | `--max-links-per-pair` | 4 | maximum links between two ASes |
-| `--max-links-tier1-pair` | 16 | maximum links between two tier-1s |
+| `--max-links-tier1-pair` | 16 | maximum links between two tier-1s that are not siblings |
 | `--tier1-pops` | `tier1_pops.csv` | curated tier-1 PoP list; `''` for automatic placement |
 | `--metro-pop` | 500000 | minimum population of a metro centre |
 | `--metro-radius-km` | 50 | merge radius for metros |
@@ -225,7 +238,7 @@ deployment scenario, from centralized cloud to edge cloud:
 
 **Mixed scenario.** Large content networks serve much of their traffic from
 caches embedded in ISPs. `--scenario mixed` places a share
-`--embedded-share` of the servers on eyeball routers (drawn as in edge) and
+`--embedded-share` (between 0 and 1) of the servers on eyeball routers (drawn as in edge) and
 the rest at CDN sites (drawn as in cdn). Each embedded server gets
 `embedded 1`, the host ISP as `hostAs`, and a content provider as
 `operator`: Google, Meta, Netflix or Akamai, drawn in proportion to the
@@ -289,7 +302,7 @@ eyeball AS. Nothing else in the file changes, so it works on
 
 **Eyeball AS.** An AS counts as eyeball if it has at least `--min-users`
 APNIC users (default 1000), is not one of the server operators
-(`CDN_AS` and `CLOUD_AS` in `place_servers.py`), and is not PeeringDB type
+(`CDN_AS` and `CLOUD_AS` in `providers.py`), and is not PeeringDB type
 "Content". The users of these ASes are mostly VPN, relay or workload
 traffic, such as Cloudflare WARP; the operator list catches AWS, whose
 PeeringDB type is "Enterprise" (3.1M users). Other PeeringDB types are not
@@ -327,12 +340,21 @@ Both apply two rules beyond plain Gao-Rexford:
   time a route passes through that router, but not at the route's source or
   at the server's hosting router. `--ignore-internal-delay` leaves it out.
 
+Link delays follow the simulator's rules (`src/Gml.py`,
+`src/Network.py`): a router link uses its `delayMs`, and a `delayMs` of 0
+becomes `--default-delay-ms` (100 ms, the experiments'
+`Graph.default_propagation_delay`); a server's `hosts` link uses its
+`delayMs` unless it is missing or 0, then 1 ms. The builder writes a
+non-zero `delayMs` on every link, so these defaults only matter for GMLs
+from elsewhere.
+
 The output has about routers × servers entries; N=1000 gives about 95M.
 
 ## 5. Smaller topologies: `subset_caida_topology.py`
 
-For quick tests, cut the full topology down to about 1,000 or 10,000 ASes,
-then place servers and clients on the subset as usual:
+For quick tests, cut the full topology down to 1,000 or 10,000 ASes ("1K
+ASes, about 6.3K routers" and "10K ASes, about 22.9K routers"), then place
+servers and clients on the subset as usual:
 
 ```bash
 .venv/bin/python3 subset_caida_topology.py caida_real.gml -o caida_1k.gml --ases 1000
@@ -353,8 +375,10 @@ is contained in the 10K subset.
 routers, unchanged: PoPs, backbones, hubs, inter-AS links and delays are
 those of the full topology. An AS keeps only the neighbours that are in the
 subset. Servers and clients are kept when every router they link to is
-kept, so a GML with servers can be cut too; all server sites are kept,
-since every cloud and CDN PoP is. The observed cones are restricted to the
+kept, so a GML with servers can be cut too: every cloud and CDN PoP is
+kept, so servers at those sites are, but an edge or embedded server is
+dropped if its host ISP is not drawn. Placing servers on the subset avoids
+this. The observed cones are restricted to the
 kept ASes in a new sidecar file, and each router's `observedCone` is
 recomputed. Graph attributes `subsetOf`, `subsetAses` and `subsetSeed`
 record how the file was made.
@@ -365,12 +389,12 @@ AS3755 does not list the eyeball behind it). Such an AS also brings its
 providers in the same way, so every kept AS other than a tier-1 has a
 provider in the subset.
 
-**Result** (seed 1, from the full topology of 97,026 routers):
+**Result** (seed 1, from the full topology of 97,040 routers):
 
 | | 1K | 10K |
 |---|---|---|
 | ASes (eyeball ASes drawn) | 1,000 (400) | 10,000 (7,956) |
-| Routers | 6,328 | 22,867 |
+| Routers | 6,342 | 22,881 |
 | Users of the full topology | 73% | 97.5% |
 | ASes that are transit | 84% | 55% |
 | Median neighbours a kept AS keeps | 31% | 83% |
@@ -383,7 +407,7 @@ over all routers do change, because the subsets keep relatively more of the
 core: mean AS-path length 3.09 (1K), 3.67 (10K) and 4.03 (full).
 
 **Limits.** The tier-1s and the 1,117 cloud and CDN PoPs alone come to
-2,349 routers, so a 1K subset has about 6K routers. With few eyeball
+2,363 routers, so a 1K subset has about 6.3K routers. With few eyeball
 routers, the 1K subset cannot take `edge` at 10,000 servers (3,109
 candidates). Stubs without users (enterprises, hosting) are never drawn,
 so the AS degree distribution is shifted up: median 12 neighbours at 1K,
@@ -415,7 +439,7 @@ the matching `<DATE>.as-rel.txt` in the build step.
   gives them no provider path to the Tier-1 clique once route servers are
   removed. Their users are missing
   from `add_clients.py` and `place_servers.py`: about 1.1M users, 0.02%.
-- **Cloud region list.** The list of cloud regions is hard-coded at the top of
-  `place_servers.py`; keep it current.
+- **Cloud region list.** The list of cloud regions is hard-coded in
+  `providers.py`; keep it current.
 - **Distances.** Coverage distances are metro-to-metro, so users and servers
   in the same metro count as 0 km.

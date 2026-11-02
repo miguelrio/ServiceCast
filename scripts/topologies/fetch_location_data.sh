@@ -21,6 +21,12 @@ fi
 # Customer cones CAIDA observes on BGP paths, for compare_customer_cones.py.
 mkdir -p caida_ppdc
 get "https://publicdata.caida.org/datasets/as-relationships/serial-1/$DATE.ppdc-ases.txt.bz2" "caida_ppdc/$DATE.ppdc-ases.txt.bz2"
+# AS-to-organisation mapping, for sibling tier-1s (published every three
+# months; the latest one is used, so this may 404 for other dates).
+mkdir -p as2org
+get "https://publicdata.caida.org/datasets/as-organizations/$DATE.as-org2info.txt.gz" "as2org/$DATE.as-org2info.txt.gz" \
+  || { rm -f "as2org/$DATE.as-org2info.txt.gz"
+       echo "No AS2Org file for $DATE; put the nearest one from publicdata.caida.org/datasets/as-organizations/ in data/as2org/"; }
 get "https://publicdata.caida.org/datasets/peeringdb/$Y/$M/peeringdb_2_dump_${Y}_${M}_${D}.json" "peeringdb_2_dump_${Y}_${M}_${D}.json"
 get "https://publicdata.caida.org/datasets/routing/routeviews-prefix2as/$Y/$M/routeviews-rv2-${DATE}-1200.pfx2as.gz" "routeviews-rv2-${DATE}-1200.pfx2as.gz"
 DBIP_MONTH=$(date +%Y-%m)

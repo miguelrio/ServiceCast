@@ -373,6 +373,8 @@ def main():
     ap.add_argument("--ms-per-km", type=float, default=0.007, help="propagation delay per km (default 0.007)")
     ap.add_argument("--link-base-ms", type=float, default=0.2, help="fixed delay added to every link (default 0.2)")
     args = ap.parse_args()
+    if not 0.0 <= args.embedded_share <= 1.0:
+        ap.error(f"--embedded-share must be between 0 and 1, not {args.embedded_share}")
     t0 = time.perf_counter()
 
     gaz = Gazetteer(args.data_dir, args.metro_pop, args.metro_radius_km)
@@ -406,7 +408,9 @@ def main():
         mean_km, median_km = coverage_km(gaz, [s[1] for s in sites], metro_users)
         ops = collections.Counter("access ISPs" if op.startswith("AS") else op + (" (embedded)" if emb else "")
                                   for _, _, op, emb in sites)
-        log(f"N={n} ({scenario}): {len({s[1] for s in sites})} metros, {len({s[0] for s in sites})} host ASes, "
+        n_emb_hosts = len({s[0] for s in sites if s[3]})
+        log(f"N={n} ({scenario}): {len({s[1] for s in sites})} metros, {len({s[0] for s in sites})} host ASes"
+            + (f" ({n_emb_hosts} hosting embedded servers)" if n_emb_hosts else "") + ", "
             f"user->nearest server {mean_km:.0f} km mean, "
             f"{median_km:.0f} km median; operators {dict(ops.most_common(6))} -> {path}")
     log(f"Done in {time.perf_counter() - t0:.1f}s")

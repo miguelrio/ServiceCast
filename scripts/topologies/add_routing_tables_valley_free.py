@@ -63,10 +63,14 @@ over chunks of destinations; the peer/provider passes run per destination.
 V^2 lines, so it can be very expensive/large on big topologies - there is no
 automatic size guard, use your judgment on the graph's actual size.
 
-Edge weights:
-  - if the edge has a `delayMs` attribute, use it directly
-  - otherwise, compute great-circle distance between the two endpoints'
-    Latitude/Longitude (km) and convert at 0.009 ms/km
+Edge weights, as in the simulator (src/Gml.py, src/Network.py):
+  - router links: the edge's `delayMs`; a `delayMs` of 0 is replaced by
+    --default-delay-ms (100 ms, the experiments' Graph.default_propagation_delay);
+    without `delayMs`, great-circle distance between the two endpoints'
+    Latitude/Longitude (km) at 0.009 ms/km
+  - attachment links (an endpoint marked Internal 0, e.g. a server's hosts
+    edge): the edge's `delayMs` unless absent or 0, then 1 ms for a server
+    (10 ms for a client)
 
 Only router<->router edges and server<->router ("hosts") edges are used to
 build the routable graph; client nodes and client-related edges (access,
@@ -102,6 +106,14 @@ from gml_lines import graph_attrs, observed_cones_path, parse_gml, read_cones
 KM_PER_DEGREE_DELAY_MS_PER_KM = 0.009
 EARTH_RADIUS_KM = 6371.0
 
+# The simulator's default delays (src/Graph.py), all in ms: a router link
+# whose delayMs is 0 gets Graph.default_propagation_delay, which the
+# experiment files set to 100 ms (--default-delay-ms); an attachment link
+# without a non-zero delayMs gets 1 ms (server) or 10 ms (client).
+ENGINE_DEFAULT_PROPAGATION_DELAY = 100.0
+SERVER_ATTACHMENT_DELAY = 1.0
+CLIENT_ATTACHMENT_DELAY = 10.0
+
 ROUTER_ROUTER_EDGE_TYPES = {"internal", "p2p", "c2p"}
 SERVER_ROUTER_EDGE_TYPES = {"hosts"}
 
@@ -115,10 +127,20 @@ ROUTE_CLASS_NAMES = {ROUTE_CUSTOMER: "customer", ROUTE_PEER: "peer", ROUTE_PROVI
 NO_PRED = -9999  # scipy's "no predecessor" marker
 
 
-def edge_weights(nodes, edges):
+def edge_weights(nodes, edges, default_delay=ENGINE_DEFAULT_PROPAGATION_DELAY):
     """Delay (ms) of each edge. Vectorized: edge weights for the
     Euclidean-fallback case are computed for all such edges at once with
     numpy rather than one Python call per edge, which matters at 10^5+ scale.
+
+    Weights follow the simulator's link rules (src/Gml.py edge parsing and
+    src/Network.from_graph), so both compute the same routes:
+      - attachment links (an endpoint marked Internal 0, e.g. a server's
+        hosts edge): delayMs if present and not 0, else 1 ms for a server
+        (Graph.default_server_attachment_delay_ms), 10 ms for a client;
+      - router links: delayMs if present, a delayMs of 0 replaced by
+        default_delay (Graph.default_propagation_delay, which the
+        experiments set to 100 ms); without delayMs, great-circle km at
+        0.009 ms/km.
     """
     has_delay = np.fromiter(("delayMs" in e for e in edges), dtype=bool, count=len(edges))
     weights = np.empty(len(edges), dtype=np.float64)
@@ -126,13 +148,29 @@ def edge_weights(nodes, edges):
         (float(e["delayMs"]) for e in edges if "delayMs" in e), dtype=np.float64, count=int(has_delay.sum())
     )
 
-    if (~has_delay).any():
-        no_delay_edges = [e for e, hd in zip(edges, has_delay) if not hd]
+    def attachment_default(e):
+        """0 for a router link, else the simulator's default for the
+        attached host."""
+        ext = [nodes[n] for n in (e["source"], e["target"]) if int(nodes[n].get("Internal", 1)) == 0]
+        if not ext:
+            return 0.0
+        types = {a.get("type") for a in ext}
+        return CLIENT_ATTACHMENT_DELAY if "client" in types else SERVER_ATTACHMENT_DELAY
+
+    attach = np.fromiter((attachment_default(e) for e in edges), dtype=np.float64, count=len(edges))
+    external = attach > 0
+    zero = has_delay & (weights == 0.0)
+    weights[zero & external] = attach[zero & external]
+    weights[zero & ~external] = default_delay
+    weights[~has_delay & external] = attach[~has_delay & external]
+
+    if (~has_delay & ~external).any():
+        no_delay_edges = [e for e, hd, ex in zip(edges, has_delay, external) if not hd and not ex]
         lat1 = np.array([nodes[e["source"]]["Latitude"] for e in no_delay_edges])
         lon1 = np.array([nodes[e["source"]]["Longitude"] for e in no_delay_edges])
         lat2 = np.array([nodes[e["target"]]["Latitude"] for e in no_delay_edges])
         lon2 = np.array([nodes[e["target"]]["Longitude"] for e in no_delay_edges])
-        weights[~has_delay] = haversine_km_vec(lat1, lon1, lat2, lon2) * KM_PER_DEGREE_DELAY_MS_PER_KM
+        weights[~has_delay & ~external] = haversine_km_vec(lat1, lon1, lat2, lon2) * KM_PER_DEGREE_DELAY_MS_PER_KM
     return weights
 
 
@@ -167,7 +205,7 @@ def detect_c2p_orientation(nodes, c2p_edges):
     return orientation
 
 
-def classify_edges(nodes, edges, id_to_idx, c2p_orientation):
+def classify_edges(nodes, edges, id_to_idx, c2p_orientation, default_delay=ENGINE_DEFAULT_PROPAGATION_DELAY):
     """Split the routable edges by relationship, as arrays of matrix indices
     plus weights:
         internal: (a, b, w)            undirected, same AS
@@ -187,7 +225,7 @@ def classify_edges(nodes, edges, id_to_idx, c2p_orientation):
     if c2p_orientation == "auto":
         c2p_orientation = detect_c2p_orientation(nodes, [e for e in routable if e["type"] == "c2p"])
 
-    weights = edge_weights(nodes, routable)
+    weights = edge_weights(nodes, routable, default_delay)
     src = np.fromiter((id_to_idx[e["source"]] for e in routable), dtype=np.int64, count=len(routable))
     dst = np.fromiter((id_to_idx[e["target"]] for e in routable), dtype=np.int64, count=len(routable))
     etype = np.array([e["type"] for e in routable], dtype=object)
@@ -485,6 +523,13 @@ def main():
         action="store_true",
         help="Leave out the internalDelayMs of the routers a route crosses.",
     )
+    ap.add_argument(
+        "--default-delay-ms",
+        type=float,
+        default=ENGINE_DEFAULT_PROPAGATION_DELAY,
+        help="Delay of a router link whose delayMs is 0, as the simulator's Graph.default_propagation_delay "
+        "(default 100, the value the experiment files set).",
+    )
     args = ap.parse_args()
     run_start = time.perf_counter()
 
@@ -511,7 +556,8 @@ def main():
     node_id_list = list(nodes.keys())
     id_to_idx = {nid: i for i, nid in enumerate(node_id_list)}
     classified = classify_edges(
-        nodes, edges, id_to_idx, "provider-customer" if args.ignore_policy else args.c2p_orientation
+        nodes, edges, id_to_idx, "provider-customer" if args.ignore_policy else args.c2p_orientation,
+        args.default_delay_ms,
     )
     cross = np.zeros(len(node_id_list))
     if not args.ignore_internal_delay:
