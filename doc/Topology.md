@@ -47,6 +47,26 @@ Then convert the adjacency list into a Graph.
 ```
 
 
+#### CAIDA topologies
+
+Large topologies modelled on the real Internet are built by the CAIDA
+topology builder in `scripts/topologies/` (see its `MANUAL.md`):
+`build_caida_topology.py` places the routers, `place_servers.py` the
+servers, `add_clients.py` and `add_client_nodes.py` the clients, and
+`subset_caida_topology.py` cuts a topology down to a given number of
+ASes.
+
+Each CAIDA GML names an observed-cone sidecar file in its graph
+attribute `observedCones` (for example `caida_real.cones.txt`). The
+path is relative to the GML's folder, so copy or move the two files
+together. The simulator reads the sidecar for its routing rules (see
+`network.calculate_forwarding_tables()` in [Starting](Starting.md)).
+
+Subsets are named by AS count, and their router count is several times
+larger, because the tier-1 and cloud provider/CDN footprints are kept
+whole: 1K ASes is about 6.3K routers and 10K ASes about 22.9K routers.
+The full topology has about 97K routers.
+
 #### Creating a Graph object and explicitly adding the nodes and edges
 
 ```
