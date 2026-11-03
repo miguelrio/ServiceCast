@@ -191,8 +191,8 @@ class Host(object):
         if Verbose.level >= 1:
             print("{:.3f}: {:5s} HOST_RECV Packet {}.{} consumed from {} after {:.3f}".format(self.env.now,  self.hostid, packet.src, packet.pkt_no, link_end.src_node.id(), (self.env.now - packet.time)))
 
-        # add a tuple of (link_end, packet) to the packet store
-        self.packet_store.put((link_end, packet))
+        # handle it at once (packet_store and run() are for this node's own packets)
+        self.manage_packet((link_end, packet))
 
     def weight_edge(self, node1):
         """What is the weight of the edge from this router to dest"""

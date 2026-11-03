@@ -185,8 +185,18 @@ class PacketSink(object):
 
 
 class SwitchPort(object):
-    """ Models a switch output port with a given rate and buffer size limit in bytes.
-        Set the "out" member variable to the entity to receive the packet.
+    """ Models a switch output port with a given rate and no buffer limit.
+        Set the "out" member variable to the LinkEnd that carries the packets.
+
+        Packets are sent in the order they are put, one at a time: each one
+        starts when the port is free, takes size*8/rate to send, and then
+        the link's propagation delay to reach the far end, where
+        out.dst_node.recv(packet, out) is called. One SimPy timeout per
+        packet covers the whole hop.
+
+        free_at - now is the time a packet put now waits before it starts
+        to be sent, so the queue holds (free_at - now) * rate / 8 bytes.
+        (PortMonitor, which sampled the old queue, has been removed.)
 
         Parameters
         ----------
@@ -195,86 +205,26 @@ class SwitchPort(object):
         rate : float
             the bit rate of the port in bits per millisecond (the clock unit,
             see src/units.py), so the transmission time size*8/rate is ms
-        qlimit : integer (or None)
-            a buffer size limit in bytes or packets for the queue (including items
-            in service).
-        limit_bytes : If true, the queue limit will be based on bytes if false the
-            queue limit will be based on packets.
+        qlimit : must be None (queue limits are not modelled)
+        limit_bytes, debug : kept for compatibility, not used
 
     """
     def __init__(self, env, rate, qlimit=None, limit_bytes=True, debug=False):
-        self.store = simpy.Store(env)
+        if qlimit is not None:
+            raise ValueError("SwitchPort: queue limits are not supported")
         self.rate = rate
         self.env = env
         self.out = None
         self.packets_rec = 0
-        self.packets_drop = 0
-        self.qlimit = qlimit
-        self.limit_bytes = limit_bytes
-        self.byte_size = 0  # Current size of the queue in bytes
-        self.debug = debug
-        self.busy = 0  # Used to track if a packet is currently being sent
-        self.action = env.process(self.run())  # starts the run() method as a SimPy process
-
-    def run(self):
-        while True:
-            msg = (yield self.store.get())
-            self.busy = 1
-            self.byte_size -= msg.size
-            yield self.env.timeout(msg.size*8.0/self.rate)
-            self.out.put(msg)
-            self.busy = 0
-            if self.debug:
-                print(msg)
+        self.free_at = 0.0   # when the port finishes sending what it has
 
     def put(self, pkt):
         self.packets_rec += 1
-        tmp_byte_count = self.byte_size + pkt.size
-
-        if self.qlimit is None:
-            self.byte_size = tmp_byte_count
-            return self.store.put(pkt)
-        if self.limit_bytes and tmp_byte_count >= self.qlimit:
-            self.packets_drop += 1
-            return
-        elif not self.limit_bytes and len(self.store.items) >= self.qlimit-1:
-            self.packets_drop += 1
-        else:
-            self.byte_size = tmp_byte_count
-            return self.store.put(pkt)
-
-
-class PortMonitor(object):
-    """ A monitor for an SwitchPort. Looks at the number of items in the SwitchPort
-        in service + in the queue and records that info in the sizes[] list. The
-        monitor looks at the port at time intervals given by the distribution dist.
-
-        Parameters
-        ----------
-        env : simpy.Environment
-            the simulation environment
-        port : SwitchPort
-            the switch port object to be monitored.
-        dist : function
-            a no parameter function that returns the successive inter-arrival times of the
-            packets
-    """
-    def __init__(self, env, port, dist, count_bytes=False):
-        self.port = port
-        self.env = env
-        self.dist = dist
-        self.count_bytes = count_bytes
-        self.sizes = []
-        self.action = env.process(self.run())
-
-    def run(self):
-        while True:
-            yield self.env.timeout(self.dist())
-            if self.count_bytes:
-                total = self.port.byte_size
-            else:
-                total = len(self.port.store.items) + self.port.busy
-            self.sizes.append(total)
+        now = self.env.now
+        self.free_at = max(now, self.free_at) + pkt.size*8.0/self.rate
+        link = self.out
+        arrival = self.env.timeout(self.free_at - now + link.propagation_delay)
+        arrival.callbacks.append(lambda _event: link.dst_node.recv(pkt, link))
 
 
 class RandomBrancher(object):

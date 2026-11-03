@@ -110,6 +110,10 @@ class Router(object):
         # create one SimComponent.SwitchPort for each neighbour_id
         self.outgoing_ports = dict()
 
+        # the ports with their neighbours, for announce_metrics (see _ports_by_neighbour)
+        self._ports = None
+        self._ports_n = -1
+
         # a unicast forwarding table
         # each entry is { destination: (destination, next_hop, weight) }
         self.unicast_forwarding_table = dict()
@@ -814,140 +818,96 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
     def withdraw_connected_capacity(self, packet):
         pass
 
-    # Announce the entries
-    # Consider some specific limits and caveats
-    # e.g. announce on all the links that it wasn't received from
+    # Announce the entries: send each (metric, Announce/Withdraw) in
+    # announcements on every port to a router, except the one it came from
+    # and, with forward_to_tree_children_only, ports to routers whose next
+    # hop to the replica is not this router.
     def announce_metrics(self, announcements):
-                
-        # skip through all the announcements
-        for metric_no, metric_to_send_tuple in enumerate(announcements):
+        Announce, Withdraw = ServerMetricMessageType.Announce, ServerMetricMessageType.Withdraw
+        debug = Verbose.level >= 2
+        tree_children_only = Router.forward_to_tree_children_only
+        me = self._routerid
+        ports = self._ports_by_neighbour()
 
-            # unpick metric and force from the tuple
-            metric_to_send, msg_type = metric_to_send_tuple
+        for metric_to_send, msg_type in announcements:
+            replica = metric_to_send['replica']
+            came_from = metric_to_send['neighbour']
 
-            # print("{:.3f}: Check {} - metric {} {} announcement {} withdraw {}".format(self.env.now, self.id(),  metric_to_send['replica'], msg_type, msg_type == ServerMetricMessageType.Announce, msg_type == ServerMetricMessageType.Withdraw))
-
-            # 12/9/2023
-            # is neighbour a directly connected host
-            if self.is_neighbour_host(metric_to_send['replica']):
-                if Verbose.level >= 2:
-                    print("{:.3f}: {:5s} ANNOUNCE directly connected {}".format(self.env.now, self.id(), metric_to_send['replica']))
-
-                # if we are doing aggregation, then use values from
-                # the metric_to_send in the connected_capacity table
-
-                # we adapt the metric to send to have the connected total
-                # iff we use aggregation
-                # if self.aggregating_connected:
-                #    metric_to_send['replica'] = self.id()
-                #    metric_to_send['aggregate'] = True
-                #    metric_to_send['load'] = self.connected_capacity_total['load']
-                #    metric_to_send['no_of_flows'] = self.connected_capacity_total['no_of_flows']
-                #    metric_to_send['slots'] = self.connected_capacity_total['slots']
-                
-            else:
-                if Verbose.level >= 2:
-                    print("{:.3f}: {:5s} ANNOUNCE NOT directly connected {}".format(self.env.now, self.id(), metric_to_send['replica']))
-
-
+            if debug:
+                if self.is_neighbour_host(replica):
+                    print("{:.3f}: {:5s} ANNOUNCE directly connected {}".format(self.env.now, self.id(), replica))
+                else:
+                    print("{:.3f}: {:5s} ANNOUNCE NOT directly connected {}".format(self.env.now, self.id(), replica))
 
             # send to neighbours
-            for neighbour in self.outgoing_ports:
-
-                # print("Check " +  metric_to_send['link_end'] +  " <--> " + str(neighbour))
-
-                if isinstance(self.neighbour_destination(neighbour),  Host):
+            for neighbour, port, dst_node, is_host in ports:
+                if is_host:
                     # don't send to any connected Hosts
-                    if Verbose.level >= 2:
-                        print("{:.3f}: {:5s} NOT_TO_HOST {} - metric {}".format(self.env.now, self.id(), self.neighbour_destination(neighbour), metric_to_send['replica']))
-                    pass
+                    if debug:
+                        print("{:.3f}: {:5s} NOT_TO_HOST {} - metric {}".format(self.env.now, self.id(), dst_node, replica))
+                    continue
 
-
-                elif metric_to_send['neighbour'] == str(neighbour):
+                if came_from == neighbour:
                     # don't send to where it came from
-                    if Verbose.level >= 2:
-                        print("{:.3f}: {:5s} NO_RETURN to {} - metric {}".format(self.env.now, self.id(), neighbour,  metric_to_send['replica']))
-                    pass
+                    if debug:
+                        print("{:.3f}: {:5s} NO_RETURN to {} - metric {}".format(self.env.now, self.id(), neighbour, replica))
+                    continue
 
-                elif Router.forward_to_tree_children_only and \
-                     self.neighbour_destination(neighbour).next_hop_to(metric_to_send['replica']) != self.id():
+                if tree_children_only and dst_node.unicast_forwarding_table.get(replica) != me:
                     # neighbour's next hop toward this replica isn't us: it would drop this
-                    if Verbose.level >= 2:
-                        print("{:.3f}: {:5s} NOT_TREE_CHILD {} - metric {}".format(self.env.now, self.id(), neighbour, metric_to_send['replica']))
-                    pass
+                    # (reads the neighbour's forwarding table directly: a simulation shortcut)
+                    if debug:
+                        print("{:.3f}: {:5s} NOT_TREE_CHILD {} - metric {}".format(self.env.now, self.id(), neighbour, replica))
+                    continue
+
+                # a candidate for forwarding
+                if msg_type == Announce:
+                    if neighbour in self.sent_table.get(replica, ()):
+                        # this is in the sent table, so no need to send
+                        if debug:
+                            print("{:.3f}: {:5s} ALREADY_IN_SENT_TABLE neighbour {} metric {} msgID {}".format(self.env.now, self.id(), neighbour, replica, metric_to_send['msgID']))
+                        continue
+
+                    new_packet = self.metric_to_packet(metric_to_send, msg_type, neighbour)
+                    self.pkt_no += 1
+                    if Verbose.level >= 1:
+                        print("{:.3f}: {:5s} FORWARD_METRIC to {} msg {}".format(self.env.now, self.id(), dst_node.id(), metric_to_send))
+                    port.put(new_packet)
+                    self.update_sent_table(metric_to_send, neighbour)
+
+                elif msg_type == Withdraw:
+                    if neighbour in self.sent_table.get(replica, ()):
+                        # this is in the sent table, so send the withdraw
+                        new_packet = self.metric_to_packet(metric_to_send, msg_type, neighbour)
+                        self.pkt_no += 1
+                        if debug:
+                            print("{:.3f}: {:5s} FORWARD_WITHDRAW to {} msg {}".format(self.env.now, self.id(), dst_node.id(), metric_to_send))
+                        port.put(new_packet)
+                    elif debug:
+                        # not in sent_table, so no need to send the withdraw
+                        print("{:.3f}: {:5s} NOT_IN_SENT_TABLE neighbour {} metric {} msgID {}".format(self.env.now, self.id(), neighbour, replica, metric_to_send['msgID']))
 
                 else:
-                    # a candidate for forwarding
+                    print("UNKNOWN ServerMetricMessageType " + msg_type)
 
-                    # check if it is an Announcement or a Withdraw
-
-                    if msg_type == ServerMetricMessageType.Announce:
-                        # Announce
-
-                        if self.check_sent_table(metric_to_send, neighbour):
-                            # this is in the sent table, so no need to send
-                            if Verbose.level >= 2:
-                                print ("{:.3f}: {:5s} ALREADY_IN_SENT_TABLE neighbour {} metric {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send['replica'], metric_to_send['msgID']) )
-                                pass
-
-
-                        else:
-                            # send a new packet
-
-                            # create a new packet
-                            new_packet = self.metric_to_packet(metric_to_send, msg_type, neighbour)
-
-                            self.pkt_no += 1
-
-                            # forward the packet
-                            if Verbose.level >= 1:
-                                print("{:.3f}: {:5s} FORWARD_METRIC to {} msg {}".format(self.env.now,  self.id(), self.neighbour_destination(neighbour).id(), metric_to_send))
-
-                            # send to relevant SwitchPort
-                            self.send_packet_to_neighbour(new_packet, neighbour)
-
-                            # update sent_table
-                            self.update_sent_table(metric_to_send, neighbour)
-
-                    elif msg_type == ServerMetricMessageType.Withdraw:
-                        # Withdraw
-                        
-                        if self.check_sent_table(metric_to_send, neighbour):
-                            # this is in the sent table, so send withdraw
-
-                            # send a new packet
-
-                            # create a new packet
-                            new_packet = self.metric_to_packet(metric_to_send, msg_type, neighbour)
-
-                            self.pkt_no += 1
-
-                            # forward the packet
-                            if Verbose.level >= 2:
-                                print("{:.3f}: {:5s} FORWARD_WITHDRAW to {} msg {}".format(self.env.now, self.id(), self.neighbour_destination(neighbour).id(), metric_to_send))
-
-                            # send to relevant SwitchPort
-                            self.send_packet_to_neighbour(new_packet, neighbour)
-
-                        else:
-                            # not in sent_table, so no need to send Withdraw
-                            if Verbose.level >= 2:
-                                print ("{:.3f}: {:5s} NOT_IN_SENT_TABLE neighbour {} metric {} msgID {}".format(self.env.now, self.id(), neighbour, metric_to_send['replica'], metric_to_send['msgID']) )
-
-                            pass
-                    else:
-                        print("UNKNOWN ServerMetricMessageType " + msg_type)
-                
             # if the msg_type is Withdraw, clear sent_table
-            if msg_type == ServerMetricMessageType.Withdraw:
-                # delete from sent_table
-                self.clear_sent_table(metric_to_send['replica'])
+            if msg_type == Withdraw:
+                self.clear_sent_table(replica)
 
-
-        if Verbose.level >= 2:
+        if debug:
             print("{:.3f}: {:5s} ANNOUNCE_END".format(self.env.now, self.id()))
 
-        
+    # (neighbour, port, neighbour node, is the neighbour a Host) for each
+    # outgoing port, in outgoing_ports order, so that announce_metrics does
+    # not look these up for every port on every update. Built on first use
+    # and again if ports are added.
+    def _ports_by_neighbour(self):
+        if self._ports_n != len(self.outgoing_ports):
+            self._ports = [(neighbour, port, port.out.dst_node, isinstance(port.out.dst_node, Host))
+                           for neighbour, port in self.outgoing_ports.items()]
+            self._ports_n = len(self.outgoing_ports)
+        return self._ports
+
     # Create a new packet from a metric
     def metric_to_packet(self, metric_to_send, msg_type, neighbour):
         new_packet = Packet(self.env.now, 3, metric_to_send['msgID'], self.id(), dst=neighbour)
@@ -1051,60 +1011,118 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             return Compare.Worse
 
 
-    # decide the entries to announce, given a set of entries
+    # Decide the entries to announce, given a set of entries.
+    #
+    # An entry is announced unless another entry is Better (the Same or
+    # better in every metric, and not the Same in all), and among entries
+    # that are the Same in every metric only the last one in the list is
+    # announced. Entries come back in their original order.
+    #
+    # Two implementations give the same result:
+    #   - _decide_skyline: a sort and scan, used with the default comparisons
+    #     (metrics load and delay, exact equality, lower is better);
+    #   - _decide_pairwise: compares every pair of entries, for any other
+    #     comparison functions. Needed for an equivalence margin ("the same
+    #     within x"), which is not transitive, so a sort and scan would not
+    #     give the pairwise result.
+    # tests/test_decide_announcements.py checks that the two agree.
     def decide_announcements(self, entries):
-        if len(entries) == 1:
-            return [entries[0]]
+        if self.uses_default_comparisons():
+            return self._decide_skyline(entries)
+        return self._decide_pairwise(entries)
 
-        else:
-            # the list of things to announce
-            announce = [False for i in entries]
+    # metrics load and delay, compared with same_as and less_than
+    def uses_default_comparisons(self):
+        return ([m['name'] for m in self.metric_list] == ['load', 'delay'] and
+                all(m['same'] is same_as and m['better'] is less_than for m in self.metric_list))
 
-            # skip through all entries - outer loop
-            for index_i, i in enumerate(entries):
+    # Sort the entries by (delay, load). An entry is beaten exactly when an
+    # entry with a lower delay has a load no higher, or an entry with the
+    # same delay has a lower load. So one pass in that order, keeping the
+    # lowest load seen at lower delays, finds the entries to announce; of
+    # entries with the same delay and load, the last in the list is kept.
+    def _decide_skyline(self, entries):
+        n = len(entries)
+        if n <= 1:
+            return list(entries)
+        keys = [(e['delay'], e['load']) for e in entries]
+        order = sorted(range(n), key=keys.__getitem__)
+        keep = [False] * n
+        best_load_before = None   # lowest load among entries with a strictly lower delay
+        k = 0
+        while k < n:
+            # one group of entries with the same delay, sorted by load
+            delay = keys[order[k]][0]
+            g = k
+            while g < n and keys[order[g]][0] == delay:
+                g += 1
+            group_min = keys[order[k]][1]
+            idx = k
+            while idx < g:
+                load = keys[order[idx]][1]
+                # the run of entries with this same (delay, load)
+                r = idx
+                last = order[idx]
+                while r < g and keys[order[r]][1] == load:
+                    if order[r] > last:
+                        last = order[r]
+                    r += 1
+                dominated = (best_load_before is not None and best_load_before <= load) or group_min < load
+                if not dominated:
+                    keep[last] = True
+                idx = r
+            if best_load_before is None or group_min < best_load_before:
+                best_load_before = group_min
+            k = g
+        if Verbose.level >= 3:
+            print("announce: {}".format(keep))
+        return [e for e, kp in zip(entries, keep) if kp]
 
-                # label i as True
-                announce[index_i] = True
-                
-                # skip through all entries - inner loop
-                for index_j, j in enumerate(entries):
-
-                    # no need to do the diagonal
-                    if index_i != index_j:
-
-                        # is j better than i
-                        better_j_i = self.is_better_in_any_metrics(j,i) 
-
-                        if better_j_i == Compare.Better: # j is better than i in at least 1 metrics 
-                            # so we don't need i anymore
-                            announce[index_i] = False
-
-                            if Verbose.level >= 3:
-                                print("Compare.Better: j_{} is better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
-                        
-                            break
-
-                        elif better_j_i == Compare.Same: # j is same in all metrics
-
-                            # so we don't need j
-                            announce[index_j] = False
-                            
-                            if Verbose.level >= 3:
-                                print("Compare.Same: j_{} is same as i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
-
-
-                        else:
-                            # we keep i
-                            if Verbose.level >= 3:
-                                print("Compare.Worse: j_{} is not better than i_{}: {} {}".format(index_j, index_i, self.displayMetrics('j: ', j), self.displayMetrics('i: ', i)))
-                        
-
-            # at this point the announce list should have a True for all the entries to announce
-            if Verbose.level >= 3:
-                print("announce: {}".format(announce))
-
-            # select those entries which are laballed as True in announce
-            return [ entry for ann, entry in zip(announce, entries) if ann == True ]
+    def _decide_pairwise(self, entries):
+        n = len(entries)
+        if n <= 1:
+            return list(entries)
+        mets = [(m['name'], m['same'], m['better']) for m in self.metric_list]
+        vals = [[e[name] for name, _, _ in mets] for e in entries]
+        fns = [(same, better) for _, same, better in mets]
+        debug = Verbose.level >= 3
+        announce = [False] * n
+        for i in range(n):
+            announce[i] = True
+            vi = vals[i]
+            for j in range(n):
+                if j == i:
+                    continue
+                vj = vals[j]
+                # Same / Better / Worse of j against i, as is_better_in_any_metrics
+                all_same = True
+                worse = False
+                for k, (same, better) in enumerate(fns):
+                    if same(vi[k], vj[k]):
+                        continue
+                    all_same = False
+                    if not better(vj[k], vi[k]):
+                        worse = True
+                        break
+                if worse:
+                    # we keep i
+                    if debug:
+                        print("Compare.Worse: j_{} is not better than i_{}: {} {}".format(j, i, self.displayMetrics('j: ', entries[j]), self.displayMetrics('i: ', entries[i])))
+                    continue
+                if all_same:
+                    # so we don't need j
+                    announce[j] = False
+                    if debug:
+                        print("Compare.Same: j_{} is same as i_{}: {} {}".format(j, i, self.displayMetrics('j: ', entries[j]), self.displayMetrics('i: ', entries[i])))
+                else:
+                    # j is better than i, so we don't need i
+                    announce[i] = False
+                    if debug:
+                        print("Compare.Better: j_{} is better than i_{}: {} {}".format(j, i, self.displayMetrics('j: ', entries[j]), self.displayMetrics('i: ', entries[i])))
+                    break
+        if debug:
+            print("announce: {}".format(announce))
+        return [e for e, a in zip(entries, announce) if a]
 
     # is the newly arrived metrics worse 
     def check_metrics_worse(self, metrics, doc):
@@ -1705,8 +1723,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if Verbose.level >= 2:
                 print("{:.3f}: {:5s} PACKET_ARRIVED {}.{} ({:.3f}) in {} from {} after {:.3f}".format(self.env.now, self.id(), packet.src, packet.pkt_no, packet.time, self.id(), link_end.src_node.id(), (self.env.now - packet.time)))
 
-        # add a tuple of (link_end, packet) to the packet store
-        self.packet_store.put((link_end, packet))
+        # handle it at once (packet_store and run() are for this node's own packets)
+        self.manage_packet((link_end, packet))
 
     def neighbours(self):
         """Neighbours of Router"""

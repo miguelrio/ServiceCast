@@ -156,7 +156,7 @@ class Generator(object):
         def arrival_dist():
             # exponential_lambda is the mean inter-arrival time in SECONDS
             # (human-interface knob); the clock is ms (src/units.py)
-            next_time = s_to_ms(gen.exponential(exponential_lambda))
+            next_time = float(s_to_ms(gen.exponential(exponential_lambda)))
             return next_time
 
         # Assume all packets have the same size given by packet_size
@@ -297,7 +297,7 @@ class Generator(object):
         def arrival_dist():
             # arrival_lambda is the mean inter-arrival time in SECONDS
             # (human-interface knob); the clock is ms (src/units.py)
-            next_time = s_to_ms(gen.exponential(arrival_lambda))
+            next_time = float(s_to_ms(gen.exponential(arrival_lambda)))
             return next_time
 
         # Assume all packets have the same size given by packet_size
@@ -379,7 +379,7 @@ class Generator(object):
         def arrival_dist():
             # arrival_lambda is the mean inter-arrival time in SECONDS
             # (human-interface knob); the clock is ms (src/units.py)
-            next_time = s_to_ms(gen.exponential(arrival_lambda))
+            next_time = float(s_to_ms(gen.exponential(arrival_lambda)))
             # WAS next_time = gen.poisson(arrival_lambda)
             return next_time
 
