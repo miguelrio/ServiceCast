@@ -443,3 +443,32 @@ the matching `<DATE>.as-rel.txt` in the build step.
   `providers.py`; keep it current.
 - **Distances.** Coverage distances are metro-to-metro, so users and servers
   in the same metro count as 0 km.
+- **Metro names.** A PoP takes the name and country of its metro's main
+  city, which can be across a border: the McAllen (Texas) PoPs of seven
+  tier-1s are labelled Reynosa, Mexico. Delays are unaffected (the cities
+  are 15 km apart), but per-country counts of PoPs are not.
+- **Announcements.** Every AS announces all its servers over every link to
+  every neighbour, because which address blocks go over each peering is
+  not published. Against RouteViews (route-views2, 1 Aug 2026, 197 AS
+  pairs), AS paths are slightly short: 50% are one AS hop, against 36%
+  observed, all over links CAIDA lists; the mean gap is 0.62 AS hops.
+- **Route choice.** Within the best class (customer, then peer, then
+  provider), routers take the lowest-delay route, while BGP prefers the
+  shortest AS path, so route delays are somewhat optimistic. Every scheme
+  simulated on the topology uses the same routes.
+- **PoP cap.** Transit ASes outside the tier-1 list have at most
+  `--max-pops` (8) PoPs. Hurricane Electric (AS6939), for example, has
+  Amsterdam as its only continental European PoP, which carries 4,343 of
+  its 10,479 inter-AS links.
+- **Highly connected stubs.** A stub AS is a single router whatever its
+  degree: Valve (AS32590) has 5,128 links on one router. None of the
+  largest hosts servers or users, so in simulation runs their RIBs stay
+  small.
+- **Tier-1 lists.** AT&T publishes no PoP list and keeps its automatic 8
+  PoPs. Lumen's Mexican PoPs are kept because its looking glass still
+  lists them, though Lumen sold its Latin American business to Cirion in
+  2022.
+- **Siblings without AS2Org.** Without a `data/as2org/` file, sibling
+  tier-1s are recognised only by the operator column of `tier1_pops.csv`,
+  which names Verizon (701) and XO (2828) differently; they then get 16
+  links instead of 4. Fetch the AS2Org file before building.

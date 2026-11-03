@@ -30,6 +30,18 @@ python3 add_clients.py caida_servers_100.gml -o caida_servers_100_clients.gml
 python3 add_client_nodes.py caida_servers_100_clients.gml caida_servers_100_c5000.gml 5000
 ```
 
+Each GML names its observed-cone sidecar (`<output>.cones.txt`) in the graph
+attribute `observedCones`, as a path relative to the GML's folder; keep the
+two files together. To cut a topology down for quick tests:
+
+```bash
+python3 subset_caida_topology.py caida_real.gml -o caida_1k.gml --ases 1000
+```
+
+1K ASes is about 6.3K routers, 10K ASes about 22.9K. The subsets keep every
+tier-1, cloud provider and CDN PoP, so they are mostly core; check
+conclusions on the full topology.
+
 `fetch_location_data.sh` puts the as-rel file in this directory and the rest
 (about 250 MB) in `data/`; neither is committed.
 
