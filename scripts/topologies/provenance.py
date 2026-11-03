@@ -7,8 +7,9 @@ the plain attributes and before the first node. The block holds one `step`
 per script that worked on the file; a script that starts from another
 script's GML copies the earlier steps and adds its own. Each step records:
 
-  script, code (git describe --always --dirty of the repo), command,
-  python, numpy, built (UTC time), then per input file its role, file
+  script, its sha256 (scriptSha256, for builds from uncommitted code),
+  code (git describe --always --dirty of the repo), command, every option
+  with its resolved value (options), python, numpy, built (UTC time), then per input file its role, file
   name, sha256, bytes, dataset date (from the file name, or "latest"),
   URL and download date (from data/SOURCES.tsv, which
   fetch_location_data.sh writes), and for the RIR files the end date of
@@ -40,6 +41,7 @@ MANIFEST = "SOURCES.tsv"  # file<TAB>url<TAB>fetched (UTC date)<TAB>how
 
 _used = {}  # abspath -> role, in the order first used
 _absent = {}  # role -> note, for optional inputs this run did not have
+_options = {}  # option -> resolved value, from options()
 
 
 def use(path, role):
@@ -52,6 +54,31 @@ def use(path, role):
 def absent(role, note):
     """Note that an optional input was not there (the GML differs without it)."""
     _absent.setdefault(role, note)
+
+
+def options(args):
+    """Note this run's resolved options (an argparse Namespace), defaults
+    included, for the provenance block."""
+    _options.clear()
+    _options.update(vars(args))
+
+
+def _gml_key(name):
+    """GML keys are letters and digits: max_pops -> maxPops."""
+    head, *rest = name.split("_")
+    return head + "".join(w[:1].upper() + w[1:] for w in rest)
+
+
+def _short(a):
+    """A path cut to its last part (so the GML does not carry anyone's home
+    folder); --opt=path keeps its --opt=."""
+    a = str(a)
+    if os.sep not in a:
+        return a
+    opt, eq, val = a.partition("=")
+    if eq and opt.startswith("-") and os.sep not in opt:
+        return opt + "=" + os.path.basename(val.rstrip(os.sep))
+    return os.path.basename(a.rstrip(os.sep))
 
 
 def sha256(path):
@@ -111,12 +138,8 @@ def _rir_date(path):
 
 
 def _command(argv):
-    """The command line, with file and folder paths cut to their last part
-    (so the GML does not carry anyone's home folder)."""
-    words = [os.path.basename(argv[0])]
-    for a in argv[1:]:
-        words.append(os.path.basename(a.rstrip(os.sep)) if os.sep in a else a)
-    return shlex.join(words)
+    """The command line, with file and folder paths cut to their last part."""
+    return shlex.join([os.path.basename(argv[0])] + [_short(a) for a in argv[1:]])
 
 
 def _q(v):
@@ -130,11 +153,18 @@ def step_lines(script, data_dir, outputs=(), summary=None, argv=None):
     argv = sys.argv if argv is None else argv
     out = ["    step [",
            f"      script {_q(os.path.basename(script))}",
+           f"      scriptSha256 {_q(sha256(script))}",
            f"      code {_q(_git_describe())}",
            f"      command {_q(_command(argv))}",
            f"      python {_q(platform.python_version())}",
            f"      numpy {_q(numpy.__version__)}",
            f"      built {_q(time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))}"]
+    if _options:
+        out.append("      options [")
+        for k, v in _options.items():
+            v = " ".join(map(_short, v)) if isinstance(v, (list, tuple)) else _short(v)
+            out.append(f"        {_gml_key(k)} {_q(v)}")
+        out.append("      ]")
     for p, role in _used.items():
         name = os.path.basename(p)
         out += ["      input [", f"        role {_q(role)}", f"        file {_q(name)}",

@@ -377,6 +377,7 @@ def main():
     ap.add_argument("--ms-per-km", type=float, default=0.007, help="propagation delay per km (default 0.007)")
     ap.add_argument("--link-base-ms", type=float, default=0.2, help="fixed delay added to every link (default 0.2)")
     args = ap.parse_args()
+    provenance.options(args)
     if not 0.0 <= args.embedded_share <= 1.0:
         ap.error(f"--embedded-share must be between 0 and 1, not {args.embedded_share}")
     t0 = time.perf_counter()

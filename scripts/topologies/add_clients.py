@@ -70,6 +70,7 @@ def main():
     ap.add_argument("--metro-pop", type=int, default=500_000, help="must match build_caida_topology.py (default 500000)")
     ap.add_argument("--metro-radius-km", type=float, default=50.0, help="must match build_caida_topology.py (default 50)")
     args = ap.parse_args()
+    provenance.options(args)
     t0 = time.perf_counter()
 
     if os.path.abspath(args.output) == os.path.abspath(args.topology):

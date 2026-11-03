@@ -49,7 +49,8 @@ conclusions on the full topology.
 
 Every GML has a `provenance` block in its graph attributes. It holds one
 `step` for each script that worked on the file, with the code version
-(`git describe --dirty`), the command, the Python and numpy versions, and
+(`git describe --dirty` and the script's sha256), the command, every
+option's resolved value, the Python and numpy versions, and
 for each input file its sha256, size, dataset date, URL and download date.
 To check that your input files match the ones a GML was built from, or to
 compare two builds without the block:

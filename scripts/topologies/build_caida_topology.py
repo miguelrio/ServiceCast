@@ -149,6 +149,9 @@ def find_one(data_dir, pattern, role):
     if not paths:
         log(f"Missing data file {pattern} in {data_dir}; run fetch_location_data.sh first.")
         sys.exit(1)
+    if len(paths) > 1:
+        # e.g. a second DB-IP month after fetching again in a new month
+        log(f"Several files match {pattern}; using the last, {os.path.basename(paths[-1])}")
     return provenance.use(paths[-1], role)
 
 
@@ -672,6 +675,7 @@ def main():
     ap.add_argument("--single-pop-internal-delay", type=float, default=1.5,
                     help="internalDelayMs of single-router ASes (default 1.5)")
     args = ap.parse_args()
+    provenance.options(args)
     t0 = time.perf_counter()
 
     if os.path.abspath(args.output) == os.path.abspath(args.as_rel):

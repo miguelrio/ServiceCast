@@ -35,6 +35,7 @@ def main():
     ap.add_argument("--delay-ms", type=float, default=10.0,
                     help="access link delay in ms (default 10)")
     args = ap.parse_args()
+    provenance.options(args)
 
     candidates = []  # (clientCount, router id, router label)
     max_id = -1

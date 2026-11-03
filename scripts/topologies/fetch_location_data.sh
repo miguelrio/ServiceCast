@@ -17,10 +17,12 @@ cd "$DIR"
 
 MANIFEST=$DIR/SOURCES.tsv
 [ -s "$MANIFEST" ] || printf '# file\turl\tfetched (UTC)\thow\n' > "$MANIFEST"
-# record FILE URL HOW: add FILE's entry to SOURCES.tsv unless it has one.
+# record FILE URL HOW: add FILE's entry to SOURCES.tsv. A download always
+# adds one (the scripts take the last entry); a file already here only if
+# it has none.
 record() {
   local name; name=$(basename "$1")
-  grep -q "^$name	" "$MANIFEST" && return 0
+  [ "$3" != download ] && awk -F'\t' -v n="$name" '$1 == n {f = 1} END {exit !f}' "$MANIFEST" && return 0
   local when; when=$([ "$3" = download ] && date -u +%Y-%m-%d || date -u -r "$1" +%Y-%m-%d)
   printf '%s\t%s\t%s\t%s\n' "$name" "$2" "$when" "$3" >> "$MANIFEST"
 }
