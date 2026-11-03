@@ -24,6 +24,8 @@ Usage:
 import argparse
 import sys
 
+import provenance
+
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -38,6 +40,8 @@ def main():
     max_id = -1
     node = None
     last = None
+    provenance.use(args.input, "topology")
+    step = provenance.StepInserter(provenance.step_text(__file__, provenance.DEFAULT_DATA_DIR))
     with open(args.input, encoding="utf-8", errors="surrogateescape") as fin, \
          open(args.output, "w", encoding="utf-8", errors="surrogateescape") as fout:
         # copy every line except the last (the graph's closing "]"), which is
@@ -45,6 +49,7 @@ def main():
         for line in fin:
             if last is not None:
                 fout.write(last)
+            fout.write(step.before(line))
             last = line
             s = line.strip()
             if s == "node [":

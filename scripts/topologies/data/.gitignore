@@ -1,0 +1,4 @@
+# Downloaded input data is never committed; see README.md.
+*
+!.gitignore
+!README.md

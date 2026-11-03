@@ -42,6 +42,7 @@ import numpy as np
 
 from build_caida_topology import Gazetteer, log
 from place_servers import Topology, load_users
+import provenance
 
 CLIENT_LINE = re.compile(r"^\s*clientCount\s")
 
@@ -98,8 +99,11 @@ def main():
         in_router[start] += 1
         in_router[end + 1] -= 1
     in_router = np.cumsum(in_router)[:-1].astype(bool)
+    step = provenance.StepInserter(provenance.step_text(
+        __file__, args.data_dir, summary={"taggedRouters": len(counts), "clients": sum(counts.values())}))
     with open(args.output, "w") as f:
         for i, line in enumerate(topo.lines):
+            f.write(step.before(line))
             if i in insert_at:
                 f.write(insert_at[i])
             if in_router[i] and CLIENT_LINE.match(line):

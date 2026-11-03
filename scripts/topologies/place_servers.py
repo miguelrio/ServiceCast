@@ -63,6 +63,7 @@ from scipy.spatial import cKDTree
 
 from gml_lines import graph_attrs, observed_cones_path, parse_gml
 from build_caida_topology import Gazetteer, gml_value, haversine_km, load_peeringdb, log, to_xyz
+import provenance
 import providers
 from providers import CDN_AS, CLOUD_AS
 
@@ -119,6 +120,8 @@ class Topology:
         self.lines, nodes, edges, self.node_blocks = parse_gml(path)
         self.path = path
         self.graph_attrs = graph_attrs(self.lines)
+        self.provenance = provenance.earlier_steps(self.lines)
+        provenance.use(path, "topology")
         drop = {nid for nid, a in nodes.items() if a.get("type") == "server"}
         self.nodes = {nid: a for nid, a in nodes.items() if nid not in drop}
         self.edges = [e for e in edges if e.get("type") not in ("hosts", "demand")
@@ -187,7 +190,7 @@ class Scenario:
         }
         self.new_edges.append((sid, router, "hosts", self.delay(sid, router)))
 
-    def write(self, path):
+    def write(self, path, data_dir, summary=None):
         attrs = dict(self.t.graph_attrs)
         cones = observed_cones_path(self.t.path, attrs)
         if cones:
@@ -197,6 +200,7 @@ class Scenario:
             f.write("graph [\n  directed 0\n")
             for k, v in attrs.items():
                 f.write(f"  {k} {gml_value(v)}\n")
+            f.write(provenance.block(__file__, data_dir, self.t.provenance, summary=summary))
             for nid in list(self.t.nodes) + list(self.new_nodes):
                 f.write(f"  node [\n    id {nid}\n")
                 for k, v in self.attrs(nid).items():
@@ -236,7 +240,7 @@ def load_users(data_dir, topo, gaz, min_users=1000, non_eyeball_types=NON_EYEBAL
         sys.exit(1)
     row = re.compile(r'^\s*\[\d+,"AS(\d+)",".*",".*>([A-Z]{2})</a>",(\d+),')
     rows = []
-    with open(path[-1], encoding="latin-1") as f:
+    with open(provenance.use(path[-1], "apnic-aspop"), encoding="latin-1") as f:
         for line in f:
             hit = row.match(line)
             if hit:
@@ -404,7 +408,9 @@ def main():
             log(f"N={n} ({scenario}): {exc}")
             sys.exit(1)
         path = f"{args.output_prefix}_{n}.gml"
-        sc.write(path)
+        provenance.use(providers.__file__, "providers")
+        sc.write(path, args.data_dir, {"servers": n, "embeddedServers": sum(1 for s in sites if s[3]),
+                                       "hostAses": len({s[0] for s in sites}), "metros": len({s[1] for s in sites})})
         mean_km, median_km = coverage_km(gaz, [s[1] for s in sites], metro_users)
         ops = collections.Counter("access ISPs" if op.startswith("AS") else op + (" (embedded)" if emb else "")
                                   for _, _, op, emb in sites)

@@ -94,6 +94,8 @@ def graph_attrs(lines):
             break
         if s.endswith("["):
             depth += 1
+        elif s == "]":
+            depth -= 1  # end of a nested list such as provenance [ ... ]
         elif depth == 1:
             m = kv_re.match(line)
             if m and m.group(1) != "directed":

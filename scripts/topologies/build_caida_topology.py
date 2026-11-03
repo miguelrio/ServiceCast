@@ -122,6 +122,7 @@ import zipfile
 import numpy as np
 from scipy.spatial import cKDTree
 
+import provenance
 import providers
 from gml_lines import read_cones
 
@@ -143,12 +144,12 @@ def log(msg):
     print(msg, file=sys.stderr, flush=True)
 
 
-def find_one(data_dir, pattern):
+def find_one(data_dir, pattern, role):
     paths = sorted(glob.glob(os.path.join(data_dir, pattern)))
     if not paths:
         log(f"Missing data file {pattern} in {data_dir}; run fetch_location_data.sh first.")
         sys.exit(1)
-    return paths[-1]
+    return provenance.use(paths[-1], role)
 
 
 def to_xyz(lat, lon):
@@ -172,7 +173,7 @@ class Gazetteer:
 
     def __init__(self, data_dir, metro_pop, metro_radius_km):
         self.countries = {}  # iso2 -> (name, continent)
-        with open(find_one(data_dir, "countryInfo.txt"), encoding="utf-8") as f:
+        with open(find_one(data_dir, "countryInfo.txt", "geonames-countries"), encoding="utf-8") as f:
             for line in f:
                 if line.startswith("#"):
                     continue
@@ -183,7 +184,7 @@ class Gazetteer:
         names, ccs, lats, lons, pops = [], [], [], [], []
         self.by_name = {}  # (cc, lower name) -> city idx, primary/ascii names
         by_alt = {}  # (cc, lower alternate name) -> city idx
-        with zipfile.ZipFile(find_one(data_dir, "cities15000.zip")) as z:
+        with zipfile.ZipFile(find_one(data_dir, "cities15000.zip", "geonames-cities")) as z:
             with z.open("cities15000.txt") as raw:
                 for line in io.TextIOWrapper(raw, encoding="utf-8"):
                     c = line.rstrip("\n").split("\t")
@@ -261,7 +262,7 @@ class Gazetteer:
 def load_peeringdb(data_dir, gaz):
     """Per AS: Counter of metro -> number of facilities, set of IXP metros,
     and PeeringDB network type; and Counter of metro -> number of IXPs."""
-    path = find_one(data_dir, "peeringdb_2_dump_*.json")
+    path = find_one(data_dir, "peeringdb_2_dump_*.json", "peeringdb")
     with open(path, encoding="utf-8") as f:
         d = json.load(f)
 
@@ -313,7 +314,7 @@ def load_geoip(data_dir, gaz, wanted_asns):
     Nested prefixes are counted for each origin (a /16 also gets credit for
     a more-specific /24 announced by someone else); multi-origin prefixes
     are split evenly between their origins."""
-    dbip_path = find_one(data_dir, "dbip-city-lite-*.csv.gz")
+    dbip_path = find_one(data_dir, "dbip-city-lite-*.csv.gz", "dbip")
     starts, ends, lats, lons = [], [], [], []
     with gzip.open(dbip_path, "rt", encoding="utf-8") as f:
         for row in csv.reader(f):
@@ -332,7 +333,7 @@ def load_geoip(data_dir, gaz, wanted_asns):
     range_metro = gaz.snap(uniq[:, 0], uniq[:, 1])[inv.ravel()]
     log(f"DB-IP: {len(starts)} IPv4 ranges, {len(uniq)} distinct locations ({os.path.basename(dbip_path)})")
 
-    pfx_path = find_one(data_dir, "*.pfx2as.gz")
+    pfx_path = find_one(data_dir, "*.pfx2as.gz", "pfx2as")
     p_start, p_end, p_as, p_frac = [], [], [], []
     with gzip.open(pfx_path, "rt") as f:
         for line in f:
@@ -383,7 +384,8 @@ def load_geoip(data_dir, gaz, wanted_asns):
 
 def load_rir_countries(data_dir):
     starts, counts, ccs = [], [], []
-    for path in glob.glob(os.path.join(data_dir, "delegated-*-extended-latest")):
+    for path in sorted(glob.glob(os.path.join(data_dir, "delegated-*-extended-latest"))):
+        provenance.use(path, "rir")
         with open(path, encoding="utf-8", errors="replace") as f:
             for line in f:
                 c = line.split("|")
@@ -440,7 +442,7 @@ def load_tier1_pops(path, gaz):
     e.g. Quincy WA); otherwise the city name is looked up. Cities that are
     still not found are reported and skipped."""
     out, operator, missed = collections.defaultdict(set), {}, []
-    with open(path, encoding="utf-8") as f:
+    with open(provenance.use(path, "tier1-pops"), encoding="utf-8") as f:
         for row in csv.DictReader(f):
             operator[row["asn"]] = row["operator"]
             if row.get("lat") and row.get("lon"):
@@ -463,9 +465,10 @@ def load_as_orgs(data_dir):
     paths = sorted(glob.glob(os.path.join(data_dir, "as2org", "*.as-org2info.txt.gz")))
     if not paths:
         log("No CAIDA AS-to-organisation file in data/as2org/; siblings come from tier1_pops.csv only.")
+        provenance.absent("caida-as2org", "no data/as2org/*.as-org2info.txt.gz; siblings from tier1_pops.csv only")
         return {}
     org, fmt = {}, []
-    with gzip.open(paths[-1], "rt", encoding="utf-8", errors="replace") as f:
+    with gzip.open(provenance.use(paths[-1], "caida-as2org"), "rt", encoding="utf-8", errors="replace") as f:
         for line in f:
             if line.startswith("# format:"):
                 fmt = line[len("# format:"):].strip().split("|")
@@ -540,7 +543,7 @@ def load_as_rel(path, exclude=frozenset()):
     with their links before the check for a provider path to the clique."""
     clique, links, ases = set(), [], set()
     has_customers, excluded = set(), set()
-    with open(path) as f:
+    with open(provenance.use(path, "caida-as-rel")) as f:
         for line in f:
             if line.startswith("# input clique:"):
                 clique = set(line.split(":", 1)[1].split())
@@ -596,8 +599,8 @@ def load_observed_cones(data_dir, as_rel_path, ppdc_path=None):
         if not date:
             log(f"Cannot tell the date of {as_rel_path}; pass --ppdc.")
             sys.exit(1)
-        ppdc_path = find_one(data_dir, f"caida_ppdc/{date.group(0)}.ppdc-ases.txt*")
-    cones = read_cones(ppdc_path)
+        ppdc_path = find_one(data_dir, f"caida_ppdc/{date.group(0)}.ppdc-ases.txt*", "caida-ppdc")
+    cones = read_cones(provenance.use(ppdc_path, "caida-ppdc"))
     log(f"Observed customer cones: {len(cones)} ASes ({os.path.basename(ppdc_path)})")
     return cones
 
@@ -866,9 +869,14 @@ def main():
     n_inter = len(out_edges) - n_internal
 
     cones_name = re.sub(r"\.gml$", "", os.path.basename(args.output)) + ".cones.txt"
-    n_entries = write_cones(os.path.join(os.path.dirname(os.path.abspath(args.output)), cones_name), cones, as_order)
+    cones_file = os.path.join(os.path.dirname(os.path.abspath(args.output)), cones_name)
+    n_entries = write_cones(cones_file, cones, as_order)
+    provenance.use(providers.__file__, "providers")
+    summary = {"ases": len(as_order), "routers": len(out_nodes), "edges": len(out_edges),
+               "internalEdges": n_internal, "observedConeEntries": n_entries}
     with open(args.output, "w") as f:
         f.write(f'graph [\n  directed 0\n  observedCones "{cones_name}"\n')
+        f.write(provenance.block(__file__, args.data_dir, outputs=[cones_file], summary=summary))
         for i, n in enumerate(out_nodes):
             f.write(f"  node [\n    id {i}\n")
             for k, v in n.items():

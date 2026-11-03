@@ -50,6 +50,7 @@ import numpy as np
 from gml_lines import graph_attrs, observed_cones_path, parse_gml, read_cones
 from build_caida_topology import Gazetteer, gml_value, log, write_cones
 from place_servers import load_users
+import provenance
 import providers
 
 
@@ -119,8 +120,9 @@ def main():
     args = ap.parse_args()
     t0 = time.time()
 
-    lines, nodes, edges, _ = parse_gml(args.topology)
+    lines, nodes, edges, _ = parse_gml(provenance.use(args.topology, "topology"))
     attrs = graph_attrs(lines)
+    prior = provenance.earlier_steps(lines)
     cones_path = observed_cones_path(args.topology, attrs)
     if not cones_path:
         sys.exit(f"{args.topology} names no observedCones sidecar; rebuild it with build_caida_topology.py")
@@ -180,10 +182,14 @@ def main():
     attrs["subsetOf"] = os.path.basename(args.topology)
     attrs["subsetAses"] = args.ases
     attrs["subsetSeed"] = args.seed
+    summary = {"ases": len(keep_as), "routers": len(kept_routers), "otherNodes": len(keep) - len(kept_routers),
+               "edges": len(kept_edges), "observedConeEntries": n_entries}
     with open(args.output, "w") as f:
         f.write("graph [\n  directed 0\n")
         for k, v in attrs.items():
             f.write(f"  {k} {gml_value(v)}\n")
+        f.write(provenance.block(__file__, args.data_dir, prior, outputs=[os.path.join(out_dir, cones_name)],
+                                 summary=summary))
         for nid in sorted(keep):
             a = dict(nodes[nid])
             if nid in routers and "observedCone" in a:

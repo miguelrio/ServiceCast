@@ -20,7 +20,14 @@ run from the project directory, with the project's Python environment.
 ```
 
 This downloads `<DATE>.as-rel.txt` into the project directory, plus about
-260 MB into `data/`. Files that are already there are skipped.
+260 MB into `data/`. Files that are already there are skipped. Each
+file's URL and download date go in `data/SOURCES.tsv`. For a file that
+was already there, the date recorded is the file's modification time.
+DB-IP, GeoNames, the RIR files and the APNIC page are only published in
+their current version. Set `DBIP_MONTH=YYYY-MM` to pin DB-IP to a month
+that is still online. The data is not committed: see `data/README.md`.
+Every GML records its inputs, with hashes, in a `provenance` block (see
+the README).
 
 | Data | Used for |
 |---|---|

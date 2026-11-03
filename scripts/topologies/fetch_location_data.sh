@@ -2,7 +2,11 @@
 # Download the CAIDA AS-relationship file for DATE (into this directory, as
 # <DATE>.as-rel.txt) and the data build_caida_topology.py, place_servers.py
 # and add_clients.py need (into ./data). DB-IP, RIR and APNIC files are only
-# published for the current period, so those are the latest ones.
+# published for the current period, so those are the latest ones (set
+# DBIP_MONTH=YYYY-MM to pin the DB-IP month, if that month is still online).
+# Each file's URL and download date go in data/SOURCES.tsv, which the
+# scripts copy into the provenance block of the GMLs they write; for a file
+# that was already here, the date is its modification time.
 set -euo pipefail
 DATE=${1:-20260801}
 Y=${DATE:0:4}; M=${DATE:4:2}; D=${DATE:6:2}
@@ -11,11 +15,26 @@ DIR=$BASE/data
 mkdir -p "$DIR"
 cd "$DIR"
 
-get() { [ -s "$2" ] || curl -fL --retry 3 -o "$2" "$1"; }
+MANIFEST=$DIR/SOURCES.tsv
+[ -s "$MANIFEST" ] || printf '# file\turl\tfetched (UTC)\thow\n' > "$MANIFEST"
+# record FILE URL HOW: add FILE's entry to SOURCES.tsv unless it has one.
+record() {
+  local name; name=$(basename "$1")
+  grep -q "^$name	" "$MANIFEST" && return 0
+  local when; when=$([ "$3" = download ] && date -u +%Y-%m-%d || date -u -r "$1" +%Y-%m-%d)
+  printf '%s\t%s\t%s\t%s\n' "$name" "$2" "$when" "$3" >> "$MANIFEST"
+}
+get() {
+  if [ -s "$2" ]; then record "$2" "$1" mtime
+  else curl -fL --retry 3 -o "$2" "$1" && record "$2" "$1" download; fi
+}
 
+AS_REL_URL="https://publicdata.caida.org/datasets/as-relationships/serial-1/$DATE.as-rel.txt.bz2"
 if [ ! -s "$BASE/$DATE.as-rel.txt" ]; then
-  curl -fL --retry 3 "https://publicdata.caida.org/datasets/as-relationships/serial-1/$DATE.as-rel.txt.bz2" \
-    | bunzip2 > "$BASE/$DATE.as-rel.txt"
+  curl -fL --retry 3 "$AS_REL_URL" | bunzip2 > "$BASE/$DATE.as-rel.txt"
+  record "$BASE/$DATE.as-rel.txt" "$AS_REL_URL" download
+else
+  record "$BASE/$DATE.as-rel.txt" "$AS_REL_URL" mtime
 fi
 
 # Customer cones CAIDA observes on BGP paths, for compare_customer_cones.py.
@@ -29,7 +48,7 @@ get "https://publicdata.caida.org/datasets/as-organizations/$DATE.as-org2info.tx
        echo "No AS2Org file for $DATE; put the nearest one from publicdata.caida.org/datasets/as-organizations/ in data/as2org/"; }
 get "https://publicdata.caida.org/datasets/peeringdb/$Y/$M/peeringdb_2_dump_${Y}_${M}_${D}.json" "peeringdb_2_dump_${Y}_${M}_${D}.json"
 get "https://publicdata.caida.org/datasets/routing/routeviews-prefix2as/$Y/$M/routeviews-rv2-${DATE}-1200.pfx2as.gz" "routeviews-rv2-${DATE}-1200.pfx2as.gz"
-DBIP_MONTH=$(date +%Y-%m)
+DBIP_MONTH=${DBIP_MONTH:-$(date +%Y-%m)}
 get "https://download.db-ip.com/free/dbip-city-lite-${DBIP_MONTH}.csv.gz" "dbip-city-lite-${DBIP_MONTH}.csv.gz"
 get "https://download.geonames.org/export/dump/cities15000.zip" cities15000.zip
 get "https://download.geonames.org/export/dump/countryInfo.txt" countryInfo.txt
