@@ -16,6 +16,8 @@ _NOTE = r"(?:\([^)]*\))?"
 _TIMESTAMP_LINE_RE = re.compile(rf"^\s*{_NUM}:\s+")
 _PARAMETER_RE = re.compile(r"^\s*(?P<key>[^=]+?)\s*=\s*(?P<value>.*?)\s*$")
 _HEADER_END_RE = re.compile(r"^\s*size_scale_factor\s*=\s*.+?\s*$")
+# the wall-clock prefix scripts/memprobe.py adds to every line, e.g. "[   12.3s] "
+_MEMPROBE_STAMP_RE = re.compile(r"^\[\s*\d+(?:\.\d+)?s\] ")
 
 GAP_KEYWORDS = frozenset({"OUTCOME_GAP", "DECISION_GAP", "STALENESS_ERR"})
 FIB_STABILITY_KEYWORDS = frozenset({
@@ -116,6 +118,17 @@ def _parse_parameter_value(value: str):
             return value
 
 
+def strip_memprobe_stamps(lines: Iterable[str]) -> Iterator[str]:
+    """Yield the lines without the "[   12.3s] " prefix memprobe.py adds, so
+    a memprobe log parses like the simulator's own output."""
+    for line in lines:
+        if line.startswith("["):
+            match = _MEMPROBE_STAMP_RE.match(line)
+            if match:
+                line = line[match.end():]
+        yield line
+
+
 def parse_log_header(
     lines: Iterable[str], filename: str | None = None, *, warn: bool = False
 ) -> tuple[dict[str, object] | None, Iterator[str]]:
@@ -124,7 +137,7 @@ def parse_log_header(
     The caller sets ``warn`` only for user-supplied files. On an absent or
     malformed header, all consumed input is restored to the returned iterator.
     """
-    source = iter(lines)
+    source = strip_memprobe_stamps(lines)
     consumed: list[str] = []
 
     for line in source:

@@ -1744,26 +1744,14 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             False
 
     def weight_edge(self, dest):
-        """What is the weight of the edge from this router to dest"""
-        if isinstance(dest, str):
-            # dest is string
-            if (dest in self.outgoing_ports):
-                link =  self.outgoing_ports[dest].out
-                return link.propagation_delay
-            else:
-                return 0
+        """Propagation delay of the link from this router to dest (a node
+        name, Router or Host); 0 if dest is not a neighbour."""
+        # Nov 2026: one lookup by name for routers and hosts. Before, a Host
+        # object always gave 0 (only names and Router objects were looked up).
+        name = dest if isinstance(dest, str) else getattr(dest, "id", lambda: None)()
+        port = self.outgoing_ports.get(name)
+        return port.out.propagation_delay if port is not None else 0
 
-        elif isinstance(dest, Router):
-            # dest is Router
-            if (dest.id() in self.outgoing_ports):
-                link =  self.outgoing_ports[dest.id()].out
-                return link.propagation_delay
-            else:
-                return 0
-
-        else:
-            return 0
-        
     def degree(self):
         """Degree of Router"""
         return len(self.outgoing_ports)

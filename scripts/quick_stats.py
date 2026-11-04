@@ -190,6 +190,14 @@ def _format_fib_stability_summary(stats):
     )
 
 
+def summary_missing(stats):
+    """True when the update and FIB counts can only come from the end-of-run
+    SUMMARY_ lines (verbose < 0 for updates, < 1 for FIB) and the log has
+    none, e.g. a run still in progress or stopped early."""
+    level = stats.get("log_verbose_level")
+    return not stats.get("has_summary") and level is not None and level < 1
+
+
 def format_stats(stats, include_fib_stability=True):
     total = stats["total"]
     equal = stats["equal"]
@@ -223,13 +231,32 @@ def format_stats(stats, include_fib_stability=True):
         mean_diff = float(np.mean(different_diffs)) if different_diffs else 0.0
         mean_diff_including_zero = float(np.mean(diffs)) if diffs else 0.0
 
-    fib_stability_line = _format_fib_stability_summary(stats) if include_fib_stability else ""
+    # without the end-of-run SUMMARY_ lines a low-verbosity log has no update
+    # or FIB counts at all; say so rather than print zeros
+    missing = summary_missing(stats)
+    level = stats.get("log_verbose_level")
+    messages = announces + withdraws
+    if missing and level < 0:
+        update_line = "server update events and messages: not available (no end-of-run summary: run incomplete?)\n"
+    else:
+        announce_pct = announces / messages * 100 if messages else 0.0
+        withdraw_pct = withdraws / messages * 100 if messages else 0.0
+        update_line = (
+            f"server update events: {updates:,}; "
+            f"total update messages: {messages:,} ({announces:,} [{announce_pct:.3g}%] announcements, {withdraws:,} [{withdraw_pct:.3g}%] withdrawals)\n"
+        )
+
+    if not include_fib_stability:
+        fib_stability_line = ""
+    elif missing:
+        fib_stability_line = "FIB stability: not available (no end-of-run summary: run incomplete?)\n"
+    else:
+        fib_stability_line = _format_fib_stability_summary(stats)
 
     return (
         f"requests: {total:,}; SAME: {same:,}; EQUAL: {equal:,}; DIFFERENT: {different:,}; BLOCKED: {blocked:,}; NOT_FORWARDED: {not_forwarded:,}\n"
         f"accuracy: {accuracy * 100:.4g}%; blocked: {blocked_rate * 100:.4g}% (unavoidable: {blocked_unavoidable_rate * 100:.4g}%, avoidable: {blocked_avoidable_rate * 100:.4g}%); utility gap: max: {max_diff * 100:.4g}%; mean: {mean_diff_including_zero * 100:.4g}%; mean conditional: {mean_diff * 100:.4g}%\n"
-        f"server update events: {updates:,}; "
-        f"total update messages: {(announces + withdraws):,} ({announces:,} [{(announces/(announces + withdraws) * 100):.3g}%] announcements, {withdraws:,} [{(withdraws/(announces + withdraws) * 100):.3g}%] withdrawals)\n"
+        f"{update_line}"
         f"{fib_stability_line}"
     )
 
@@ -323,18 +350,17 @@ def main():
             print(f"WARNING: {path}: {name}: counted from log lines {counted} "
                   f"!= SUMMARY_ line {summarised}", file=sys.stderr)
 
-        log_verbose_level = stats.get("log_verbose_level")
         # FIB counts are available below level 1 only from the SUMMARY_ lines
-        log_is_low_verbosity = (log_verbose_level is not None and log_verbose_level < 1
-                                and not stats.get("has_summary"))
+        log_is_low_verbosity = summary_missing(stats)
         include_fib_stability = not (not args.verbose and log_is_low_verbosity)
 
         if show_filename:
             print(path)
-        if args.verbose and log_is_low_verbosity:
+        if log_is_low_verbosity:
+            unavailable = "update and FIB counts are" if stats["log_verbose_level"] < 0 else "FIB counts are"
             print(
-                f"The verbose level for {path} is less than 1 so FIB stability, "
-                "Decision gap, and Staleness error stats will not be calculated correctly."
+                f"Note: {path} has no end-of-run SUMMARY_ lines (run incomplete?): "
+                f"statistics cover the run so far; {unavailable} not available."
             )
         print(format_stats(stats, include_fib_stability=include_fib_stability), end="")
         if args.verbose:

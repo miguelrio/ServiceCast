@@ -150,7 +150,13 @@ def topology_setup():
             _nall = len(clients)
             clients = clients[:int(os.environ.get("NCLIENTS_USE"))]
             print(f"NCLIENTS_USE: using first {len(clients)} of {_nall} clients")
-        print(f"clients generating requests ({len(clients)}): {clients}")
+        if Verbose.level <= 0:
+            shown_clients = clients[:10]
+            remaining_clients = len(clients) - len(shown_clients)
+            suffix = f" (+{remaining_clients} more)" if remaining_clients else ""
+            print(f"clients generating requests ({len(clients)}): {shown_clients}{suffix}")
+        else:
+            print(f"clients generating requests ({len(clients)}): {clients}")
         # arrival_lambda is the mean inter-request time (seconds) of a single
         # Poisson process across all clients (each request goes to a random
         # client), so the total rate is 1/arrival_lambda whatever the client

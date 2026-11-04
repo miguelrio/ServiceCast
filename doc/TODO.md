@@ -1,104 +1,104 @@
-# Bugs
+# Technical notes for open to-do items
 
-#### GML loader ignores `clientCount`
+Background for open items: code locations, measurements and options.
+Status, owners and priorities are tracked in the team's master to-do
+list; each heading carries that list's ID. Delete a section when its
+item is resolved (git keeps the history).
 
-The topology generator writes one `client_<City>` node per city with
-a `clientCount` attribute. `Network.from_graph` makes one `Client` per
-node and ignores the count. On
-`dg-1000as-100servers-100clients-with-routes` there are 49 client
-nodes, and their counts add up to 91, not the 100 requested, so the
-generator is short too. Total load is unaffected (`TAU` sets the
-network-wide request rate), but the number of request sources is.
-Decide whether the loader should create `clientCount` clients, or the
-generator should write one node per client, and fix the generator's
-total.
+## Protocol behaviour
 
-Postponed (2026-10-14) until we have aligned with Miguel on the next
-version of the topology generator.
+#### T-12: Entries freed by a withdrawal are not announced until the next decision
 
-#### `run_simulation_sweep_log.py` has no `import subprocess`
+When an announcement arrives, the router reruns `decide_announcements`
+and announces its non-dominated set. When a withdrawal arrives
+(`incoming_server_metrics_packet_withdraw`), it deletes the entry and
+passes the withdrawal on, but does not decide again. An entry that was
+dominated only by the withdrawn one is now non-dominated, yet it is not
+announced until the next announcement reaches that router. Until then
+routers downstream do not see that server. Measured on the 1K-router,
+100-server topology at full load (100 s): 545 of 1,000 routers held one
+such entry at the end of the run.
 
-So the sweep results always record the git commit as "unknown". A
-one-line fix, left for Wes (his script).
+Proposal: announce freed entries straight after a withdrawal. With the
+default comparators (transitive dominance) only a little work is
+needed:
 
-#### `quick_stats.py` crashes on an incomplete log
+- if the withdrawn entry was not in the router's decided set, or the
+  router has no dominated entries, nothing can change (most
+  withdrawals);
+- otherwise check only the dominated entries against the remaining
+  decided set and announce those no longer beaten.
 
-On a log from a run that was stopped early, there is no end-of-run
-`SUMMARY_SERVER_METRICS` line, so announcements + withdrawals is 0 and
-`format_stats` divides by zero (`quick_stats.py`, the "total update
-messages" line). Guard the percentages against a zero total, and say in
-the output that the summary is missing, so partial runs can still be
-inspected.
+Expected cost about 1-3% of run time (a full re-decision on every
+withdrawal would cost about 25-35%). Messages: mostly the same ones,
+sent earlier, since the next decision would announce them anyway; a few
+extra when the freed entry is dominated or changes again before that
+next decision. Margin comparators (e.g. "same within 5%") are not
+strictly transitive, so they would need a full re-decision. The change
+alters results, so measure run time, message counts and accuracy
+against the current code before adopting it.
 
+#### T-13: Count the messages `TREE_CHILDREN_ONLY` does not send
 
-# Issues
+`TREE_CHILDREN_ONLY` is mainly a simulator speed-up. As a protocol
+option it would need each router to know its neighbours' routing
+tables. With it on, a router skips a neighbour whose next hop to the
+replica is not this router (`NOT_TREE_CHILD`, logged at Verbose 2
+only). Those messages are never sent, so they are missing from
+`SUMMARY_SERVER_METRICS` and from the "total update messages" line in
+`quick_stats.py`. With it off, they are sent, counted on arrival and
+then dropped (`INVALID_ROUTE_DROPS`, which `quick_stats.py` does not
+read). Message counts from runs with the flag on and off are therefore
+not comparable.
 
-#### Scripts still use verbose -1 to mean "no logging"
+Add an end-of-run count of the messages that would have been sent,
+split into announcements and withdrawals, and report it in
+`quick_stats.py` next to the totals. Also report `INVALID_ROUTE_DROPS`
+for runs with the flag off. Getting this exact is not simple: with the
+flag off, these messages also go through the sent table (an
+announcement already sent to that neighbour is not sent again, and
+withdrawals follow the sent table). Counting the skips alone would
+over-count. Matching the flag-off count means keeping sent-table
+entries for the skipped neighbours too, which costs some of the time
+and memory the flag saves. The receiver drops these messages without
+acting on them, so they have no further effect. With the sent-table
+entries kept, the count would match the flag-off runs exactly.
 
-Verbose level -1 is now the metrics level (per-request lines plus
-end-of-run SUMMARY_ counts); silent is -2. Scripts written before
-the change pass -1 to mean "no logging" and now get the metrics
-level instead: about 2% slower, and per-request lines printed to
-stdout. Results are unchanged. Wes is looking at these (2026-10-13),
-and the experiment workflow proposal will cover the sweep scripts. To
-fix (switch to -2, or decide that -1 is what they want):
+#### T-38: Announcement radius (blast radius)
 
-- `scripts/run_simulation_sweep.py`: sets `Verbose.level = -1` for its
-  in-process runs, so it will now print every request's gap lines to
-  the console.
-- `scripts/run_simulation_sweep_log.py`: its comment refers to "the
-  probe path's silent -1".
-- `scripts/measure_one.py`: "null" log mode runs at -1 and says event
-  counters are unavailable there. They are now available from the
-  SUMMARY_ lines (or directly from `Router.recv_server_metric`,
-  `Router.fib_actions` and `Server.server_metrics_created`).
-- `scripts/run_scaling_benchmark.py` and
-  `scripts/setup/constants_scaling.py`: pair each run with a
-  "verbose -1 / null" run to measure compute cost, and sweep
-  `(-1, 0, 1, 2, 3)`; add -2 for the compute-only baseline.
-- Any local benchmark harness that passes -1 for timing.
-- Older logs: a log made at -1 before the change contains no
-  per-request lines; at 0 it lacks DECISION_GAP / STALENESS_ERR.
-  `quick_stats.py` handles both.
+The prototype in `Router.incoming_server_metrics_packet` is commented
+out (Oct 2026). It computed an `announcement_distance` for every
+announcement at every router but only printed it (verbose >= 2):
+nothing limited propagation. It was costly because
+`Network.average_normalised_load()` loops over every server, so the
+cost grew with servers x messages: about 21% of simulation time on
+CAIDA with 1000 servers and 50 clients. It also used global state
+(average load, total capacity, network diameter) that a router would
+not have. A real version should be O(1) per message and use only
+local information. Options:
+- the origin server computes the radius from its own load and
+  capacity and puts it in the announcement (a budget in ms or hops,
+  like a TTL); each router only compares the propagation time so far
+  with it;
+- routers estimate the "average load" and "available capacity"
+  terms from their own RIB entries, kept as running totals updated
+  when an entry is added, changed or removed;
+- the diameter term: the origin's or the router's own largest delay
+  (its eccentricity), computed once at start-up.
 
-#### Unreachable servers with valley-free routing
+#### T-44: Client request forwarding
 
-Owner: Miguel (2026-10-13). Investigate why valley-free routing makes
-servers unreachable, then decide between relaxing the rules and
-constraining server placement.
+Currently we have hop-by-hop forwarding,
+so each Router will check which is the best for the service name.
 
-Valley-free (Gao-Rexford) routing leaves some router/server pairs with
-no valid path. On the CAIDA topology
-(`caida_routing_valley_free-v2-seconds-nodemand.gml`) there are 37,710
-such pairs, and one client access router (`10133-p0`, `client_Istanbul`)
-cannot reach 20 of the 100 servers.
+An alternative is to change the service name to an address
+at the first Router.
 
-Routing copes with this: a router only chooses among servers it has a
-route to, and a request arriving at a router with no FIB entry for the
-service is dropped (`Router.client_request_packet` logs
-`REQUEST_NOT_FORWARDED`, at verbose -1 and above). The ground-truth "best server"
-calculations in `Network.py` (`inject_snapshot_optimal_utility` and the
-arrival-time `OUTCOME_GAP` calculation) looked up the latency to *every*
-server and crashed with a `KeyError` on the first unreachable one.
+## Configuration and defaults
 
-**Workaround (2026-10-08):** both calculations skip servers with no
-latency-table entry, so "best" means the best *reachable* server, the
-same set the router chooses from.
+#### T-17: Default link delay is hard-coded and inconsistent
 
-Still to decide:
-- Rethink the valley-free restrictions: are they too strict for this
-  use, e.g. should a router fall back to a non-valley-free path?
-- Only place servers (and clients) where every client can reach every
-  server, or report unreachable pairs when a topology is generated.
-- Should results report how many requests had a reduced server set?
-
-#### Default link delay is hard-coded and inconsistent
-
-Owner: Miguel (2026-10-13). A plan is agreed for the default delay and
-for ms vs s; Miguel fixes them in the next version of the topology
-generator, after further discussion with the group.
-
-Update: a link touching an `Internal 0` node (every server and client
+A link touching an `Internal 0` node (every server and client
 attachment) now uses its GML `delayMs` when given and not 0, else
 `Graph.default_server_attachment_delay_ms` (1 ms) or
 `Graph.default_client_attachment_delay_ms` (10 ms); delays are ms
@@ -174,165 +174,111 @@ Changing these changes results of the DFN, COG and toy experiments.
     ignores them (2026-10-14); the generator should stop writing them
   - the same link-weight rule everywhere
 
-#### Engine-built latency tables leave out server access links
+#### T-08: Damping uses an absolute load change
 
-Update: the routing tables no longer use `Network.weight()`; they read
-each link's delay directly, so router -> server delays and the diameter
-now include the server's access link. `Router.weight_edge` itself still
-returns 0 for a host, so any other caller of `Network.weight(router,
-host)` still gets 0.
+`Server.change_factor` (default 0.01) is compared with the change in
+load (used slots / slots). With more than 100 slots per server one
+session moves load by less than 0.01, so most changes are never
+announced (with 500 slots, about every 5th). This dominated the
+damped curves in the server-count sweep. Consider damping in units of
+slots, or scaling `change_factor` with `Server.slots`, or at least
+documenting it.
 
-`Router.weight_edge(dest)` only handles `str` and `Router`, so it
-returns 0 when `dest` is a `Host` (Server or Client). Latency-table
-paths from a router to a server therefore leave out the server's
-access link, the network diameter comes out short (by about 0.1 s with
-the usual default), and announced delays, which do include that link,
-can exceed it. The run then crashes with `MetricUtility: metric utility
-for 'delay' ... not in range 0 -> 1`. Reproduce with Cogentco, 20
-servers, 10 clients. Precomputed tables avoid this only because the
-route adders apply the engine's link rule themselves.
+#### T-32: Scripts still use verbose -1 to mean "no logging"
 
-Decided (2026-10-14): client and server links to routers must never
-have weight / latency 0; they take the default delay unless the GML
-gives one. Kept as a TODO until the experiment workflow and the
-config / `Importer` logic are resolved, since the fix
-(`isinstance(dest, (Router, Host))`, and the same rule in the route
-adders) changes the results of every engine-routed experiment.
-`Router-old.py` / `Router-dict.py` would need the same change.
+Verbose level -1 is now the metrics level (per-request lines plus
+end-of-run SUMMARY_ counts); silent is -2. Scripts written before
+the change pass -1 to mean "no logging" and now get the metrics
+level instead: about 2% slower, and per-request lines printed to
+stdout. Results are unchanged. To fix (switch to -2, or decide that
+-1 is what they want):
 
-#### Change the utility function
+- `scripts/run_simulation_sweep.py`: sets `Verbose.level = -1` for its
+  in-process runs, so it will now print every request's gap lines to
+  the console.
+- `scripts/run_simulation_sweep_log.py`: its comment refers to "the
+  probe path's silent -1".
+- `scripts/measure_one.py`: "null" log mode runs at -1 and says event
+  counters are unavailable there. They are now available from the
+  SUMMARY_ lines (or directly from `Router.recv_server_metric`,
+  `Router.fib_actions` and `Server.server_metrics_created`).
+- `scripts/run_scaling_benchmark.py` and
+  `scripts/setup/constants_scaling.py`: pair each run with a
+  "verbose -1 / null" run to measure compute cost, and sweep
+  `(-1, 0, 1, 2, 3)`; add -2 for the compute-only baseline.
+- Any local benchmark harness that passes -1 for timing.
+- Older logs: a log made at -1 before the change contains no
+  per-request lines; at 0 it lacks DECISION_GAP / STALENESS_ERR.
+  `quick_stats.py` handles both.
 
-Change utilty fn from:
+#### T-16: One global seed for every random choice
 
-    return 1 / (1 + alpha * load + (1-alpha) * delay) 
+There is no single seed setting. The `Importer` scripts take `SEED`
+from their constants file (`scripts/setup/constants_*.py`), but the
+older `experiments/main_*.py` scripts, including
+`main_precomputed_t1.py`, hard-code `seed=15112022` in each generator
+call, so running another seed needs an edited copy. Add one global
+seed (a `SEED` environment variable or command-line option, with the
+constants file as the default) that reaches everything random: server
+and client placement, server load generators, client request
+generation (arrival times, sizes and which client sends each request)
+and any other draws (`gen2` in `multi_client_event_generator` uses
+seed + 1). Nothing should use numpy's unseeded global generator;
+`multi_client_event_generator` did until its client choice was moved
+to `gen`.
 
-to
+#### T-16: Set the routing policy through `Importer`
 
-    return 1 - (alpha * load + (1-alpha) * delay)
+To do with the `Importer` work. `Routing.policy` (`"valley_free"`, the
+default, or `"shortest"`) can only be set in Python before
+`calculate_forwarding_tables()`. Add `("Routing.policy",
+"ROUTING_POLICY")` to the `Importer` mappings, and a `ROUTING_POLICY`
+environment variable to `main_precomputed_t1.py` (like `TAU`). Also
+reject unknown values in `src/Routing.py`: today only `"shortest"` is
+checked, so a typo silently gives valley-free routing
+(`c2p_orientation` already raises). The start-up message prints
+`valley_free` even when the topology has no `c2p`/`p2p` links, where
+the routes are plain shortest-delay paths; say so in the message. Also
+warn when a topology has `p2p` links but no `c2p` links: valley-free
+routing then leaves many router-server pairs unreachable (a route
+learned from a peer is never passed to another peer).
 
-#### Announcement Radius
+#### T-16: Set utility functions through `Importer`
 
-Still to be refined.
-Draft formula not correct.
+`Importer` cannot set
+`MetricUtility.metric_utility_fn['load']` / `['delay']` or
+`MetricUtility.metric_scale['load']`, because they are dict entries
+(see the comment in `src/Importer.py`). `main_dfn_2.py` uses a
+logarithmic load utility and a geometric user utility; configs run
+through `Importer` get the linear defaults. Also decide which
+functions are canonical.
 
-The prototype in `Router.incoming_server_metrics_packet` is commented
-out (Oct 2026). It computed an `announcement_distance` for every
-announcement at every router but only printed it (verbose >= 2):
-nothing limited propagation. It was costly because
-`Network.average_normalised_load()` loops over every server, so the
-cost grew with servers x messages: about 21% of simulation time on
-CAIDA with 1000 servers and 50 clients. It also used global state
-(average load, total capacity, network diameter) that a router would
-not have. A real version should be O(1) per message and use only
-local information. Options:
-- the origin server computes the radius from its own load and
-  capacity and puts it in the announcement (a budget in ms or hops,
-  like a TTL); each router only compares the propagation time so far
-  with it;
-- routers estimate the "average load" and "available capacity"
-  terms from their own RIB entries, kept as running totals updated
-  when an entry is added, changed or removed;
-- the diameter term: the origin's or the router's own largest delay
-  (its eccentricity), computed once at start-up.
+#### T-16: `Utility.alpha` is hard-coded in `main_precomputed_t1.py`
 
+It is fixed at 0.5, with no environment variable like `TAU` or
+`SERVER_SLOTS`, so testing another alpha needs an edited copy. Add an
+`ALPHA` variable. Note that at alpha 0.5 a router only removes a FIB
+entry when a server is both full and at the network's maximum delay,
+so normal runs never exercise `REMOVED`; validating the FIB counters
+needed alpha 1.0, `TAU=0.1`, `SERVER_SLOTS=1`.
 
-#### Client Request Forwarding
+#### T-16: `TREE_CHILDREN_ONLY` through `Importer` is untested
 
-Currently we have hop-by-hop forwarding,
-so each Router will check which is the best for the service name.
+The flag is mapped in `src/Importer.py`, but only the
+`main_precomputed_t1.py` environment variable (`TREE_CHILDREN_ONLY=1`)
+has been tested. Other experiment scripts have no switch for it.
 
-An alternative is to change the service name to an address
-at the first Router.
+#### T-16: Scripts can silently run another checkout's code
 
-#### Load values
+The experiment and analysis scripts import from whatever `src/` is on
+`PYTHONPATH`. If the shell profile points at one checkout (e.g. the
+main `ServiceCast`), running a script in another (a worktree such as
+`ServiceCast-refactor`) silently mixes that checkout's experiment
+script with the other's simulator. Either have scripts put their own
+repository's `src/` (and `scripts/`) first on `sys.path`, or document
+running with `PYTHONPATH=src:scripts` from the repository root.
 
-**DONE**
-- Load values are not in range 0 -> 1.
-- Currently based on slot.
-
-#### Delay values
-
-**DONE**
-- Map delay from actual values into range 0 -> 1.
-
-- Added to `Network.py`  `get_delay_utility()` function
-  which calculates: delay / network_diameter()
-
-
-#### Utility function value
-
-**DONE**
-- Ensure Utility is in range 0 -> 1.
-- Check before returning from Utility.forwarding_utility_fn
-
-
-**DONE**  
-The Utility function has been changed so that:
-- 0 is the worst value
-- 1 is the best value
-- Output is always in range (0, 1]
-
-Changes made:
-- `Utility.py`: Changed `forwarding_utility1` to return `1 / (1 + alpha * load + (1-alpha) * delay)`
-- `Router.py`: Changed comparison from `<` to `>`, initial `best_utility` from `-inf` to `-1`, and added initialization of `best_neighbour` and `servicename`
-- `Network.py`: Added `reverse=True` to sort for maximum utility
-- `main_ls_lc.py`, `main_sm_cm.py`, `main.py`: Updated custom utility functions
-- `Variables.md`: Updated documentation examples
-
-
-
-####  Server metrics update
-
-**DONE**
-- Servers should have load_utilty in range 0 -> 1.
-- We can divide load by total slots 
-
-- Adjust load_up_fn and load_down_fn to be slots_up_fn and slots_down_fn 
-- Make load derived from slots.
-
-Changes made:
-- Server keeps track of slots used in self.used_slots
-- The calculate load function = used_slots / slots
-- Changed calculate_load_difference()
-
-**DONE**
-Fixed issue when there are no more slots in the whole system.
-
-# TODO
-
-## Performance
-
-Figures from the October 2026 scaling runs
-(`results/precomputed-scaling-20261008/`).
-
-Accepted (2026-10-13): the limits are understood and no optimisation is
-planned for now. Long runs go in parallel on other machines, including
-the two testbed servers once they are installed.
-
-#### Memory per router
-
-About 100 KB per router: 7.9 GB at 91K routers, about 35 GB projected
-at 400K. A large share at 91K is the ~9M precomputed routing-table
-entries held as Python dicts. A more compact store (arrays indexed by
-server, or nextHop only with delays computed on demand) would let
-more 100K runs share the Stanford server (196 GB allows about 20
-today).
-
-#### Profile memory on a large run
-
-Nobody has profiled what grows during a run. The 91K run kept growing
-to 7.8 GB. Candidates: per-router RIB / FIB / sent tables, packets
-queued in the simulation, per-request records kept for metrics.
-
-#### Remaining setup time
-
-After the `Graph.py` lookup fix, loading the full CAIDA GML takes
-147 s (was 834 s), but `Network.from_graph` still takes about 120 s
-at 91K. The routing tables are now computed with scipy in about 10 s
-at 91K with 100 servers (the old pure-Python Dijkstra took 2-5 minutes
-on the 16-server, 1.2K-node sweep topology).
-
-#### Free the parsed graph once the network is built
+#### T-16: Free the parsed graph once the network is built
 
 To do in the new `main.py`. After `Network.from_graph()` nothing uses
 the parsed `Graph` again (the `Network` keeps its own copies of node
@@ -355,160 +301,19 @@ with a stripped GML (the graph is ~0.9 GiB, and only part of freed
 memory is reused); 1.8 GiB (7.9 -> 6.1 GiB peak) at 100 servers with
 a GML that still carries routing tables, where the graph is larger.
 
-#### Possible speed-ups from the CAIDA x 1000 profile
+#### T-20: Change the utility function
 
-Not planned; kept for if we need more speed later. From a profile of
-CAIDA with 1000 servers, 50 clients, 60 s simulated,
-`TREE_CHILDREN_ONLY=1` (Oct 2026): 35.5M load messages, simulation
-19,700 s under the profiler. The announcement-distance prototype (21%)
-has already been commented out (see "Announcement Radius").
-- `announce_metrics` (~15% of simulation time): for every update it
-  loops over all of the router's neighbours, calling
-  `neighbour_destination()` twice and the neighbour's `next_hop_to()`
-  for each (1.18 billion and 567M calls). (a) Cache each router's
-  `(neighbour, destination, is_host, destination FIB)` list, updated
-  in `add_neighbour`: same decisions, about 3-5%. (b) Precompute each
-  router's tree children per server (routing is fixed), so the loop
-  only visits them: about 8-12%, but one entry per router-server pair
-  (~1-1.5 GiB as Python lists at CAIDA x 1000, ~0.4 GiB as numpy, so
-  best done with the routing-table arrays).
-- Utility evaluation code (`MetricUtility.evaluate`, `check_in_range`)
-  is generic: a dict comprehension per call, `min(max())`, and an error
-  message string built on every call though only needed on failure.
-  Small now that RIB utilities are stored (most evaluations are gone).
-- Per-request ground-truth records (`Network.py`, the three dicts of
-  utilities, loads and latencies per request) grow memory slowly, about
-  1 MiB per simulated second at CAIDA x 1000 with 50 clients; watch it
-  in very long runs.
-- simpy overhead (~18%): every link hop creates a new simpy process
-  (`Link.put` -> `env.process(_send)`) plus queue events. Scheduling the
-  delivery directly would cut part of it, but changes core simulation
-  code.
-- GML parsing (~26-63 s for full CAIDA, depending on the machine):
-  the tokenizer does ~10 `match.group()` calls, an enum and a namedtuple
-  per token; `match.lastindex` and plain tuples would make it 2-3x
-  faster. Or cache the built network in a binary file per topology.
-  Only worth it for many short runs.
+Change utilty fn from:
 
-#### `decide_announcements` is quadratic in RIB size
+    return 1 / (1 + alpha * load + (1-alpha) * delay) 
 
-Every received ServerMetric runs `decide_announcements`, which
-compares each RIB entry with every other one (O(R^2)), then the FIB
-utility loop. This is the main cost per update, and why cost per
-update varies with the number of servers. An incremental version
-(update the non-dominated set for the one changed entry) would cut it.
-Profile (CAIDA x 1000, 50 clients, 60 s, Oct 2026): about 23% of
-simulation time, 1.57 billion `is_better_in_any_metrics` calls (~84
-per accepted update). The biggest remaining time cost, but an algorithm
-change: ties, removals and entries that stop being dominated must come
-out exactly as now, so check with identical logs on several topologies.
+to
 
-## Enhancements
+    return 1 - (alpha * load + (1-alpha) * delay)
 
-#### Python 3.9 support (only if a machine needs it)
+#### T-33: Move the old experiments still in use
 
-The simulator needs Python 3.10+ only because of the two `match`
-statements in `ServerMetricMessageType.to_val` / `from_val`
-(`src/Server.py`, added Jan 2023); every other file parses as Python
-3.9. Rewriting them as `if`/`elif` (`is` for the enum members, `==`
-for the strings) behaves identically and costs nothing (about 10 ns per
-call faster). Worth doing only if a machine we want to use has nothing
-newer than 3.9 (on some servers the default `python3` is 3.9, with a
-newer version installed alongside).
-
-#### Scripts can silently run another checkout's code
-
-The experiment and analysis scripts import from whatever `src/` is on
-`PYTHONPATH`. If the shell profile points at one checkout (e.g. the
-main `ServiceCast`), running a script in another (a worktree such as
-`ServiceCast-refactor`) silently mixes that checkout's experiment
-script with the other's simulator. Either have scripts put their own
-repository's `src/` (and `scripts/`) first on `sys.path`, or document
-running with `PYTHONPATH=src:scripts` from the repository root.
-
-#### `Utility.alpha` is hard-coded in `main_precomputed_t1.py`
-
-It is fixed at 0.5, with no environment variable like `TAU` or
-`SERVER_SLOTS`, so testing another alpha needs an edited copy. Add an
-`ALPHA` variable. Note that at alpha 0.5 a router only removes a FIB
-entry when a server is both full and at the network's maximum delay,
-so normal runs never exercise `REMOVED`; validating the FIB counters
-needed alpha 1.0, `TAU=0.1`, `SERVER_SLOTS=1`.
-
-#### One global seed for every random choice
-
-There is no single seed setting. The `Importer` scripts take `SEED`
-from their constants file (`scripts/setup/constants_*.py`), but the
-older `experiments/main_*.py` scripts, including
-`main_precomputed_t1.py`, hard-code `seed=15112022` in each generator
-call, so running another seed needs an edited copy. Add one global
-seed (a `SEED` environment variable or command-line option, with the
-constants file as the default) that reaches everything random: server
-and client placement, server load generators, client request
-generation (arrival times, sizes and which client sends each request)
-and any other draws (`gen2` in `multi_client_event_generator` uses
-seed + 1). Nothing should use numpy's unseeded global generator;
-`multi_client_event_generator` did until its client choice was moved
-to `gen`.
-
-#### `TREE_CHILDREN_ONLY` through `Importer` is untested
-
-The flag is mapped in `src/Importer.py`, but only the
-`main_precomputed_t1.py` environment variable (`TREE_CHILDREN_ONLY=1`)
-has been tested. Other experiment scripts have no switch for it.
-
-#### Damping uses an absolute load change
-
-`Server.change_factor` (default 0.01) is compared with the change in
-load (used slots / slots). With more than 100 slots per server one
-session moves load by less than 0.01, so most changes are never
-announced (with 500 slots, about every 5th). This dominated the
-damped curves in the server-count sweep. Consider damping in units of
-slots, or scaling `change_factor` with `Server.slots`, or at least
-documenting it. To be handled by the planned review of the default
-thresholds (2026-10-13).
-
-#### Experiment workflow proposal
-
-Owner: David (2026-10-13). A concrete proposal for creating and running
-experiments, single runs and sweeps alike, to share with the group. It
-should settle: one config format (extended `Importer` constants files
-or something else); per-run `--set` overrides or config files only;
-where configs live and how results directories are named; the
-provenance kept with every run (config copy, git commit, seeds); how
-many parallel runs per machine and who manages the queue; the sweep
-scripts; and what happens to the existing scripts once the new
-workflow is validated.
-
-#### Set utility functions through `Importer`
-
-Agreed (2026-10-13), to do in the near future. `Importer` cannot set
-`MetricUtility.metric_utility_fn['load']` / `['delay']` or
-`MetricUtility.metric_scale['load']`, because they are dict entries
-(see the comment in `src/Importer.py`). `main_dfn_2.py` uses a
-logarithmic load utility and a geometric user utility; configs run
-through `Importer` get the linear defaults. Also decide which
-functions are canonical.
-
-#### Set the routing policy through `Importer`
-
-To do with the `Importer` work. `Routing.policy` (`"valley_free"`, the
-default, or `"shortest"`) can only be set in Python before
-`calculate_forwarding_tables()`. Add `("Routing.policy",
-"ROUTING_POLICY")` to the `Importer` mappings, and a `ROUTING_POLICY`
-environment variable to `main_precomputed_t1.py` (like `TAU`). Also
-reject unknown values in `src/Routing.py`: today only `"shortest"` is
-checked, so a typo silently gives valley-free routing
-(`c2p_orientation` already raises). The start-up message prints
-`valley_free` even when the topology has no `c2p`/`p2p` links, where
-the routes are plain shortest-delay paths; say so in the message. Also
-warn when a topology has `p2p` links but no `c2p` links: valley-free
-routing then leaves many router-server pairs unreachable (a route
-learned from a peer is never passed to another peer).
-
-#### Move the old experiments still in use
-
-Agreed (2026-10-13, Stuart's suggestion). Some of the hand-built
+Some of the hand-built
 experiments (`main_e1`, `main_e2`, `main_ls_lc`, `main_sa`, `main_sm`,
 `main_small`, `main_sm_cm`, `main_dfn`, `main_mig_t1`) are still used:
 move them to a separate directory rather than deleting them.
@@ -525,27 +330,156 @@ experiments and the simulator code are not affected. To make them
 repeatable, iterate `sorted(nextLinks, key=str)` in `Graph.from_dict`
 (one line), or run them with `PYTHONHASHSEED=0`.
 
-#### Topology generator improvements
+## Performance and memory
 
-Owner: Miguel (2026-10-13); proposals discussed, work continues
-alongside the rest. Questions raised about `scenario-explorer-12.html`:
-real AS locations for CAIDA (PeeringDB, CAIDA AS-to-organisation, IP
-geolocation) instead of random geography; a larger city list than the
-82 hard-coded `CITIES`; PoP counts and tiers from real data, and the
-8-PoP cap and full internal mesh; client rounding (see the
-`clientCount` bug); one copy of the generator, with the seed recorded
-in each GML.
+#### T-15: Client and server latency rows duplicate the router rows
 
-#### New metrics
+`Network.install_host_rows` gives every client a latency row to every
+server (its access router's row plus the access-link delay), then
+gives every server a row to every client by copying those values
+(`latency_table[server][client]` is the same float as
+`latency_table[client][server]`). Only the ground truth reads them
+(`best_replica_utility`, plus the network diameter); requests take
+their delay from the links they cross. Cost at CAIDA x 1000
+(measured on the tables alone, Oct 2026): 0.42 GiB with 5,000 clients,
+3.1 GiB with 33K (1.9 GiB client rows, 1.2 GiB server rows), growing
+with clients x servers.
 
-Postponed (2026-10-13). Proposed so far: per-router summary lines
-(RIB size at the end of the run and its peak, non-dominated set size),
-per-server summary lines (announcements sent and suppressed by
-damping), periodic progress lines, and run statistics.
+Neither table is needed: compute the latency when it is read, as
+`stub[client] + latency_table[access_router[client]][server]`, with
+one small entry per client (access router, access-link delay), and the
+diameter as the largest stub plus the largest router-row value over
+the access routers. Same arithmetic as today, so results should be
+identical (check with identical logs on DFN, the 1K topology and a
+short CAIDA run); saves almost all of the memory above. The mirror
+would only matter with asymmetric latencies, and even then a copy of
+the client->server value would be wrong; requests are one-way, so
+nothing uses the server->client direction.
 
-## Experiments to run
+Readers to update first: `scripts/run_simulation_sweep.py` reads
+`latency_table[server][client]` (agree the change with the script's
+owner), and several old experiments print
+`latency_table['s1']['c1']` at start-up (`main_e1`, `main_sa`,
+`main_s1_c5`, `main_sm_cm`, `main_ls_lc`; `main_sm` reads the client
+direction). An accessor such as `network.latency(client, server)`
+would keep them working.
 
-#### Does RIB size settle at about log(number of servers)?
+#### T-83: Further speed-ups (optional)
+
+Optional; some of these are being tried (Nov 2026). From a profile of
+CAIDA with 1000 servers, 50 clients, 60 s simulated,
+`TREE_CHILDREN_ONLY=1` (Oct 2026): 35.5M load messages, simulation
+19,700 s under the profiler. The announcement-distance prototype (21%)
+has already been commented out (see T-38).
+
+Since then (Nov 2026) the simulator is about 2.5-3x faster: arrival
+times as plain floats, sort-and-scan in `decide_announcements`, a
+cached neighbour list in `announce_metrics`, and packet delivery with
+one simpy timeout per hop instead of a process and queue per link.
+The shares below are from before these changes; profile again before
+acting on them.
+- `announce_metrics`: each router now caches its
+  `(neighbour, port, destination, is_host)` list. Still possible:
+  precompute each router's tree children per server (routing is
+  fixed), so the loop only visits them; one entry per router-server
+  pair (~1-1.5 GiB as Python lists at CAIDA x 1000, ~0.4 GiB as numpy,
+  so best done with the routing-table arrays). A trial with a children
+  cache for routers with 32 or more ports (plus two smaller changes)
+  gave only about 5% on CAIDA x 1000, for about 0.8 GiB more memory.
+  A later trial on the faster code (Nov 2026), caching tree children
+  for every router, gave about 15% on the 1K and 10K subsets with
+  identical output; full CAIDA memory and speed not yet checked.
+- Utility evaluation code (`MetricUtility.evaluate`, `check_in_range`)
+  is generic: a dict comprehension per call, `min(max())`, and an error
+  message string built on every call though only needed on failure.
+  Small now that RIB utilities are stored (most evaluations are gone).
+- Per-request ground-truth records (`Network.py`, the three dicts of
+  utilities, loads and latencies per request) grow memory slowly, about
+  1 MiB per simulated second at CAIDA x 1000 with 50 clients; watch it
+  in very long runs.
+- GML parsing (~26-63 s for full CAIDA, depending on the machine):
+  the tokenizer does ~10 `match.group()` calls, an enum and a namedtuple
+  per token; `match.lastindex` and plain tuples would make it 2-3x
+  faster. Or cache the built network in a binary file per topology.
+  Only worth it for many short runs.
+
+#### T-83: `decide_announcements` with other comparison functions
+
+Every received ServerMetric runs `decide_announcements` over the whole
+RIB. With the default comparisons (load and delay, `same_as` and
+`less_than`) it sorts and scans, O(R log R). With any other comparison
+function, such as an equivalence margin, which need not be transitive,
+it falls back to comparing every pair, O(R^2), as before; the guard is
+`uses_default_comparisons()` and `tests/test_speedups.py` checks both
+paths against the pairwise rule. If margins become the norm, an
+incremental version (update the non-dominated set for the one changed
+entry) would be the next step; ties, removals and entries that stop
+being dominated must come out exactly as now.
+
+#### T-47: Memory per router
+
+About 100 KB per router: 7.9 GB at 91K routers, about 35 GB projected
+at 400K. A large share at 91K is the ~9M precomputed routing-table
+entries held as Python dicts. A more compact store (arrays indexed by
+server, or nextHop only with delays computed on demand) would let
+more 100K runs share the Stanford server (196 GB allows about 20
+today).
+
+#### T-47: Profile memory on a large run
+
+Nobody has profiled what grows during a run. The 91K run kept growing
+to 7.8 GB. Candidates: per-router RIB / FIB / sent tables, packets
+queued in the simulation, per-request records kept for metrics.
+
+#### Remaining setup time
+
+After the `Graph.py` lookup fix, loading the full CAIDA GML takes
+147 s (was 834 s), but `Network.from_graph` still takes about 120 s
+at 91K. The routing tables are now computed with scipy in about 10 s
+at 91K with 100 servers (the old pure-Python Dijkstra took 2-5 minutes
+on the 16-server, 1.2K-node sweep topology).
+
+#### T-49: Python 3.9 support (only if a machine needs it)
+
+The simulator needs Python 3.10+ only because of the two `match`
+statements in `ServerMetricMessageType.to_val` / `from_val`
+(`src/Server.py`, added Jan 2023); every other file parses as Python
+3.9. Rewriting them as `if`/`elif` (`is` for the enum members, `==`
+for the strings) behaves identically and costs nothing (about 10 ns per
+call faster). Worth doing only if a machine we want to use has nothing
+newer than 3.9 (on some servers the default `python3` is 3.9, with a
+newer version installed alongside).
+
+## Metrics and experiments
+
+#### T-04: New metrics: which summaries, and how often
+
+The
+long CAIDA runs need statistics during the run as well as at the end,
+because a run takes hours or days and steady state comes only after a
+warm-up of a few mean session times. At present the simulator prints
+only end-of-run totals (`SUMMARY_SERVER_METRICS`, `SUMMARY_FIB_ROUTER`).
+
+Candidates:
+
+- a network-wide progress line every simulated second (or a set
+  interval): wall time and memory; requests, blocked and not forwarded;
+  server load mean, spread and maximum; load changes, announcements and
+  withdrawals; FIB changes; RIB size mean, 99th percentile and maximum;
+  decided-set size;
+- a per-router line (RIB size, decided-set size, degree, messages
+  received) at set intervals and at the end, for RIB distributions over
+  time; about 15 MB of log per snapshot on CAIDA x 1000;
+- per-server lines (announcements sent and suppressed by damping);
+- run statistics (set-up and run time, peak memory).
+
+To decide: which of these, the interval for each (simulated seconds,
+or wall time), the verbose level that enables them, and the line
+formats, so that `log_syntax.py` and `quick_stats.py` can read them.
+Any per-call timing (e.g. of `decide_announcements`) should stay
+optional, since it adds overhead to every decision.
+
+#### T-23: Does RIB size settle at about log(number of servers)?
 
 Hypothesis: Pareto dominance limits each router's RIB to roughly
 c * ln(servers) once loads spread out. A 30 s probe showed RIBs about
@@ -553,70 +487,17 @@ twice H_n at 10-50 servers, probably because loads are still near zero
 early in a run. Test: run 10, 25, 50, 100 and 500 servers to 200 s,
 snapshotting each router's RIB and non-dominated set size every 10 s,
 and compare the median and 90th percentile with H_n. The per-router RIB
-summary lines proposed under "New metrics" would provide the data. Part of
-the evaluation plan, to be refined (2026-10-13).
+summary lines proposed under "New metrics" would provide the data.
 
+#### T-22: Compare with anycast
 
-# Experiments
-
-
-## 2021
-
-1 - Generate demand
-  we will have two windows, one for sampling the demand (ground truth) and one for sending the updates
-Updates can be sent:
-  - synchronously (every fixed interval): interval
-  - asynchronously (after a threshold crossing, compared with the last value sent): threshold
-  - combination of both
-2 - fix hardcoding of individual router2s
-  - e.g. some kind of adjacency list
-        constructs the routers on the fly
-        creates links on the fly
-3 - write forwarding algorithm
-4 - put metrics in packets
-
-have load generater (LG) of load from a normal distribution
-  - configured with a mean and a stddev
-have another distribution that can update the mean of LG
-  - this can be poisson, always up, always down,
-  - from a time-series, or other we device
-  - have a knob to adjust stddev in LG so that that range of values will be closer to mean or further away
-
-# Algorithm
-
-1  LOAD TOPOLOGY
-2  ALLOCATE REPLICAS
-3  ALLOCATE CLIENTS
-4  REPLICAS SEND LOAD
-5  LOAD GETS PROPAGATED
-6  FORWARDING TABLE UPDATED
-7  GENERATE DEMANDS - INCLUDING DURATION
-8  REQUESTS GET PROPAGATED TOWARDS REPLICA
-9  REPLICAS UPDATE INTERNAL LOAD INFO
-10 REPLICAS SEND UPDATES
-11 LOAD UPDATES GET PROPAGATED
-12 ROUTERS UPDATE FORWARDING TABLE
-
-
-# Network topologies
-
-Potential networks to look at from topology zoo
-
-- abilene
-- BICS
-- BT Europe
-- Cogent
-- Colt Telecom
-- GEANT
-
-WorldWide
-- AboveNet
-- Cogent
-- Deutsche Telecom *
-- EasyNet
-- Hibernia Atlantic
-- Hostway International
-- Hurricane Electric
-- Internode
-- NTT *
-- Tinet *
+Run the same scenarios with anycast as a baseline for accuracy and
+blocking. In "ideal anycast", each router has a fixed entry for its
+lowest-delay server over the policy paths, and no load information is
+used. This is the best case for anycast. It needs a flag in
+`Server.send_load_packet` to stop announcements. A "BGP-like" variant
+(class, then fewest AS hops, then delay) would be a second
+baseline. Provision server slots with Erlang-B at nominal demand, so that both schemes are
+compared at the same blocking target. Claim that ServiceCast adapts
+automatically and within seconds, not that anycast cannot adapt: real
+anycast does adapt, slowly.
