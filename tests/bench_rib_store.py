@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Benchmark: A/B comparison of two Router versions -- by default the
-original TinyDB-based tables (src/Router-old.py, "old") vs the current
-plain-dict tables (src/Router.py, "new"). --old-file / --new-file pick any
-two versions in src/, e.g. a version before and after an optimisation.
+"""Benchmark: A/B comparison of two Router versions in src/: --old-file
+(the baseline, "old", required) vs --new-file ("new", default Router.py),
+e.g. a version before and after an optimisation. Take the baseline from
+git, e.g. the original TinyDB-based tables (removed Nov 2026):
+
+    git show 1fc7d42:src/Router-old.py > src/Router-before.py
 
 Both versions are loaded straight from their own files by importlib.
 
@@ -35,15 +37,15 @@ Part B (--fullsim): full-simulation A/B. Each run is a fresh subprocess
     scripts/check-tinydb-dict-logs.py is run on the pair.
 
 Usage:
-    python3 tests/bench_rib_store.py                 # Part A only
-    python3 tests/bench_rib_store.py --fullsim       # Part A + Part B
-    python3 tests/bench_rib_store.py --fullsim --until 120 --repeats 5
-    python3 tests/bench_rib_store.py --fullsim --logs logs/ab
-    python3 tests/bench_rib_store.py --fullsim --skip-part-a --gml <file>
-    python3 tests/bench_rib_store.py --fullsim --skip-part-a \
-        --gml topologies/gml/Dfn.gml --servers 5 --clients 5 --until 300
-    python3 tests/bench_rib_store.py --old-file Router-before.py \
-        --new-file Router.py --fullsim ...
+    python3 tests/bench_rib_store.py --old-file Router-before.py   # Part A only
+    python3 tests/bench_rib_store.py --old-file Router-before.py --fullsim
+    python3 tests/bench_rib_store.py --old-file Router-before.py --fullsim \
+        --until 120 --repeats 5
+    python3 tests/bench_rib_store.py --old-file Router-before.py --fullsim \
+        --logs logs/ab
+    python3 tests/bench_rib_store.py --old-file Router-before.py --fullsim \
+        --skip-part-a --gml topologies/gml/Dfn.gml --servers 5 --clients 5 \
+        --until 300
 
 Notes:
 - A TinyDB-based version needs tinydb installed.
@@ -98,7 +100,7 @@ def load_router_module(filename, modname):
 # --old-file / --new-file choose the two Router versions compared. They are
 # needed before argparse runs (the modules load at import), so pre-parse them.
 _pre = argparse.ArgumentParser(add_help=False)
-_pre.add_argument('--old-file', default='Router-old.py')
+_pre.add_argument('--old-file', required=True)
 _pre.add_argument('--new-file', default='Router.py')
 _files, _ = _pre.parse_known_args()
 OLD_FILE, NEW_FILE = _files.old_file, _files.new_file
@@ -721,9 +723,9 @@ def main():
     ap.add_argument('--log-level', type=int, default=2,
                     help='Verbose.level for --logs runs (default 2)')
     ap.add_argument('--seed', type=int, default=SEED)
-    ap.add_argument('--old-file', default='Router-old.py',
+    ap.add_argument('--old-file', required=True,
                     help='Router version in src/ used as the baseline '
-                         '(default Router-old.py)')
+                         '(e.g. one taken from git with git show)')
     ap.add_argument('--new-file', default='Router.py',
                     help='Router version in src/ being tested '
                          '(default Router.py)')
