@@ -248,7 +248,7 @@ def plot_faceted_heatmap(data_file_dir, data3d, delays, title, ylabel_cbar, file
         im = _draw_heatmap(ax, data3d[k], server_cfs, router_cfs, cmap, format_str, is_percentage,
                            vmin=vmin, vmax=vmax, cell_label_fs=cell_label_fs,
                            show_xlabel=True, show_ylabel=(k == 0))
-        ax.set_title(f"delay = {delay}", fontsize=13, fontweight='bold', color=INK, pad=18)
+        ax.set_title(f"delay = {delay} ms", fontsize=13, fontweight='bold', color=INK, pad=18)
 
     cbar = fig.colorbar(im, ax=axes.tolist(), pad=0.02, fraction=0.025)
     cbar.ax.set_ylabel(ylabel_cbar, rotation=-90, va="bottom", fontsize=12, fontweight='medium', color=INK)
@@ -274,10 +274,18 @@ def generate_matrix_plots(data_file_dir, data, metrics):
     suffix = f"{mode_str}_{source}"
     title_suffix = f"\n({mode_title}, Collected: {source_title})"
 
-    delays = data["delays"]
+    # New sweep files declare ms explicitly. Older files stored delays in
+    # seconds; convert those values so their plots are not silently relabelled.
+    delay_unit = data.get("delay_unit", "s")
+    if delay_unit == "s":
+        delays = [delay * 1000 for delay in data["delays"]]
+    elif delay_unit == "ms":
+        delays = data["delays"]
+    else:
+        raise ValueError(f"Unknown delay_unit: {delay_unit!r}")
     server_cfs, router_cfs = data["server_cfs"], data["router_cfs"]
 
-    print(f"\nGenerating heatmaps for metrics: {metrics} across {len(delays)} delays {delays}...", file=sys.stderr)
+    print(f"\nGenerating heatmaps for metrics: {metrics} across {len(delays)} delays (ms) {delays}...", file=sys.stderr)
 
     for metric in metrics:
         spec = METRIC_SPECS[metric]
@@ -304,7 +312,7 @@ def generate_matrix_plots(data_file_dir, data, metrics):
             plot_heatmap(
                 data_file_dir,
                 data3d[k],
-                spec.title + title_suffix + f"\nPropagation delay = {delay}",
+                spec.title + title_suffix + f"\nPropagation delay = {delay} ms",
                 spec.cbar_label,
                 f"change_factor_matrix_{spec.file_tag}_{suffix}_delay{delay_tag}.png",
                 server_cfs, router_cfs,

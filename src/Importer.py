@@ -2,8 +2,6 @@ import sys
 import importlib.util
 import importlib.machinery
 
-from units import s_to_ms
-
 from Graph import Graph
 from Network import Network
 from Server import Server
@@ -37,11 +35,6 @@ mappings = [    ("Utility.alpha", "ALPHA"),
                 # (linear). MetricUtility.metric_scale['delay'] is always
                 # set to the network diameter by the Network.
             ]
-
-# Time-valued config knobs declare SECONDS (the human-interface convention,
-# see src/units.py) and cross into the ms clock at the update() boundary.
-TIME_KNOBS_S = {"Graph.default_propagation_delay"}
-
 
 # Import some values from a .py file
 # These values become attributes
@@ -104,12 +97,7 @@ class Importer(object):
             # we have that name
             value = getattr(self, name)
 
-            # convert only defined settings: a missing one must never be
-            # converted (None * 1000 would crash)
-            if variable in TIME_KNOBS_S:
-                value = s_to_ms(value)
-
-            # split out class name and attribute name
+            # Configuration values already use the engine's units.
             class_name, attr_name = variable.split(".", 1)
 
             # get the class

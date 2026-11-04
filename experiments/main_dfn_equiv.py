@@ -43,7 +43,7 @@ def topology_setup():
     Router.same_as_fn_load = lambda x, y: abs(x - y) < 0.05
     
     # Router equivalence
-    # Router.same_as_fn_delay = lambda x, y: abs(x - y) < 0.1
+    # Router.same_as_fn_delay = lambda x, y: abs(x - y) < 100
     
     print(f"""Simulation parameters:
     Verbose.level = {Verbose.level}
@@ -158,19 +158,19 @@ def topology_setup():
         generator = Generator.server_load_event_generator(network, server_name, ["§a"], seed=15112022, background_load=False)
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    # arrival_lambda is the mean arrival time between requests (in seconds)
-    # size_lambda is the mean length/duration of the sessions (in seconds)
-    # size_scale_factor is a multiplier for the session duration
-    # Example: arrival_lambda=0.5, size_lambda=10, size_scale_factor=10 means an average of 2 requests per second, each lasting on average 100 seconds. This gives an average of 200 concurrent requests in the system. If there are 5 servers, each server will have an average of 40 concurrent requests.
-    # Note that it doesn't matter whether we have size_lambda=10, size_scale_factor=10 or size_lambda=100, size_scale_factor=1, the average session duration is the same (100 seconds). The scale factor is just a multiplier for the session duration.
-    generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=0.4, size_lambda=10, size_scale_factor=10, seed=15112022)
+    # arrival_lambda is the mean arrival time between requests (in milliseconds)
+    # size_lambda is the mean length/duration of the sessions (in milliseconds)
+    # size_scale_factor is a dimensionless multiplier for the session duration
+    # Example: arrival_lambda=500, size_lambda=10000, size_scale_factor=10 means an average of one request every 500 ms, each lasting on average 100000 ms. This gives an average of 200 concurrent requests in the system. If there are 5 servers, each server will have an average of 40 concurrent requests.
+    # Note that it doesn't matter whether we have size_lambda=10000, size_scale_factor=10 or size_lambda=100000, size_scale_factor=1, the average session duration is the same (100000 ms). The scale factor is just a dimensionless multiplier for the session duration.
+    generator_m1 = Generator.multi_client_event_generator(network, clients, "§a", arrival_lambda=400, size_lambda=10000, size_scale_factor=10, seed=15112022)
 
     # 10 - run
     
     if Verbose.level >= 3:
         print("RUN ----------------------------------------------------------------")
 
-    network.start(until=3600)
+    network.start(until=3600000)
 
 
 # go !

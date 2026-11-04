@@ -40,12 +40,12 @@ Usage:
     python3 tests/bench_rib_store.py --old-file Router-before.py   # Part A only
     python3 tests/bench_rib_store.py --old-file Router-before.py --fullsim
     python3 tests/bench_rib_store.py --old-file Router-before.py --fullsim \
-        --until 120 --repeats 5
+        --until 120000 --repeats 5
     python3 tests/bench_rib_store.py --old-file Router-before.py --fullsim \
         --logs logs/ab
     python3 tests/bench_rib_store.py --old-file Router-before.py --fullsim \
         --skip-part-a --gml topologies/gml/Dfn.gml --servers 5 --clients 5 \
-        --until 300
+        --until 300000
 
 Notes:
 - A TinyDB-based version needs tinydb installed.
@@ -80,6 +80,7 @@ SEED = 15112022
 
 import simpy  # noqa: E402
 
+from units import s_to_ms  # noqa: E402
 from Verbose import Verbose  # noqa: E402
 
 # Silence the simulator's own prints during benchmarking.
@@ -224,7 +225,7 @@ def drive_backend(module, adapter, R, D, update_rounds, withdraw_frac, seed):
     for i, rep in enumerate(replicas):
         adapter.rib_insert(router, make_doc(rep, rng.choice(neighbours),
                                             0.0, 0.1 * i, 1.0 + i))
-    times['rib_insert'] = time.perf_counter() - t0
+    times['rib_insert'] = s_to_ms(time.perf_counter() - t0)
 
     # Phase 2: update rounds. Each round: one replica's metrics drift
     # (RIB search + update), then the announce fan-out over all D
@@ -243,14 +244,14 @@ def drive_backend(module, adapter, R, D, update_rounds, withdraw_frac, seed):
         for n in neighbours:
             if not router.check_sent_table(doc, n):
                 router.update_sent_table(doc, n)
-    times['update_and_announce'] = time.perf_counter() - t0
+    times['update_and_announce'] = s_to_ms(time.perf_counter() - t0)
 
     # Phase 3: Pareto announce decision over the full RIB
     t0 = time.perf_counter()
     entries = adapter.rib_all(router)
     for _ in range(update_rounds):
         router.decide_announcements(entries)
-    times['decide_announcements'] = time.perf_counter() - t0
+    times['decide_announcements'] = s_to_ms(time.perf_counter() - t0)
 
     # Phase 4: withdraw a fraction of the replicas
     # (clear_sent_table + delete_rib_entry per replica)
@@ -261,7 +262,7 @@ def drive_backend(module, adapter, R, D, update_rounds, withdraw_frac, seed):
         if doc is not None:
             router.clear_sent_table(adapter.sent_key(doc))
             router.delete_rib_entry(doc)
-    times['withdraw'] = time.perf_counter() - t0
+    times['withdraw'] = s_to_ms(time.perf_counter() - t0)
 
     times['total'] = sum(times.values())
     times['storage'] = times['total'] - times['decide_announcements']
@@ -291,6 +292,7 @@ def part_a(seed):
     ok = True
     for R, D, rounds in cells:
         print(f"\nR={R} replicas, D={D} neighbours, {rounds} update rounds")
+        print("Phase wall times (ms)")
         header = f"{'backend':<8} {'insert':>9} {'upd+ann':>9} {'decide':>9} " \
                  f"{'withdraw':>9} {'total':>9} {'peak MB':>9}"
         print(header)
@@ -444,7 +446,7 @@ def fullsim_worker(backend, gml, until, mode, result_file, log_level,
 
     router_cls.hop_by_hop = hop_by_hop
     router_cls.fib_utility_update_threshold = 0.001
-    Graph.default_propagation_delay = 100   # ms (0.1 s), src/units.py
+    Graph.default_propagation_delay = 100   # ms
     Utility.alpha = 0.50
     Server.slots = 50
     Server.change_factor = 0.01
@@ -470,15 +472,15 @@ def fullsim_worker(backend, gml, until, mode, result_file, log_level,
         Generator.server_load_event_generator(network, server_name, ["§a"],
                                               seed=SEED, background_load=False)
     Generator.multi_client_event_generator(network, network.client_names(),
-                                           "§a", arrival_lambda=0.4,
-                                           size_lambda=10,
+                                           "§a", arrival_lambda=400,
+                                           size_lambda=10000,
                                            size_scale_factor=10, seed=SEED)
 
     t0 = time.perf_counter()
     network.start(until=until)
-    wall = time.perf_counter() - t0
+    wall_ms = s_to_ms(time.perf_counter() - t0)
 
-    result = {'backend': backend, 'mode': mode, 'wall_s': wall,
+    result = {'backend': backend, 'mode': mode, 'wall_ms': wall_ms,
               'peak_rss_mb': _peak_rss_mb(), 'routing': routing,
               'hop_by_hop': hop_by_hop}
 
@@ -579,7 +581,7 @@ def part_b(gml, until, repeats, logs_dir, log_level, hosts=(0, 0),
     wk = dict(hosts=hosts, hop_by_hop=hop_by_hop)
     print("\n" + "=" * 78)
     print("Part B -- full-simulation A/B "
-          f"(gml={os.path.basename(gml)}, until={until}, repeats={repeats})")
+          f"(gml={os.path.basename(gml)}, until={until}ms, repeats={repeats})")
     print(describe_backends())
     print("=" * 78)
 
@@ -592,16 +594,16 @@ def part_b(gml, until, repeats, logs_dir, log_level, hosts=(0, 0),
                 return False
             timings[backend].append(r)
             print(f"  run {i + 1}/{repeats} {backend:<6} "
-                  f"wall {r['wall_s']:>8.3f}s  "
+                  f"wall {r['wall_ms']:>8.3f}ms  "
                   f"peak RSS {r['peak_rss_mb']:>8.1f} MB", flush=True)
 
     first = timings['old'][0]
     print(f"\nrouting: {first['routing']}, hop_by_hop: {first['hop_by_hop']}")
-    print(f"{'backend':<8} {'median s':>9} {'min s':>9} {'max s':>9} "
+    print(f"{'backend':<8} {'median ms':>9} {'min ms':>9} {'max ms':>9} "
           f"{'RSS MB':>9}")
     med = {}
     for backend, runs in timings.items():
-        walls = [r['wall_s'] for r in runs]
+        walls = [r['wall_ms'] for r in runs]
         med[backend] = statistics.median(walls)
         rss = statistics.median(r['peak_rss_mb'] for r in runs)
         print(f"{backend:<8} {med[backend]:>9.3f} {min(walls):>9.3f} "
@@ -713,8 +715,8 @@ def main():
     ap.add_argument('--hop-by-hop', action='store_true',
                     help='Part B: Router.hop_by_hop = True (hop-by-hop anycast '
                          'request forwarding; default first-decide unicast)')
-    ap.add_argument('--until', type=float, default=60,
-                    help='simulated seconds for Part B (default 60)')
+    ap.add_argument('--until', type=float, default=60000,
+                    help='simulated milliseconds for Part B (default 60000)')
     ap.add_argument('--repeats', type=int, default=3,
                     help='timing runs per backend in Part B (default 3)')
     ap.add_argument('--logs', metavar='DIR',

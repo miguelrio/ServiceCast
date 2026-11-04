@@ -21,13 +21,13 @@ def topology_setup():
     network = Network(env)
     
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=3, seed=30072022)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=3000, seed=30072022)
     # bind in the ev_print function
     generator_m1.generator.elsefn = ev_print
 
     # run
 
-    network.start(until=400)
+    network.start(until=400000)
 
 
 # go !

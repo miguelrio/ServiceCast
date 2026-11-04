@@ -5,20 +5,20 @@
 #
 # Experiment values
 
-SIM_DURATION = 3600           # simulated seconds per run
+SIM_DURATION = 3600000        # simulated milliseconds per run
 
 SERVICE = "§a"                # the single service every client requests
 
 NUM_SERVERS = 5               # servers attached to core nodes
 NUM_CLIENTS = 5               # clients attached to local nodes
 
-SERVER_LOAD_LAMBDA = 55       # background-load inter-arrival; INERT here: we pass
+SERVER_LOAD_LAMBDA = 55000    # background-load inter-arrival (ms); INERT here: we pass
                               # background_load=False, and Generator.py:216 (the only
                               # line that reads it) is commented out, so it has no effect
-CLIENT_ARRIVAL_LAMBDA = 0.4   # mean inter-arrival time (s) between client requests
+CLIENT_ARRIVAL_LAMBDA = 400   # mean inter-arrival time (ms) between client requests
 SEED = 15112022               # shared RNG seed for reproducibility
-SESSION_SIZE_LAMBDA = 10      # mean session length (s)
-SESSION_SIZE_SCALE = 10       # session-length multiplier (effective session ~= lambda*scale)
+SESSION_SIZE_LAMBDA = 10000   # mean session length (ms)
+SESSION_SIZE_SCALE = 10       # dimensionless session-length multiplier
 
 GML_FILE = "topologies/gml/Dfn.gml"     # The topology file of the network to use
 
@@ -35,7 +35,7 @@ ROUTER_HOP_BY_HOP = False     # Do routers to hop_by_hop forwarding
 SERVER_SLOTS = 50             # server capacity
 
 
-GRAPH_DELAY = 0.1               # Value for Graph.default_propagation_delay
+GRAPH_DELAY = 100             # Graph.default_propagation_delay in milliseconds
 
 SERVER_CF = 0.0                 # Server change factor damping
 ROUTER_FIB_UPT = 0.0            # Router FIB change factor damping

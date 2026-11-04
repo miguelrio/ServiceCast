@@ -24,7 +24,7 @@ CLI:
   --axes a,b,c  subset of axis names to run
                 (factorial | <ofat axis> | confirmation | noise_floor)
   --dry-run     print the matrix and the estimated count without running
-  --timeout     per-run subprocess seconds (default the config's DEFAULT_TIMEOUT)
+  --timeout     per-run subprocess milliseconds (default the config's DEFAULT_TIMEOUT)
   --repeats     override every group's repeat count (quick runs)
 
 Data flow: this script -> (measure_one -> placement) -> CSV ->
@@ -45,6 +45,11 @@ import argparse
 import subprocess
 from datetime import datetime
 from itertools import product
+
+PROJECT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(PROJECT_PATH, "src"))
+
+from units import ms_to_s, s_to_ms
 
 # --- config loading -----------------------------------------------------------
 #
@@ -234,11 +239,12 @@ def enumerate_cells(cfg, axes_filter=None, repeats_override=None):
 # --- per-cell subprocess run -------------------------------------------------
 
 def run_one(cell, timeout):
-    """Spawn measure_one for one cell; return (row_dict, parent_wall_s).
+    """Spawn measure_one for one cell; return (row_dict, parent_wall_ms).
 
-    The parent measures wall_s (subprocess wall, includes ~0.15 s startup) and
-    merges it into the child's row, overriding the child's own wall_s. A
-    subprocess.TimeoutExpired is recorded as status=timeout.
+    The parent measures wall_ms (subprocess wall, includes ~150 ms startup) and
+    merges it into the child's row, overriding the child's own wall_ms. A
+    subprocess.TimeoutExpired is recorded as status=timeout. The timeout knob is
+    milliseconds; subprocess.run's timeout boundary requires seconds.
     """
     knobs_json = json.dumps(cell)
     env = {**os.environ, "PYTHONPATH": "src"}
@@ -249,32 +255,33 @@ def run_one(cell, timeout):
     t0 = time.perf_counter()
     try:
         proc = subprocess.run(
-            cmd, env=env, capture_output=True, text=True, timeout=timeout)
+            cmd, env=env, capture_output=True, text=True,
+            timeout=ms_to_s(timeout))
     except subprocess.TimeoutExpired:
-        parent_wall = time.perf_counter() - t0
+        parent_wall_ms = s_to_ms(time.perf_counter() - t0)
         row = _empty_row(cell)
         row["status"] = "timeout"
-        row["wall_s"] = parent_wall
-        row["child_wall_s"] = parent_wall
-        return row, parent_wall
+        row["wall_ms"] = parent_wall_ms
+        row["child_wall_ms"] = parent_wall_ms
+        return row, parent_wall_ms
 
-    parent_wall = time.perf_counter() - t0
+    parent_wall_ms = s_to_ms(time.perf_counter() - t0)
     if proc.returncode != 0:
         row = _empty_row(cell)
         row["status"] = f"error:exit{proc.returncode}"
         row["error"] = (proc.stderr or "").strip()[:500]
-        row["wall_s"] = parent_wall
-        row["child_wall_s"] = parent_wall
-        return row, parent_wall
+        row["wall_ms"] = parent_wall_ms
+        row["child_wall_ms"] = parent_wall_ms
+        return row, parent_wall_ms
 
     out = proc.stdout.strip()
     if not out:
         row = _empty_row(cell)
         row["status"] = "error:empty_stdout"
         row["error"] = (proc.stderr or "").strip()[:500]
-        row["wall_s"] = parent_wall
-        row["child_wall_s"] = parent_wall
-        return row, parent_wall
+        row["wall_ms"] = parent_wall_ms
+        row["child_wall_ms"] = parent_wall_ms
+        return row, parent_wall_ms
 
     try:
         row = json.loads(out.splitlines()[-1])
@@ -282,13 +289,13 @@ def run_one(cell, timeout):
         row = _empty_row(cell)
         row["status"] = "error:bad_json"
         row["error"] = f"{exc}: {out[:200]}"
-        row["wall_s"] = parent_wall
-        row["child_wall_s"] = parent_wall
-        return row, parent_wall
+        row["wall_ms"] = parent_wall_ms
+        row["child_wall_ms"] = parent_wall_ms
+        return row, parent_wall_ms
 
-    # Override wall_s with the parent-measured subprocess wall.
-    row["wall_s"] = parent_wall
-    return row, parent_wall
+    # Override wall_ms with the parent-measured subprocess wall.
+    row["wall_ms"] = parent_wall_ms
+    return row, parent_wall_ms
 
 
 def _empty_row(cell):
@@ -318,7 +325,7 @@ CSV_COLUMNS = [
     "server_cf", "router_cf", "prop_delay", "hop_by_hop", "alpha", "seed",
     "config_key",
     # cost
-    "build_s", "sim_s", "parse_s", "wall_s", "child_wall_s",
+    "build_ms", "sim_ms", "parse_ms", "wall_ms", "child_wall_ms",
     "log_bytes", "log_lines", "peak_rss_mb", "status",
     # workload counters (file-mode rows only; blank for null)
     "created", "recv_total", "recv_announce", "recv_withdraw",
@@ -358,7 +365,7 @@ def write_manifest(path, cfg, started_at, ended_at, n_cells, n_ok, axes_filter,
         "ok_cells": n_ok,
         "axes_filter": sorted(axes_filter) if axes_filter else "all",
         "repeats_override": repeats_override,
-        "per_run_timeout_s": timeout,
+        "per_run_timeout_ms": timeout,
         "constants": {
             "BASELINE": cfg.BASELINE,
             "FACTORIAL_AXES": cfg.FACTORIAL_AXES,
@@ -390,7 +397,7 @@ def parse_args():
     p.add_argument("--dry-run", action="store_true",
                    help="Print the matrix and the estimated count without running.")
     p.add_argument("--timeout", type=float, default=None,
-                   help="Per-run subprocess timeout in seconds "
+                   help="Per-run subprocess timeout in milliseconds "
                         "(default: the config's DEFAULT_TIMEOUT).")
     p.add_argument("--repeats", type=int, default=None,
                    help="Override every group's repeat count (for quick runs).")
@@ -419,10 +426,10 @@ def main():
         for axis in sorted(by_axis):
             print(f"  {axis:28s} {by_axis[axis]:>5d}")
         print(f"  {'TOTAL':28s} {len(cells):>5d}")
-        # rough time estimate using the calibration range (0.5-5.5 s/run)
+        # rough time estimate using the calibration range (500-5500 ms/run)
         print(f"\nEstimated serial runtime: "
-              f"{len(cells) * 0.5:.0f}-{len(cells) * 5.5:.0f} s "
-              f"(plus {len(cells) * 0.15:.0f} s subprocess startup).")
+              f"{len(cells) * 500:.0f}-{len(cells) * 5500:.0f} ms "
+              f"(plus {len(cells) * 150:.0f} ms subprocess startup).")
         return
 
     # Output directory.
@@ -445,7 +452,7 @@ def main():
     print(f"Scaling benchmark: {len(cells)} cells -> {csv_path}",
           file=sys.stderr)
     print(f"  axes_filter={axes_filter or 'all'}, "
-          f"repeats_override={args.repeats}, timeout={timeout}s",
+          f"repeats_override={args.repeats}, timeout={timeout}ms",
           file=sys.stderr)
 
     rows = []
@@ -456,9 +463,9 @@ def main():
         if row.get("status") == "ok":
             n_ok += 1
         status = row.get("status", "?")
-        sim_s = row.get("sim_s")
+        sim_ms = row.get("sim_ms")
         log_mb = (row.get("log_bytes") or 0) / (1024.0 * 1024.0)
-        sim_str = f"{sim_s:.3f}s" if sim_s is not None else "    -"
+        sim_str = f"{sim_ms:.3f}ms" if sim_ms is not None else "    -"
         print(f"  [{i:>4d}/{len(cells)}] {cell['axis']:>22s} "
               f"{cell['run_id']:<28s} r{cell['repeat_idx']} "
               f"{cell['log_mode']:>4s} v{cell['verbose_level']:>2} "

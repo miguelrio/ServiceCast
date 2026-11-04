@@ -135,19 +135,19 @@ def topology_setup():
 
     # Server 's1' generates packets from arriving events
     # and sends to service 'a'  indicated by "§a"
-    generator_s1 = Generator.server_load_event_generator(network, "s1", ["§a"], exponential_lambda=55, seed=30072022, background_load=False)
-    generator_s2 = Generator.server_load_event_generator(network, "s2", ["§a"], exponential_lambda=55, seed=30072022, background_load=False)
-    generator_s3 = Generator.server_load_event_generator(network, "s3", ["§a"], exponential_lambda=55, seed=30072022, background_load=False)
-    generator_s4 = Generator.server_load_event_generator(network, "s4", ["§a"], exponential_lambda=55, seed=30072022, background_load=False)
-    generator_s5 = Generator.server_load_event_generator(network, "s5", ["§a"], exponential_lambda=55, seed=30072022, background_load=False)
+    generator_s1 = Generator.server_load_event_generator(network, "s1", ["§a"], exponential_lambda=55000, seed=30072022, background_load=False)
+    generator_s2 = Generator.server_load_event_generator(network, "s2", ["§a"], exponential_lambda=55000, seed=30072022, background_load=False)
+    generator_s3 = Generator.server_load_event_generator(network, "s3", ["§a"], exponential_lambda=55000, seed=30072022, background_load=False)
+    generator_s4 = Generator.server_load_event_generator(network, "s4", ["§a"], exponential_lambda=55000, seed=30072022, background_load=False)
+    generator_s5 = Generator.server_load_event_generator(network, "s5", ["§a"], exponential_lambda=55000, seed=30072022, background_load=False)
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=5, size_lambda=10, size_scale_factor=10, seed=30072022)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=5000, size_lambda=10000, size_scale_factor=10, seed=30072022)
 
     # run
     print("RUN ----------------------------------------------------------------")
 
-    network.start(until=3600)
+    network.start(until=3600000)
 
 
     

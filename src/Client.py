@@ -34,7 +34,8 @@ class Client(Host):
     def event_to_packet(self, event):
         # convert an event into a packet
         # Destination is likely to be a service name: e.g. §a
-        packet = Packet(event.time, event.size, self.pkt_no, event.src, event.dst, event.flow_id)
+        packet = Packet(event.time, event.size, self.pkt_no, event.src, event.dst,
+                        event.flow_id, duration=event.duration)
         packet.type = "ClientRequest"
         packet.pkt_no = self.pkt_no
         

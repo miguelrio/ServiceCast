@@ -23,7 +23,6 @@ script_path = os.path.dirname(os.path.abspath(__file__))
 project_path = os.path.dirname(script_path)
 
 from Graph import Graph
-from units import s_to_ms
 from Network import Network
 from Server import Server
 from Router import Router
@@ -37,7 +36,7 @@ from Gml import read_gml
 # --- Fixed experiment constants -------------------------------------------------
 # These define the scenario every sweep cell shares; only the swept axes
 # (server_cf, router_cf, propagation_delay) vary between runs.
-SIM_DURATION = 360           # simulated seconds per run
+SIM_DURATION = 360000        # simulated milliseconds per run
 ALPHA = 0.50                  # Utility load/delay weighting
 SLOTS = 50                    # server capacity
 SEED = 15112022               # shared RNG seed for reproducibility
@@ -46,12 +45,12 @@ SERVICE = "§a"                # the single service every client requests
 NUM_SERVERS = 5               # servers attached to core nodes
 NUM_CLIENTS = 5               # clients attached to local nodes
 
-SERVER_LOAD_LAMBDA = 55       # background-load inter-arrival; INERT here: we pass
+SERVER_LOAD_LAMBDA = 55000    # background-load inter-arrival (ms); INERT here: we pass
                               # background_load=False, and Generator.py:216 (the only
                               # line that reads it) is commented out, so it has no effect
-CLIENT_ARRIVAL_LAMBDA = 0.4     # mean inter-arrival time (s) between client requests
-SESSION_SIZE_LAMBDA = 10      # mean session length (s)
-SESSION_SIZE_SCALE = 10       # session-length multiplier (effective session ~= lambda*scale)
+CLIENT_ARRIVAL_LAMBDA = 400   # mean inter-arrival time (ms) between client requests
+SESSION_SIZE_LAMBDA = 10000   # mean session length (ms)
+SESSION_SIZE_SCALE = 10       # dimensionless session-length multiplier
 
 # Metric fields, in output order. Drives both the per-cell accumulation and the
 # JSON keys (matrix_<field>), so the seven metrics are named in exactly one place.
@@ -247,9 +246,8 @@ def _configure_globals(server_cf, router_cf, hop_by_hop, propagation_delay):
     Verbose.table = 0
 
     Router.hop_by_hop = hop_by_hop
-    # propagation_delay knob is seconds (human interface); the engine
-    # constant is ms (src/units.py)
-    Graph.default_propagation_delay = s_to_ms(propagation_delay)
+    # Propagation delay is milliseconds, like every simulation time value.
+    Graph.default_propagation_delay = propagation_delay
     Utility.alpha = ALPHA
     Server.slots = SLOTS
     Server.change_factor = server_cf
@@ -314,8 +312,8 @@ def build_network(env):
     return network
 
 
-def run_single_experiment(server_cf, router_cf, hop_by_hop=False, propagation_delay=0.1):
-    """Run one SIM_DURATION-second simulation for the given parameters.
+def run_single_experiment(server_cf, router_cf, hop_by_hop=False, propagation_delay=100):
+    """Run one SIM_DURATION-millisecond simulation for the given parameters.
 
     Returns an ExperimentResult of raw measurements (see summarise_records for the
     derived selection-quality statistics).
@@ -336,7 +334,7 @@ def run_single_experiment(server_cf, router_cf, hop_by_hop=False, propagation_de
                             probes.blocked, probes.hops_announce, probes.hops_withdraw)
 
 
-def run_sweep(hop_by_hop, output_path=None, delays=(0.1, 0.5, 1.0, 2.0, 4.0)):
+def run_sweep(hop_by_hop, output_path=None, delays=(100, 500, 1000, 2000, 4000)):
     """
     Runs the full parameter sweep and saves/returns the matrix data.
 
@@ -361,7 +359,7 @@ def run_sweep(hop_by_hop, output_path=None, delays=(0.1, 0.5, 1.0, 2.0, 4.0)):
     matrices = {name: np.zeros(shape) for name in METRIC_FIELDS}
 
     for k, delay in enumerate(delays):
-        print(f"\n=== Propagation delay {delay} ({k + 1}/{len(delays)}) ===")
+        print(f"\n=== Propagation delay {delay} ms ({k + 1}/{len(delays)}) ===")
         for i, r_cf in enumerate(router_cfs):
             for j, s_cf in enumerate(server_cfs):
                 result = run_single_experiment(
@@ -378,7 +376,7 @@ def run_sweep(hop_by_hop, output_path=None, delays=(0.1, 0.5, 1.0, 2.0, 4.0)):
                 for name in METRIC_FIELDS:
                     matrices[name][k, i, j] = cell[name]
 
-                print(f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
+                print(f"Delay: {delay} ms, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
                       f"Created: {result.created}, Hops: {result.hops} "
                       f"(A:{result.hops_announce} W:{result.hops_withdraw}), "
                       f"Acc-arr: {summary.accuracy_arrival:.1f}%, Blocked: {blocked_rate:.1f}%, "
@@ -389,6 +387,7 @@ def run_sweep(hop_by_hop, output_path=None, delays=(0.1, 0.5, 1.0, 2.0, 4.0)):
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "source": "probe",
         "hop_by_hop": hop_by_hop,
+        "delay_unit": "ms",
         "delays": delays,
         "server_cfs": server_cfs,
         "router_cfs": router_cfs,

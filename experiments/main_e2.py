@@ -124,17 +124,17 @@ def topology_setup():
 
     # Server 'r1' generates packets from arriving events
     # and sends to service 'a'  indicated by "§a"
-    generator_r1 = Generator.server_load_event_generator(network, "r1", ["§a"], exponential_lambda=55, seed=30072022, background_load=False)
-    generator_r2 = Generator.server_load_event_generator(network, "r2", ["§a"], exponential_lambda=55, seed=30072022, background_load=False)
+    generator_r1 = Generator.server_load_event_generator(network, "r1", ["§a"], exponential_lambda=55000, seed=30072022, background_load=False)
+    generator_r2 = Generator.server_load_event_generator(network, "r2", ["§a"], exponential_lambda=55000, seed=30072022, background_load=False)
 
 
     # Clients 'c1' ... 'c5' generates packets from arriving events
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=5, size_lambda=10, size_scale_factor=10, seed=30072022)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5"], "§a", arrival_lambda=5000, size_lambda=10000, size_scale_factor=10, seed=30072022)
 
     # run
     print("RUN ----------------------------------------------------------------")
 
-    network.start(until=3600)
+    network.start(until=3600000)
 
 
     

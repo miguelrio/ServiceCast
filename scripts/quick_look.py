@@ -49,7 +49,7 @@ AXIS_KNOB = {
 # Full human-readable names (no code identifiers in the plots).
 LABEL = {
     "topology": "topology", "num_servers": "number of servers",
-    "num_clients": "number of clients", "arrival_lambda": "request arrival rate",
+    "num_clients": "number of clients", "arrival_lambda": "mean request inter-arrival time",
     "session_lambda": "mean session length", "slots": "server slots",
     "total_slots": "total network slots",
     "sim_duration": "simulated duration", "verbose_level": "verbose level",
@@ -57,8 +57,8 @@ LABEL = {
     "prop_delay": "propagation delay", "hop_by_hop": "hop-by-hop forwarding",
 }
 UNIT = {
-    "sim_duration": " (s)", "arrival_lambda": " (s)", "session_lambda": " (s)",
-    "prop_delay": " (s)",
+    "sim_duration": " (ms)", "arrival_lambda": " (ms)", "session_lambda": " (ms)",
+    "prop_delay": " (ms)",
 }
 
 # Readable axis title (the prefix before the colon).
@@ -82,11 +82,11 @@ def _x_label(axis, knob):
     if axis == "clients_fixed_total":
         return "number of clients  (total request rate held constant)"
     if axis in ("arrival_sweep", "load_curve"):
-        return "offered load %  =  (1/λ) × 100 s mean session ÷ total slots   ·   λ per tick"
+        return "offered load %  =  (1/λ) × 100000 ms mean session ÷ total slots   ·   λ per tick"
     if axis == "capacity_90":
         return "total network slots  (each point's λ co-varied → 90% offered load)"
     if axis == "session_length":
-        return "mean session length (s)  =  session_lambda × session_scale"
+        return "mean session length (ms)  =  session_lambda × session_scale"
     if axis == "verbosity":
         return "verbose level  (−1 = logging off)"
     if axis == "change_factor":
@@ -108,7 +108,7 @@ def _offered_load_pct(row):
     slots = _f(row["slots"])
     if not lam or not ns or not slots:
         return None
-    mean_session = (sl or 10) * (ss or 10)
+    mean_session = (sl or 10000) * (ss or 10)
     capacity = ns * slots
     return (1.0 / lam) * mean_session / capacity * 100
 
@@ -146,15 +146,15 @@ def _held_fixed_pairs(rows, swept_knob):
         if len(vals) == 1 and next(iter(vals), "") not in ("", None):
             v = next(iter(vals))
             if c == "session_lambda":
-                # λ is the exponential's parameter, not seconds: show the mean
+                # session_lambda is the exponential's parameter: show the mean
                 # session it produces (λ × scale) so the value reads in real time
                 sc = {r["session_scale"] for r in rows}
                 if len(sc) == 1:
                     pairs.append(("mean session length",
-                                  f"{float(v) * float(next(iter(sc))):g}s"
+                                  f"{float(v) * float(next(iter(sc))):g}ms"
                                   f"  (session_lambda {v} × scale {next(iter(sc))})"))
                     continue
-            pairs.append((LABEL[c], v))
+            pairs.append((_axis_label(c), v))
     return pairs
 
 
@@ -198,8 +198,8 @@ def _ofat_plot(rows, axis, knob, out_dir):
         order = sorted(groups, key=lambda k: float(k))
         x_of = {k: float(k) for k in order}
         categorical = False
-        # session_lambda is the size distribution's parameter, not seconds; the
-        # honest x is the mean session it produces: lambda x session_scale.
+        # session_lambda is the size distribution's parameter; the honest x is
+        # the mean session it produces in ms: lambda x session_scale.
         if knob == "session_lambda":
             scale = float(sub[0]["session_scale"])
             x_of = {k: float(k) * scale for k in order}
@@ -208,7 +208,7 @@ def _ofat_plot(rows, axis, knob, out_dir):
         x_of = {k: i for i, k in enumerate(order)}
         categorical = True
     xs = [x_of[k] for k in order]
-    sim_med = [statistics.median([_f(r["sim_s"]) for r in groups[k]]) for k in order]
+    sim_med = [statistics.median([_f(r["sim_ms"]) for r in groups[k]]) for k in order]
     log_med = [statistics.median([_f(r["log_bytes"]) for r in groups[k]]) / 1048576 for k in order]
     pairs = _held_fixed_pairs(sub, knob)
     n_rep = max(len(groups[k]) for k in order) if order else 0
@@ -221,7 +221,7 @@ def _ofat_plot(rows, axis, knob, out_dir):
 
     for k in order:
         x = x_of[k]
-        a1.scatter([x] * len(groups[k]), [_f(r["sim_s"]) for r in groups[k]],
+        a1.scatter([x] * len(groups[k]), [_f(r["sim_ms"]) for r in groups[k]],
                    s=24, color="#378ADD", alpha=0.45, zorder=2)
         a2.scatter([x] * len(groups[k]), [_f(r["log_bytes"]) / 1048576 for r in groups[k]],
                    s=24, color="#EF9F27", alpha=0.45, zorder=2)
@@ -229,13 +229,13 @@ def _ofat_plot(rows, axis, knob, out_dir):
     a2.plot(xs, log_med, color="#b45309", linewidth=2, marker="o", markersize=6, zorder=3)
 
     for x, s in zip(xs, sim_med):
-        a1.annotate(f"{s:.2f}s", (x, s), textcoords="offset points", xytext=(0, 7),
+        a1.annotate(f"{s:.2f}ms", (x, s), textcoords="offset points", xytext=(0, 7),
                     ha="center", fontsize=8.5, color="#1d4ed8")
     for x, l in zip(xs, log_med):
         a2.annotate(f"{l:.1f}MB", (x, l), textcoords="offset points", xytext=(0, 7),
                     ha="center", fontsize=8.5, color="#b45309")
 
-    _style(a1, _x_label(axis, knob), "runtime (s)")
+    _style(a1, _x_label(axis, knob), "runtime (ms)")
     _style(a2, _x_label(axis, knob), "log size (MB)")
     a1.set_ylim(bottom=0)
     a2.set_ylim(bottom=0)
@@ -244,8 +244,8 @@ def _ofat_plot(rows, axis, knob, out_dir):
             ax.set_xticks(xs)
             ax.set_xticklabels(order)
     elif knob == "session_lambda":
-        # per-point ticks (25 / 50 / 100 / 200 / 400 s); auto ticks would
-        # suggest intermediate session lengths that were never run
+        # per-point ticks (25000 / 50000 / 100000 / 200000 / 400000 ms); auto
+        # ticks would suggest intermediate session lengths that were never run
         for ax in (a1, a2):
             ax.set_xticks(xs)
             ax.set_xticklabels([f"{x:g}" for x in xs])
@@ -288,7 +288,7 @@ def _arrival_sweep_plot(rows, out_dir):
         by_cell[(r["num_clients"], r["arrival_lambda"])].append(r)
     n_rep = max(map(len, by_cell.values())) if by_cell else 0
     rows_line = (f"Rows: number of clients N = {', '.join(n_vals)}   ·   "
-                 f"each row sweeps λ {lams[0]:g}–{lams[-1]:g} s "
+                 f"each row sweeps λ {lams[0]:g}–{lams[-1]:g} ms "
                  f"(offered load {min(loads):.0f}–{max(loads):.0f}%)")
     vary_line = (f"Varying: offered load % (λ per tick; left = lighter, right = heavier)"
                  f"   ·   points = {n_rep} repeats, line = median")
@@ -308,7 +308,7 @@ def _arrival_sweep_plot(rows, out_dir):
             by_lam[r["arrival_lambda"]].append(r)
         order = sorted(by_lam, key=lambda k: _offered_load_pct(by_lam[k][0]))
         xs = [_offered_load_pct(by_lam[k][0]) for k in order]
-        sim_med = [statistics.median([_f(r["sim_s"]) for r in by_lam[k]]) for k in order]
+        sim_med = [statistics.median([_f(r["sim_ms"]) for r in by_lam[k]]) for k in order]
         log_med = [statistics.median([_f(r["log_bytes"]) for r in by_lam[k]]) / 1048576 for k in order]
 
         a1, a2 = axes[row_i]
@@ -316,7 +316,7 @@ def _arrival_sweep_plot(rows, out_dir):
         # scatter repeats at the offered-load % position
         for k in order:
             x = _offered_load_pct(by_lam[k][0])
-            a1.scatter([x] * len(by_lam[k]), [_f(r["sim_s"]) for r in by_lam[k]],
+            a1.scatter([x] * len(by_lam[k]), [_f(r["sim_ms"]) for r in by_lam[k]],
                        s=20, color="#378ADD", alpha=0.45, zorder=2)
             a2.scatter([x] * len(by_lam[k]), [_f(r["log_bytes"]) / 1048576 for r in by_lam[k]],
                        s=20, color="#EF9F27", alpha=0.45, zorder=2)
@@ -331,7 +331,7 @@ def _arrival_sweep_plot(rows, out_dir):
             ax.set_xticklabels([f"{_offered_load_pct(by_lam[k][0]):.0f}%"
                                 for k in order], fontsize=8)
             for i, (k, x) in enumerate(zip(order, xs)):
-                ax.annotate(f"λ={float(k):.4g}", xy=(x, 0),
+                ax.annotate(f"λ={float(k):.4g}ms", xy=(x, 0),
                             xycoords=("data", "axes fraction"),
                             xytext=(0, -17 if i % 2 == 0 else -36),
                             textcoords="offset points",
@@ -346,12 +346,12 @@ def _arrival_sweep_plot(rows, out_dir):
         # after _style, which resets the axis labels
         a1.set_title(f"N = {n_val} clients", loc="left", fontsize=11,
                      fontweight="bold", color=INK)
-        a1.set_ylabel("runtime (s)", fontsize=10, color=INK)
+        a1.set_ylabel("runtime (ms)", fontsize=10, color=INK)
         a2.set_ylabel("log size (MB)", fontsize=10, color=INK)
 
         # annotate medians
         for x, s in zip(xs, sim_med):
-            a1.annotate(f"{s:.2f}s", (x, s), textcoords="offset points", xytext=(0, 6),
+            a1.annotate(f"{s:.2f}ms", (x, s), textcoords="offset points", xytext=(0, 6),
                         ha="center", fontsize=7.5, color="#1d4ed8")
         for x, l in zip(xs, log_med):
             a2.annotate(f"{l:.1f}MB", (x, l), textcoords="offset points", xytext=(0, 6),
@@ -420,7 +420,7 @@ def _load_curve_plot(rows, out_dir):
             by_lam[r["arrival_lambda"]].append(r)
         order = sorted(by_lam, key=lambda k: _offered_load_pct(by_lam[k][0]))
         xs = [_offered_load_pct(by_lam[k][0]) for k in order]
-        sim_med = [statistics.median([_f(r["sim_s"]) for r in by_lam[k]]) for k in order]
+        sim_med = [statistics.median([_f(r["sim_ms"]) for r in by_lam[k]]) for k in order]
         log_med = [statistics.median([_f(r["log_bytes"]) for r in by_lam[k]]) / 1048576 for k in order]
         blk_med = []
         for k in order:
@@ -432,7 +432,7 @@ def _load_curve_plot(rows, out_dir):
         # scatter repeats at the offered-load % position
         for k in order:
             x = _offered_load_pct(by_lam[k][0])
-            a1.scatter([x] * len(by_lam[k]), [_f(r["sim_s"]) for r in by_lam[k]],
+            a1.scatter([x] * len(by_lam[k]), [_f(r["sim_ms"]) for r in by_lam[k]],
                        s=20, color="#378ADD", alpha=0.45, zorder=2)
             a2.scatter([x] * len(by_lam[k]), [_f(r["log_bytes"]) / 1048576 for r in by_lam[k]],
                        s=20, color="#EF9F27", alpha=0.45, zorder=2)
@@ -450,7 +450,7 @@ def _load_curve_plot(rows, out_dir):
             ax.set_xticklabels([f"{_offered_load_pct(by_lam[k][0]):.0f}%"
                                 for k in order], fontsize=8)
             for k, x in zip(order, xs):
-                ax.annotate(f"λ={float(k):.3g}", xy=(x, 0),
+                ax.annotate(f"λ={float(k):.3g}ms", xy=(x, 0),
                             xycoords=("data", "axes fraction"),
                             xytext=(0, -17), textcoords="offset points",
                             ha="center", va="top", fontsize=8, color=MUTED,
@@ -466,14 +466,14 @@ def _load_curve_plot(rows, out_dir):
         # after _style, which resets the axis labels
         a1.set_title(f"T = {t_val} total slots", loc="left", fontsize=11,
                      fontweight="bold", color=INK)
-        a1.set_ylabel("runtime (s)", fontsize=10, color=INK)
+        a1.set_ylabel("runtime (ms)", fontsize=10, color=INK)
         a2.set_ylabel("log size (MB)", fontsize=10, color=INK)
         a3.set_ylabel("blocked rate (%)", fontsize=10, color=INK)
         a3.set_ylim(0, 100)   # fixed scale: comparable facets, real zeros stay honest
 
         # annotate medians
         for x, s in zip(xs, sim_med):
-            a1.annotate(f"{s:.2f}s", (x, s), textcoords="offset points", xytext=(0, 6),
+            a1.annotate(f"{s:.2f}ms", (x, s), textcoords="offset points", xytext=(0, 6),
                         ha="center", fontsize=7.5, color="#1d4ed8")
         for x, l in zip(xs, log_med):
             a2.annotate(f"{l:.1f}MB", (x, l), textcoords="offset points", xytext=(0, 6),
@@ -493,7 +493,7 @@ def _capacity_90_plot(rows, out_dir):
     """capacity_90: runtime, log size and blocked rate vs total capacity T.
 
     Four points at constant 90% offered load (each point's λ co-varied as
-    111.1/T), linear x-axis: points at their true positions,
+    111111.1/T ms), linear x-axis: points at their true positions,
     tick labels on alternating tiers because 100/250 land ~3% apart.
     Points = repeats, line = median; the blocked-rate panel shares the fixed
     0-100% scale of the load curves.
@@ -511,7 +511,7 @@ def _capacity_90_plot(rows, out_dir):
         vals = [v for v in (_f(r[col]) for r in groups[k]) if v is not None]
         return statistics.median(vals) if vals else 0.0
 
-    sim_med = [_med(k, "sim_s") for k in order]
+    sim_med = [_med(k, "sim_ms") for k in order]
     log_med = [_med(k, "log_bytes") / 1048576 for k in order]   # bytes -> MB
     blk_med = [_med(k, "blocked_rate") for k in order]
     pairs = _held_fixed_pairs(sub, "total_slots")
@@ -524,7 +524,7 @@ def _capacity_90_plot(rows, out_dir):
                    f"Varying: {_x_label('capacity_90', 'total_slots')}   ·   points = {n_rep} repeats, line = median")
 
     for x, k in zip(xs, order):
-        a1.scatter([x] * len(groups[k]), [_f(r["sim_s"]) for r in groups[k]],
+        a1.scatter([x] * len(groups[k]), [_f(r["sim_ms"]) for r in groups[k]],
                    s=24, color="#378ADD", alpha=0.45, zorder=2)
         a2.scatter([x] * len(groups[k]), [_f(r["log_bytes"]) / 1048576 for r in groups[k]],
                    s=24, color="#EF9F27", alpha=0.45, zorder=2)
@@ -537,7 +537,7 @@ def _capacity_90_plot(rows, out_dir):
     # Label the middle panel only: three full-length x labels collide at the
     # figure bottom; the λ co-variation story stays in the context line above.
     lam_of = {k: float(groups[k][0]["arrival_lambda"]) for k in order}
-    for a, ms, fmt, c in ((a1, sim_med, "{:.2f}s", "#1d4ed8"),
+    for a, ms, fmt, c in ((a1, sim_med, "{:.2f}ms", "#1d4ed8"),
                           (a2, log_med, "{:.1f}MB", "#b45309"),
                           (a3, blk_med, "{:.1f}%", "#059669")):
         for i, (x, m) in enumerate(zip(xs, ms)):
@@ -548,7 +548,7 @@ def _capacity_90_plot(rows, out_dir):
     # Linear x: 100/250 land ~3% apart, so the per-point tick labels go on
     # alternating tiers (even upper, odd lower) and the annotations above
     # are staggered vertically.
-    _style(a1, "", "runtime (s)")
+    _style(a1, "", "runtime (ms)")
     _style(a2, _x_label("capacity_90", "total_slots"), "log size (MB)")
     _style(a3, "", "blocked rate (%)")
     # tight_layout ignores the manual tier annotations below the axes, so the
@@ -561,7 +561,7 @@ def _capacity_90_plot(rows, out_dir):
         ax.set_xticks(xs)
         ax.set_xticklabels([])
         for i, (x, k) in enumerate(zip(xs, order)):
-            ax.annotate(f"{int(x):,}\nλ={lam_of[k]:.4f}s",
+            ax.annotate(f"{int(x):,}\nλ={lam_of[k]:.4f}ms",
                         xy=(x, 0), xycoords=("data", "axes fraction"),
                         xytext=(0, -3 if i % 2 == 0 else -27),
                         textcoords="offset points", ha="center", va="top",
@@ -651,7 +651,7 @@ def _blocking_overlay_plot(rows, out_dir):
     # Knee window only: within 75-120% the medians top out near 21%, so 25
     # hugs the data instead of leaving dead room (see BLOCKING_YMAX above).
     ax.set_ylim(0, BLOCKING_YMAX)
-    _style(ax, "offered load %  =  (1/λ) × 100 s mean session ÷ total slots", "blocked rate (%)")
+    _style(ax, "offered load %  =  (1/λ) × 100000 ms mean session ÷ total slots", "blocked rate (%)")
     ax.legend(fontsize=8.5, loc="best", framealpha=0.9)
     fig.tight_layout(rect=[0, 0.01, 1, 0.80])
     _save(out_dir, "quick_blocking.png")

@@ -420,7 +420,7 @@ def main():
             + (f" ({n_emb_hosts} hosting embedded servers)" if n_emb_hosts else "") + ", "
             f"user->nearest server {mean_km:.0f} km mean, "
             f"{median_km:.0f} km median; operators {dict(ops.most_common(6))} -> {path}")
-    log(f"Done in {time.perf_counter() - t0:.1f}s")
+    log(f"Done in {(time.perf_counter() - t0) * 1000:.1f}ms")
 
 
 if __name__ == "__main__":

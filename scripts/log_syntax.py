@@ -16,8 +16,9 @@ _NOTE = r"(?:\([^)]*\))?"
 _TIMESTAMP_LINE_RE = re.compile(rf"^\s*{_NUM}:\s+")
 _PARAMETER_RE = re.compile(r"^\s*(?P<key>[^=]+?)\s*=\s*(?P<value>.*?)\s*$")
 _HEADER_END_RE = re.compile(r"^\s*size_scale_factor\s*=\s*.+?\s*$")
-# the wall-clock prefix scripts/memprobe.py adds to every line, e.g. "[   12.3s] "
-_MEMPROBE_STAMP_RE = re.compile(r"^\[\s*\d+(?:\.\d+)?s\] ")
+# Wall-clock prefixes added by scripts/memprobe.py: new "[   12.3ms] " and old
+# "[   12.3s] " forms are both accepted so existing logs remain parseable.
+_MEMPROBE_STAMP_RE = re.compile(r"^\[\s*\d+(?:\.\d+)?(?:ms|s)\] ")
 
 GAP_KEYWORDS = frozenset({"OUTCOME_GAP", "DECISION_GAP", "STALENESS_ERR"})
 FIB_STABILITY_KEYWORDS = frozenset({
@@ -119,8 +120,8 @@ def _parse_parameter_value(value: str):
 
 
 def strip_memprobe_stamps(lines: Iterable[str]) -> Iterator[str]:
-    """Yield the lines without the "[   12.3s] " prefix memprobe.py adds, so
-    a memprobe log parses like the simulator's own output."""
+    """Yield lines without memprobe's new "[   12.3ms] " or old "[   12.3s] "
+    prefix, so a memprobe log parses like the simulator's own output."""
     for line in lines:
         if line.startswith("["):
             match = _MEMPROBE_STAMP_RE.match(line)

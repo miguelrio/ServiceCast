@@ -30,10 +30,10 @@ a router receives, so the log grows with the number of messages. Use them
 only on small networks or for short runs; otherwise the log files become
 far too large to store.
 
-Measured on a 1K-router network (60 simulated seconds, about 750K update
-messages), and projected for a 500 s run on a 100K-router network:
+Measured on a 1K-router network (60000 simulated milliseconds, about 750K update
+messages), and projected for a 500000 ms run on a 100K-router network:
 
-| Level | 1K, 60 s | 100K, 500 s (projected) | Extra run time vs -2 at 100K (projected) |
+| Level | 1K, 60000 ms | 100K, 500000 ms (projected) | Extra run time vs -2 at 100K (projected) |
 | --- | --- | --- | --- |
 | -1 | 1.9 MB | about 25 MB | about 1-2% |
 | 0 | 93 MB | about 110 GB | about 5-10% |
@@ -50,6 +50,8 @@ Verbose level -1 (metrics: everything the analysis scripts need).
 
 ##### Per-request metrics
 
+Simulation timestamps and `latency` values are in milliseconds.
+
 1. OUTCOME_GAP - one per client request, printed when the request arrives
 at a Server: the utility of the selected replica vs the best replica,
 both at arrival time (B = BEST_UTIL_ARR - SEL_UTIL_ARR).
@@ -61,7 +63,7 @@ BLOCKED lines carry an extra MINLOAD section — the lowest-loaded replica at
 request could have been served elsewhere:
 
 ```
-270.990: Net   OUTCOME_GAP (B = BEST_UTIL_ARR - SEL_UTIL_ARR) 's1' [c4.141] SELECTED: time(t_arr): 270.990 server(SEL_ID): s1 load: 1.0 latency: 0.3 utility(SEL_UTIL_ARR): 0.28571 BEST: time(t_arr): 270.990 server(BEST_ID_ARR): s1 load: 1.0 latency: 0.3 utility(BEST_UTIL_ARR): 0.28571 MINLOAD: time(t_arr): 270.990 server(MIN_LOAD_ID): s3 load: 0.7 latency: 0.6 utility(MIN_LOAD_UTIL): 0.22143 BLOCKED 0.0
+270990.000: Net   OUTCOME_GAP (B = BEST_UTIL_ARR - SEL_UTIL_ARR) 's1' [c4.141] SELECTED: time(t_arr): 270990.000 server(SEL_ID): s1 load: 1.0 latency: 300 utility(SEL_UTIL_ARR): 0.28571 BEST: time(t_arr): 270990.000 server(BEST_ID_ARR): s1 load: 1.0 latency: 300 utility(BEST_UTIL_ARR): 0.28571 MINLOAD: time(t_arr): 270990.000 server(MIN_LOAD_ID): s3 load: 0.7 latency: 600 utility(MIN_LOAD_UTIL): 0.22143 BLOCKED 0.0
 ```
 
 1. DECISION_GAP - the ground-truth best utility at selection time vs the
@@ -96,9 +98,9 @@ most informative in first-decide mode.
 At Verbose levels -1 and 0 the gap lines are plain:
 
 ```
-3.015: Net   OUTCOME_GAP 's5' [c5.1] SELECTED: time: 3.015 server: s5 load: 0.0 latency: 0.747 utility: 0.9577 BEST: time: 3.015 server: s5 load: 0.0 latency: 0.747 utility: 0.9577 SAME 0.0
-3.015: Net   DECISION_GAP 's5' [c5.1] SELECTED: time: 0.000 server: s5 load: 0.0 latency: 0.747 utility: 0.9577 BEST: time: 2.268 server: s5 load: 0.0 latency: 0.647 utility: 0.9635 SAME 0.0058
-3.015: Net   STALENESS_ERR 's5' [c5.1] SELECTED: time: 0.000 server: s5 load: 0.0 latency: 0.747 utility: 0.9577 ACTUAL: time: 2.268 server: s5 load: 0.0 latency: 0.647 utility: 0.9635 SAME 0.0058
+3015.000: Net   OUTCOME_GAP 's5' [c5.1] SELECTED: time: 3015.000 server: s5 load: 0.0 latency: 747 utility: 0.9577 BEST: time: 3015.000 server: s5 load: 0.0 latency: 747 utility: 0.9577 SAME 0.0
+3015.000: Net   DECISION_GAP 's5' [c5.1] SELECTED: time: 0.000 server: s5 load: 0.0 latency: 747 utility: 0.9577 BEST: time: 2268.000 server: s5 load: 0.0 latency: 647 utility: 0.9635 SAME 0.0058
+3015.000: Net   STALENESS_ERR 's5' [c5.1] SELECTED: time: 0.000 server: s5 load: 0.0 latency: 747 utility: 0.9577 ACTUAL: time: 2268.000 server: s5 load: 0.0 latency: 647 utility: 0.9635 SAME 0.0058
 ```
 
 At Verbose level >= 1 the notation from the BEST_REPLICA_UTILITY notes is
@@ -106,8 +108,8 @@ shown before each value, as field(NOTATION): value, and the metric formula
 follows the tag; the trailing "KEYWORD gap" is identical at all levels:
 
 ```
-6.151: Net   OUTCOME_GAP (B = BEST_UTIL_ARR - SEL_UTIL_ARR) 's1' [c3.1] SELECTED: time(t_arr): 6.151 server(SEL_ID): s1 load: 0.0 latency: 0.4 utility(SEL_UTIL_ARR): 0.71429 BEST: time(t_arr): 6.151 server(BEST_ID_ARR): s1 load: 0.0 latency: 0.4 utility(BEST_UTIL_ARR): 0.71429 SAME 0.0
-3131.183: Net   STALENESS_ERR (C = SEL_UTIL_SEL - SEL_UTIL_EST) 's5' [c3.128] SELECTED: time(t_update): 2871.037 server(SEL_ID): s5 load: 0.14 latency: 0.1 utility(SEL_UTIL_EST): 0.85857 ACTUAL: time(t_sel): 3131.083 server(SEL_ID): s5 load: 0.2 latency: 0.1 utility(SEL_UTIL_SEL): 0.75857 SAME -0.1
+6151.000: Net   OUTCOME_GAP (B = BEST_UTIL_ARR - SEL_UTIL_ARR) 's1' [c3.1] SELECTED: time(t_arr): 6151.000 server(SEL_ID): s1 load: 0.0 latency: 400 utility(SEL_UTIL_ARR): 0.71429 BEST: time(t_arr): 6151.000 server(BEST_ID_ARR): s1 load: 0.0 latency: 400 utility(BEST_UTIL_ARR): 0.71429 SAME 0.0
+3131183.000: Net   STALENESS_ERR (C = SEL_UTIL_SEL - SEL_UTIL_EST) 's5' [c3.128] SELECTED: time(t_update): 2871037.000 server(SEL_ID): s5 load: 0.14 latency: 100 utility(SEL_UTIL_EST): 0.85857 ACTUAL: time(t_sel): 3131083.000 server(SEL_ID): s5 load: 0.2 latency: 100 utility(SEL_UTIL_SEL): 0.75857 SAME -0.1
 ```
 
 ##### End-of-run summaries
@@ -133,9 +135,9 @@ path to their replica, and the `forward_to_tree_children_only` setting.
 With that setting on, routers don't send those updates, so the count is 0.
 
 ```
-360.000: INVALID_ROUTE_DROPS 0 (forward_to_tree_children_only = True)
-360.000: Net   SUMMARY_SERVER_METRICS created: 1890 announce: 102571 withdraw: 16092
-360.000: AAC   SUMMARY_FIB_ROUTER SET: 16 KEEP: 1103 CHANGED: 104 REMOVED: 2
+360000.000: INVALID_ROUTE_DROPS 0 (forward_to_tree_children_only = True)
+360000.000: Net   SUMMARY_SERVER_METRICS created: 1890 announce: 102571 withdraw: 16092
+360000.000: AAC   SUMMARY_FIB_ROUTER SET: 16 KEEP: 1103 CHANGED: 104 REMOVED: 2
 ```
 
 When a log also has the per-update lines (level 0 and up), `quick_stats.py`

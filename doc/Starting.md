@@ -20,7 +20,7 @@ This computes, for every router, the next hop and the total delay
 towards every server, and installs them as the router's forwarding
 table and its row of the network's latency table (`src/Routing.py`).
 It runs one shortest-path computation per server with scipy's compiled
-Dijkstra, so it is fast even on large topologies (about 10 s for the
+Dijkstra, so it is fast even on large topologies (about 10000 ms for the
 91K-router CAIDA topology with 100 servers).
 
 - If the links carry business relationships (`type "c2p"` or
@@ -67,8 +67,11 @@ ServiceCast will use the forwarding tables in each Router, to send the
 request to the *best* Server.
 
 ```
-    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5", "c6"], "§a", arrival_lambda=2, size_lambda=6, seed=30072022)
+    generator_m1 = Generator.multi_client_event_generator(network, ["c1", "c2", "c3", "c4", "c5", "c6"], "§a", arrival_lambda=2000, size_lambda=6000, seed=30072022)
 ```
+
+`arrival_lambda` and `size_lambda` are milliseconds. `size_lambda` is the
+mean session duration before scaling, not the packet size in bytes.
 
 The event generator is based on the ```simpy``` ```EventGenerator```.
 
@@ -83,10 +86,12 @@ the routers.
 
 
 ```
-    generator_s1 = Generator.server_load_event_generator(network, "s1", ["§a"], exponential_lambda=55, seed=30072022)
-    generator_s2 = Generator.server_load_event_generator(network, "s2", ["§a"], exponential_lambda=55, seed=30072022)
+    generator_s1 = Generator.server_load_event_generator(network, "s1", ["§a"], exponential_lambda=55000, seed=30072022)
+    generator_s2 = Generator.server_load_event_generator(network, "s2", ["§a"], exponential_lambda=55000, seed=30072022)
     ...
 ```
+
+The `exponential_lambda` time parameter is in milliseconds.
 
 
 The event generator is based on the ```simpy``` ```EventGenerator```.
@@ -98,7 +103,7 @@ To run the system and trigger the event generators, we do the
 following:
 
 ```
-    network.start(until=3600)
+    network.start(until=3600000)
 ```
 
-This runs the simulation engine for 3600 seconds.
+This runs the simulation engine for 3600000 milliseconds.

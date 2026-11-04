@@ -115,26 +115,26 @@ for external nodes before it read `delayMs`, so these links got
 The default value is set in several places that must agree but are not
 linked to each other:
 
-- `src/Graph.py`: class default `default_propagation_delay = 1`
-- Experiment scripts: 7 set it to `0.1`, 1 sets it to `1`, others take
+- `src/Graph.py`: class default `default_propagation_delay = 1000`
+- Experiment scripts: 7 set it to `100`, 1 sets it to `1000`, others take
   it from a parameter (`knobs["prop_delay"]`, `GRAPH_DELAY` via
   `Importer.py`)
-- `scripts/setup/constants_*.py`: `GRAPH_DELAY = 1` (dfn_2),
-  `0.1` (dfn_equiv), `GRAPH_DELAYS = [0.1 ... 4.0]` (v1 sweep)
+- `scripts/setup/constants_*.py`: `GRAPH_DELAY = 1000` (dfn_2),
+  `100` (dfn_equiv), `GRAPH_DELAYS = [100 ... 4000]` (v1 sweep)
 - (resolved) `scripts/add_routing_tables.py` and
   `scripts/add_routing_tables_valley_free.py` hard-coded the default, so
   precomputed tables silently went wrong if an experiment used any other
   value (the delay-utility < 0 crash on 2026-10-08). Both scripts are
   removed: the simulator computes the tables from its own link weights.
-- `Host.add_neighbour` / `Router.add_neighbour`: `propdelay=1` defaults
+- `Host.add_neighbour` / `Router.add_neighbour`: `propdelay=1000` defaults
 
 To do:
 - Make the default link delay a single configured parameter, as the
   older experiment scripts did. Nothing should hard-code it.
 - The route adders should read the same value (a command-line option,
   or a value recorded in the GML), not a constant.
-- Choose a sensible default for seconds: about `0.005` (5 ms) for an
-  access link. 0.1 s is far longer than the core links (median 6 ms
+- Choose a sensible default in milliseconds: about `5` for an access
+  link. 100 ms is far longer than the core links (median 6 ms
   on the 1K topology, 16.5 ms on CAIDA).
 - Decide whether access links should use the GML `delayMs` when it is
   present, rather than always using the default.
@@ -155,11 +155,11 @@ the default and would change:
   setting only as a fallback in `main_precomputed_t1`, `main_mig_t1`.
 - `Importer` experiments (`main_importer`, `main_dfn_2_import`,
   `main_dfn_equiv_import`) attach hosts with the default, from
-  `GRAPH_DELAY` in seconds: 0.1 in `constants_dfn_2_importer`,
-  `constants_cog_importer`, `constants_dfn_equiv`; 1 in
+  `GRAPH_DELAY` in milliseconds: 100 in `constants_dfn_2_importer`,
+  `constants_cog_importer`, `constants_dfn_equiv`; 1000 in
   `constants_dfn_2`.
 - Tests: `tests/bench_rib_store.py` (100), `tests/test_routing.py` (100).
-- Sweeps vary the delay on purpose (`constants_scaling.py` 0.1-4 s,
+- Sweeps vary the delay on purpose (`constants_scaling.py` 100-4000 ms,
   `constants_v1.py` `GRAPH_DELAYS`): keep as an experiment parameter.
 - The old toy experiments (`main_e1` etc.) rely on the defaults: their
   unweighted links get `default_propagation_delay` (now 1000 ms) while
@@ -167,8 +167,7 @@ the default and would change:
 Changing these changes results of the DFN, COG and toy experiments.
 - Check consistency across the simulator, the topology generator and
   the route adders:
-  - units: the simulator reads seconds, but the CAIDA GMLs were written
-    in milliseconds
+  - units: the simulator and the CAIDA GMLs use milliseconds
   - which edges count as links: client-server `demand` edges were
     loaded as links and silenced 51 servers on CAIDA. The loader now
     ignores them (2026-10-14); the generator should stop writing them
@@ -462,7 +461,7 @@ only end-of-run totals (`SUMMARY_SERVER_METRICS`, `SUMMARY_FIB_ROUTER`).
 
 Candidates:
 
-- a network-wide progress line every simulated second (or a set
+- a network-wide progress line every 1000 simulated ms (or a set
   interval): wall time and memory; requests, blocked and not forwarded;
   server load mean, spread and maximum; load changes, announcements and
   withdrawals; FIB changes; RIB size mean, 99th percentile and maximum;
@@ -473,7 +472,7 @@ Candidates:
 - per-server lines (announcements sent and suppressed by damping);
 - run statistics (set-up and run time, peak memory).
 
-To decide: which of these, the interval for each (simulated seconds,
+To decide: which of these, the interval for each (simulated milliseconds,
 or wall time), the verbose level that enables them, and the line
 formats, so that `log_syntax.py` and `quick_stats.py` can read them.
 Any per-call timing (e.g. of `decide_announcements`) should stay
@@ -484,8 +483,8 @@ optional, since it adds overhead to every decision.
 Hypothesis: Pareto dominance limits each router's RIB to roughly
 c * ln(servers) once loads spread out. A 30 s probe showed RIBs about
 twice H_n at 10-50 servers, probably because loads are still near zero
-early in a run. Test: run 10, 25, 50, 100 and 500 servers to 200 s,
-snapshotting each router's RIB and non-dominated set size every 10 s,
+early in a run. Test: run 10, 25, 50, 100 and 500 servers to 200000 ms,
+snapshotting each router's RIB and non-dominated set size every 10000 ms,
 and compare the median and 90th percentile with H_n. The per-router RIB
 summary lines proposed under "New metrics" would provide the data.
 

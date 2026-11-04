@@ -118,14 +118,18 @@ class Packet(object):
             identifiers for source and destination
         flow_id : int
             small integer that can be used to identify a flow
+        duration : float
+            session duration in milliseconds for a client request; None for
+            packets that do not own server capacity
     """
-    def __init__(self, time, size, id, src, dst, flow_id=0):
+    def __init__(self, time, size, id, src, dst, flow_id=0, duration=None):
         self.time = time
         self.size = size
         self.id = id
         self.src = src
         self.dst = dst
         self.flow_id = flow_id
+        self.duration = duration
 
     def __repr__(self):
         return "id: {}, src: {}, dst: {}, time: {}, size: {}".\

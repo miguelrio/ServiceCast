@@ -12,6 +12,11 @@ They are intended to be run from this directory so their local imports resolve.
 | `log_syntax.py` | Shared line-level parser for current-format logs. It reads the optional parameter header, classifies timestamped events, and extracts gap, ServerMetric, and FIB fields. It is a library module rather than a standalone command. |
 | `log_metrics.py` | Matrix-specific log aggregator used by the log-based matrix sweep. It uses `log_syntax.py` to assemble each request's gap lines and return raw metrics. |
 
+`window_stats.py` accepts `--from`, `--to`, and `--every` in milliseconds and
+reports window bounds as `from_ms` and `to_ms`. `memprobe.py` prefixes child
+output with elapsed milliseconds and writes `elapsed_ms` in its RSS CSV.
+Wall-clock duration fields in CSV/JSON output use the `_ms` suffix.
+
 ### Verbose levels
 
 The simulator's verbose level (`Verbose.level`, the third argument of
@@ -34,7 +39,7 @@ matrix sweep) need level 0 or above.
 **Level -1 is the expected level for large networks and long runs.** Levels
 0 and above print one or more lines per update message, so they are for
 detailed protocol debugging on small networks or short runs only; at scale
-the logs become far too large (a 500 s run on 100K routers is projected at
+the logs become far too large (a 500000 ms run on 100K routers is projected at
 about 25 MB at -1, 110 GB at 0 and 1.7 TB at 1). See `../doc/Logging.md`.
 
 ## Change-Factor Matrix Experiments

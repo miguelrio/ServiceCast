@@ -6,7 +6,9 @@ import matplotlib.pyplot as plt
 from log_syntax import parse_event_header, parse_gap_line, parse_log_header
 
 # plot_load.py parses one or more ServiceCast log files and extracts server
-# load values from OUTCOME_GAP entries. For each input file it prints a small
+# load values from OUTCOME_GAP entries. Current event timestamps are already ms;
+# explicitly seconds-unit legacy logs are converted to ms at parse time. For each
+# input file it prints a small
 # per-server summary table, then generates two plots: a load-over-time view
 # and a time-weighted CDF of load values.
 #
@@ -104,7 +106,11 @@ def parse_file(file_path, eps=1e-9, verbose=False, detail_limit=20):
     overwrite_detail_suppressed = False
 
     with open(file_path, "r", encoding="utf-8") as handle:
-        _, event_lines = parse_log_header(handle, file_path, warn=True)
+        parameters, event_lines = parse_log_header(handle, file_path, warn=True)
+        parameters = parameters or {}
+        # Current logs are already ms. Convert explicitly seconds-based legacy
+        # logs so the millisecond plot labels remain truthful.
+        scale = 1000.0 if parameters.get("time_unit") == "s" else 1.0
         for line_num, line in enumerate(event_lines, 1):
             header = parse_event_header(line)
             if header is None or header.keyword != "OUTCOME_GAP":
@@ -120,8 +126,8 @@ def parse_file(file_path, eps=1e-9, verbose=False, detail_limit=20):
                 continue
 
             for time_value, server_id, load_value in (
-                (gap_line.sel_time, gap_line.sel_server, gap_line.sel_load),
-                (gap_line.cmp_time, gap_line.cmp_server, gap_line.cmp_load),
+                (gap_line.sel_time * scale, gap_line.sel_server, gap_line.sel_load),
+                (gap_line.cmp_time * scale, gap_line.cmp_server, gap_line.cmp_load),
             ):
 
                 if file_max_time is None or time_value > file_max_time:
@@ -196,7 +202,7 @@ def make_time_series_plot(server_to_events):
         ax.step(times, loads, where="post", label=server_id)
 
     ax.set_title("Server Load Over Time")
-    ax.set_xlabel("Time")
+    ax.set_xlabel("Time (ms)")
     ax.set_ylabel("Load")
     ax.grid(True, alpha=0.3)
     ax.legend(title="Server", fontsize=8)
@@ -304,6 +310,7 @@ def finalize_plots(file_path, fig_specs, output_dir, save_plots):
         return
 
     plt.show(block=False)
+    # matplotlib's pause boundary takes seconds: keep the UI pause at 100 ms.
     plt.pause(0.1)
     for fig, filename in fig_specs:
         if "load_vs_time" in filename:

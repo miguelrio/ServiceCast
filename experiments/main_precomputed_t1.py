@@ -6,7 +6,7 @@
 #
 # Usage:
 #   python3 main_precomputed_t1.py [gml_file] [until] [verbose_level]
-# Defaults: the synthetic topology, until=360, verbose 1.
+# Defaults: the synthetic topology, until=360000 ms, verbose 1.
 #
 # Verbose levels (each prints everything the level below prints):
 #   -2  silent: nothing per event, no ground-truth calculations (timing runs)
@@ -44,7 +44,7 @@ import random
 def topology_setup():
     gml_file = sys.argv[1] if len(sys.argv) > 1 else \
         "topologies/synthetic/topology_synthetic_1788876186136.gml"
-    until = float(sys.argv[2]) if len(sys.argv) > 2 else 360
+    until = float(sys.argv[2]) if len(sys.argv) > 2 else 360000
     Verbose.level = int(sys.argv[3]) if len(sys.argv) > 3 else 1
     Verbose.table = 0
     # optional trailing arguments after the first three:
@@ -68,7 +68,7 @@ def topology_setup():
 
     # Default propagation delay for links without a usable GML weight
     # (hyperedges and missing-meta fallbacks). Engine constants are in ms
-    # (src/units.py); 100 ms = 0.1 s. Attachment links use their own defaults.
+    # (src/units.py). Attachment links use their own defaults.
     Graph.default_propagation_delay = 100
 
     # Attachment-link defaults (ms): a delayMs on the GML edge always wins
@@ -118,7 +118,7 @@ def topology_setup():
 
     servers = network.server_names()
     clients = network.client_names()
-    print(f"load: gml {t1 - t0:.3f}s, from_graph {t2 - t1:.3f}s; "
+    print(f"load: gml {s_to_ms(t1 - t0):.3f}ms, from_graph {s_to_ms(t2 - t1):.3f}ms; "
           f"{len(network.routers)} nodes ({len(servers)} servers, {len(clients)} clients)")
     print(f"clients in gml ({len(clients)}): {clients}")
 
@@ -128,7 +128,7 @@ def topology_setup():
     counts = network.routing_counts
     print(f"routing tables: {Routing.policy} for {counts['routers']} routers x "
           f"{counts['servers']} servers ({counts['entries']} entries, "
-          f"{counts['unreachable_pairs']} pairs unreachable) in {t3 - t2:.3f}s")
+          f"{counts['unreachable_pairs']} pairs unreachable) in {s_to_ms(t3 - t2):.3f}ms")
 
     # 4 - setup generators
     for server_name in servers:
@@ -157,20 +157,21 @@ def topology_setup():
             print(f"clients generating requests ({len(clients)}): {shown_clients}{suffix}")
         else:
             print(f"clients generating requests ({len(clients)}): {clients}")
-        # arrival_lambda is the mean inter-request time (seconds) of a single
+        # arrival_lambda is the mean inter-request time (ms) of a single
         # Poisson process across all clients (each request goes to a random
-        # client), so the total rate is 1/arrival_lambda whatever the client
-        # count; session length averages size_lambda * size_scale_factor (seconds)
-        _lam = float(_tu) if _tu is not None else 0.4
+        # client), so the total rate is 1/arrival_lambda requests per ms
+        # whatever the client count; session length averages
+        # size_lambda * size_scale_factor (ms)
+        _lam = float(_tu) if _tu is not None else 400
         Generator.multi_client_event_generator(network, clients, "§a",
-                                               arrival_lambda=_lam, size_lambda=10,
+                                               arrival_lambda=_lam, size_lambda=10000,
                                                size_scale_factor=10, seed=15112022)
 
     # 5 - run
     print("RUN ----------------------------------------------------------------")
     network.start(until=until)
     t4 = time.perf_counter()
-    print(f"run: {t4 - t3:.3f}s wall; simulated {until:g} s = {s_to_ms(until):g} ms (clock: ms)")
+    print(f"run: {s_to_ms(t4 - t3):.3f}ms wall; simulated {until:g} ms (clock: ms)")
 
 
 # go !

@@ -14,7 +14,7 @@ Log handling (never retain log text):
   * log_mode="file" (default for every matrix point): redirect stdout to a real
     scratch file, then after the sim: os.path.getsize for log_bytes,
     parse_log_file for the event counters, then os.remove. Only one log exists
-    at a time, so peak disk is a single file. sim_s here includes genuine write
+    at a time, so peak disk is a single file. sim_ms here includes genuine write
     I/O, which is what a real sweep pays.
   * log_mode="null": a counting sink that tallies bytes and lines and discards
     the text. No event counters available (the verbose=-1 twin suppresses the
@@ -28,14 +28,14 @@ difference is logging's true share.
 
 CLI: one positional arg (JSON knob set). Prints one JSON row to stdout.
 
-Timing boundaries (time.perf_counter in this child):
-  * build_s    around placement + wiring + Network.from_graph's downstream.
-  * sim_s      around network.start(until=...) only. Headline number.
-  * parse_s    around parse_log_file(), started only AFTER the sim timer stops,
+Timing boundaries (time.perf_counter in this child; reported in milliseconds):
+  * build_ms   around placement + wiring + Network.from_graph's downstream.
+  * sim_ms     around network.start(until=...) only. Headline number.
+  * parse_ms   around parse_log_file(), started only AFTER the sim timer stops,
                so parsing never contaminates simulation cost.
-  * wall_s     total child wall clock. Set here to the child's own wall for
+  * wall_ms    total child wall clock. Set here to the child's own wall for
                standalone use; the parent overrides it with the subprocess wall
-               (which includes the ~0.15 s interpreter startup) when collecting.
+               (which includes the ~150 ms interpreter startup) when collecting.
   * peak_rss_mb  resource.getrusage(RUSAGE_SELF).ru_maxrss, trustworthy because
                nothing retains log text.
 """
@@ -107,8 +107,7 @@ def apply_config(knobs):
     Server.slots = knobs["slots"]
     Server.change_factor = knobs["server_cf"]
     Router.fib_utility_update_threshold = knobs["router_cf"]
-    # prop_delay knob is seconds (human interface); the engine constant is ms
-    Graph.default_propagation_delay = s_to_ms(knobs["prop_delay"])
+    Graph.default_propagation_delay = knobs["prop_delay"]
     Router.remove_fib_entry_when_all_utilities_zero = False
 
 
@@ -142,11 +141,11 @@ def build_network(knobs):
 
     # Third arg is `weight` (Network.add_server/add_client signature); the
     # older sweep scripts pass propagation_delay here, so we mirror it for
-    # identical wiring. Knob is seconds; engine weights are ms.
+    # identical wiring. Knob and engine weights are both ms.
     for name, node in zip(server_names, server_nodes):
-        network.add_server(name, node, s_to_ms(knobs["prop_delay"]))
+        network.add_server(name, node, knobs["prop_delay"])
     for name, node in zip(client_names, client_nodes):
-        network.add_client(name, node, s_to_ms(knobs["prop_delay"]))
+        network.add_client(name, node, knobs["prop_delay"])
 
     network.calculate_forwarding_tables()
 
@@ -170,7 +169,7 @@ def build_network(knobs):
 # Identifies the simulation config INDEPENDENT of log_mode, verbose, and
 # repeat_idx, so the file/null twins and the repeats join cleanly. Joins are
 # always on (axis, config_key), not config_key alone: the verbosity OFAT axis
-# reuses the baseline config (Dfn 5/5/0.4), which is also a factorial cell, so a
+# reuses the baseline config (Dfn 5/5/400), which is also a factorial cell, so a
 # config_key-only join would match the verbosity-axis file rows to the
 # factorial's null twin.
 
@@ -245,9 +244,9 @@ def run(knobs):
         "alpha": knobs["alpha"],
         "seed": knobs["seed"],
         # cost fields (filled in below)
-        "build_s": None,
-        "sim_s": None,
-        "parse_s": None,
+        "build_ms": None,
+        "sim_ms": None,
+        "parse_ms": None,
         "log_bytes": None,
         "log_lines": None,
         "peak_rss_mb": None,
@@ -267,27 +266,27 @@ def run(knobs):
         else:
             raise ValueError(f"unknown log_mode {log_mode!r}")
 
-        build_s = None
-        sim_s = None
+        build_ms = None
+        sim_ms = None
 
         t_build_start = time.perf_counter()
         if log_mode == "file":
             with open(log_path, "w") as fh, contextlib.redirect_stdout(fh):
                 network = build_network(knobs)
-                build_s = time.perf_counter() - t_build_start
+                build_ms = s_to_ms(time.perf_counter() - t_build_start)
                 t_sim_start = time.perf_counter()
                 network.start(until=knobs["sim_duration"])
-                sim_s = time.perf_counter() - t_sim_start
+                sim_ms = s_to_ms(time.perf_counter() - t_sim_start)
         else:  # null
             with contextlib.redirect_stdout(sink):
                 network = build_network(knobs)
-                build_s = time.perf_counter() - t_build_start
+                build_ms = s_to_ms(time.perf_counter() - t_build_start)
                 t_sim_start = time.perf_counter()
                 network.start(until=knobs["sim_duration"])
-                sim_s = time.perf_counter() - t_sim_start
+                sim_ms = s_to_ms(time.perf_counter() - t_sim_start)
 
-        row["build_s"] = build_s
-        row["sim_s"] = sim_s
+        row["build_ms"] = build_ms
+        row["sim_ms"] = sim_ms
         row["peak_rss_mb"] = _peak_rss_mb()
 
         # offered load % = (1/λ) × (session_lambda × session_scale) / (num_servers × slots) × 100
@@ -298,15 +297,15 @@ def run(knobs):
         row["offered_load_pct"] = round((1.0 / _lam) * _mean_sess / _cap * 100, 2)
 
         if log_mode == "file":
-            # parse_s started only AFTER the sim timer stops.
+            # parse_ms started only AFTER the sim timer stops.
             t_parse_start = time.perf_counter()
             lm = parse_log_file(log_path)
-            parse_s = time.perf_counter() - t_parse_start
+            parse_ms = s_to_ms(time.perf_counter() - t_parse_start)
 
             row["log_bytes"] = os.path.getsize(log_path)
             with open(log_path, "r", encoding="utf-8", errors="replace") as fh:
                 row["log_lines"] = sum(1 for _ in fh)
-            row["parse_s"] = parse_s
+            row["parse_ms"] = parse_ms
 
             served = len(lm.records)
             blocked_rate = lm.blocked / max(1, lm.blocked + served) * 100.0
@@ -321,7 +320,7 @@ def run(knobs):
         else:  # null: counters unavailable (verbose=-1 suppresses them)
             row["log_bytes"] = sink.nbytes
             row["log_lines"] = sink.nlines
-            row["parse_s"] = 0.0
+            row["parse_ms"] = 0.0
 
     except PlacementCapacityError as exc:
         row["status"] = "skipped:placement"
@@ -336,11 +335,11 @@ def run(knobs):
             except OSError:
                 pass
 
-    child_wall = time.perf_counter() - child_start
-    # wall_s: child-measured here (handy for standalone use); the parent
-    # overrides it with the subprocess wall (includes ~0.15 s startup).
-    row["wall_s"] = child_wall
-    row["child_wall_s"] = child_wall
+    child_wall_ms = s_to_ms(time.perf_counter() - child_start)
+    # wall_ms: child-measured here (handy for standalone use); the parent
+    # overrides it with the subprocess wall (includes ~150 ms startup).
+    row["wall_ms"] = child_wall_ms
+    row["child_wall_ms"] = child_wall_ms
     return row
 
 

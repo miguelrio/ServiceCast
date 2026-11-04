@@ -20,7 +20,7 @@ logs or files.
 - **Where every cell is filled:** [`run_sweep`](run_simulation_sweep.py#L295-L308)
 - **Where they are plotted:** [`plot_change_factor_matrix.py`](plot_change_factor_matrix.py)
 
-Each plot cell `[k, i, j]` is one full 3600s simulation run for a single
+Each plot cell `[k, i, j]` is one full 3600000 ms simulation run for a single
 `(propagation_delay, router_cf, server_cf)` triple. The sweep now spans **three
 axes** — `Server.change_factor` (columns), `Router.fib_utility_update_threshold`
 (rows), and `Graph.default_propagation_delay` (the faceted panels) — so each metric

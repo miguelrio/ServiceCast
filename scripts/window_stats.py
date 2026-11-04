@@ -9,14 +9,14 @@ and to report results for the steady-state part only. Works on runs
 still in progress and on memprobe logs.
 
 Usage:
-    python3 window_stats.py [--from S] [--to S] [--every S] <log> [<log> ...]
+    python3 window_stats.py [--from MS] [--to MS] [--every MS] <log> [<log> ...]
 
-    --from, --to   window in simulated seconds (default: the whole run)
-    --every        split the window into rows of this many seconds
+    --from, --to   window in simulated milliseconds (default: the whole run)
+    --every        split the window into rows of this many milliseconds
 
 Examples:
-    python3 window_stats.py --every 25 run.log          # how things vary
-    python3 window_stats.py --from 300 run.log          # steady state only
+    python3 window_stats.py --every 25000 run.log       # how things vary
+    python3 window_stats.py --from 300000 run.log       # steady state only
 
 Requests are counted in the window of their arrival time. Accuracy and
 the gaps use the same definitions as quick_stats.py, so a window covering
@@ -80,18 +80,18 @@ def _server_count(path):
 
 def read_log(path, time_unit=None):
     """Parse one log: the run settings, the per-request lines by arrival
-    time, and each server's load readings. Times in the log are in the
-    header's time_unit; older headers don't give it, and the clock has been
-    in ms since Oct 2026, so ms is assumed unless time_unit says otherwise."""
+    time, and each server's load readings. Returned times are ms. Current logs
+    already carry ms timestamps; explicitly seconds-unit old logs are converted
+    to ms, and ms is assumed when older headers do not specify a unit."""
     n_servers = _server_count(path)
     with open(path, "r", encoding="utf-8") as fh:
         parameters, lines = parse_log_header(fh, path, warn=True)
         parameters = parameters or {}
         unit = time_unit or parameters.get("time_unit") or "ms"
-        scale = 1000.0 if unit == "ms" else 1.0
+        scale = 1000.0 if unit == "s" else 1.0
 
-        requests = []      # (arrival s, kind, parsed line)
-        readings = {}      # server -> [(t s, load after t)]
+        requests = []      # (arrival ms, kind, parsed line)
+        readings = {}      # server -> [(t ms, load after t)]
         finished = False
         summary_t = None   # the end-of-run SUMMARY_ lines carry the end time
         last_t = 0.0
@@ -103,7 +103,7 @@ def read_log(path, time_unit=None):
                 if _RUN_DONE_RE.match(line):
                     finished = True
                 continue
-            t = header.timestamp / scale
+            t = header.timestamp * scale
             last_t = max(last_t, t)
             if header.keyword in SUMMARY_KEYWORDS:
                 finished = True
@@ -122,15 +122,17 @@ def read_log(path, time_unit=None):
 
             accepted = gap.keyword != "BLOCKED"
             readings.setdefault(gap.sel_server, []).append(
-                (gap.sel_time / scale, gap.sel_load + (slot if accepted else 0.0)))
+                (gap.sel_time * scale, gap.sel_load + (slot if accepted else 0.0)))
             if gap.cmp_server != gap.sel_server:
                 readings.setdefault(gap.cmp_server, []).append(
-                    (gap.cmp_time / scale, gap.cmp_load))
+                    (gap.cmp_time * scale, gap.cmp_load))
             if gap.minload is not None and gap.minload[1] != gap.sel_server:
                 readings.setdefault(gap.minload[1], []).append(
-                    (gap.minload[0] / scale, gap.minload[2]))
+                    (gap.minload[0] * scale, gap.minload[2]))
 
     until = parameters.get("until")
+    if until is not None:
+        until *= scale
     if summary_t is not None:
         end = summary_t
     elif finished and until is not None:
@@ -220,7 +222,7 @@ def format_row(window, s, load, partial):
             f"{load_mean:>9.3f} {load_sd:>8.3f} {full:>8.1f}")
 
 
-HEADER = (f"{'from_s':>7} {'to_s':>7}  {'requests':>9} {'blocked%':>8} {'nofwd':>6} "
+HEADER = (f"{'from_ms':>7} {'to_ms':>7}  {'requests':>9} {'blocked%':>8} {'nofwd':>6} "
           f"{'accuracy%':>9} {'gap_out%':>8} {'gap_dec%':>8} {'stale%':>8} "
           f"{'load_mean':>9} {'load_sd':>8} {'full_srv':>8}")
 
@@ -230,11 +232,11 @@ def main():
         description="Request accuracy and server load per window of simulated time.")
     parser.add_argument("paths", nargs="+", help="log file(s)")
     parser.add_argument("--from", dest="start", type=float, default=0.0,
-                        help="start of the window, simulated seconds (default 0)")
+                        help="start of the window, simulated milliseconds (default 0)")
     parser.add_argument("--to", dest="stop", type=float, default=None,
-                        help="end of the window, simulated seconds (default: end of the run)")
+                        help="end of the window, simulated milliseconds (default: end of the run)")
     parser.add_argument("--every", type=float, default=None,
-                        help="split the window into rows of this many seconds")
+                        help="split the window into rows of this many milliseconds")
     parser.add_argument("--time-unit", choices=("ms", "s"), default=None,
                         help="clock unit of the log's times, if the header does "
                              "not give it (default ms)")
@@ -246,7 +248,7 @@ def main():
         requests, readings, n_servers, end, finished = read_log(path, args.time_unit)
         stop = end if args.stop is None else min(args.stop, end)
         if stop <= args.start:
-            print(f"{path}: no data in the window ({args.start:g}-{stop:g} s)")
+            print(f"{path}: no data in the window ({args.start:g}-{stop:g} ms)")
             continue
         windows = make_windows(args.start, stop, args.every)
         loads = load_by_window(readings, n_servers, windows)
@@ -254,7 +256,7 @@ def main():
 
         if len(args.paths) > 1:
             print(path)
-        state = "complete" if finished else f"in progress or stopped: data to {end:.1f} s"
+        state = "complete" if finished else f"in progress or stopped: data to {end:.1f} ms"
         print(f"{n_servers} servers; run {state}")
         print(HEADER)
         partial = not finished and windows[-1][1] >= end
