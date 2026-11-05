@@ -8,10 +8,16 @@ commit messages.
 
 ## Not yet committed
 
+- **Slower garbage collection (T-83).** `src/Network.py` sets
+  `gc.set_threshold(100_000, 50, 1000)` when it is imported (Python's
+  default is `(700, 10, 10)`). Same output; on full CAIDA x 1000 about
+  15% less run time (the collector took 17% of it, now 1%) for 0.2% more
+  memory; about 9% less on the 1K subset. To get Python's defaults back,
+  call `gc.set_threshold(700, 10, 10)` after importing `Network`.
 - **New run entry point `experiments/main.py` and a rewritten `Importer`
   (T-16).** `python3 experiments/main.py [CONFIG] [--set NAME=VALUE ...]`:
   each setting comes from `--set`, else the config file (`.py` or `.json`),
-  else its default in the code; no environment variables. One table of 35
+  else its default in the code; no environment variables. One table of 36
   settings in `src/Importer.py`; run settings (topology, run length, seed,
   workload, clients used) are attributes of the new `src/Run.py`. Unknown
   names and invalid values (routing policy, function names) are errors.
@@ -25,7 +31,10 @@ commit messages.
   `experiments/*import*.py` scripts. Output is unchanged:
   `configs/precomputed_t1.py` gives logs identical to
   `main_precomputed_t1.py` apart from the header.
-- **Tree-children forwarding on by default (T-13).**
+
+## 5 Nov 2026
+
+- **Tree-children forwarding on by default (T-13, 8ca4c42).**
   `Router.forward_to_tree_children_only` is now True: a router sends a
   ServerMetric update only to neighbours whose unicast next hop to the
   replica is this router; the others would drop it as off the unicast
@@ -44,8 +53,8 @@ commit messages.
   the 1K subset the runs diverge after about 20 s, so the counts agree
   only to about 0.3% (off path 497.7M not sent vs 499.2M dropped).
   `TREE_CHILDREN_ONLY=0` turns it off in `main_precomputed_t1.py`.
-- **Option to announce entries freed by a withdrawal at once (T-12), off
-  by default.** With `Router.announce_freed_after_withdraw = True`
+- **Option to announce entries freed by a withdrawal at once (T-12, 8ca4c42),
+  off by default.** With `Router.announce_freed_after_withdraw = True`
   (`ANNOUNCE_FREED=1` in `main_precomputed_t1.py`), after a withdrawal a
   router announces the entries that only the withdrawn one was
   dominating; otherwise they wait for the next announcement to reach that
@@ -53,9 +62,10 @@ commit messages.
   CAIDA subset 7.9% more messages and about 12% more run time, accuracy
   61.8% vs 62.9% (one placement); on Topology Zoo DFN and Cogentco 0-4%
   more messages and accuracy mostly the same or slightly better. Left off
-  until it is checked on more placements and full CAIDA.
+  for now; whether the paper runs use it is still to be decided (results
+  on 5 placements and full CAIDA x 1000 in `doc/TODO.md` T-12).
   `main_precomputed_t1.py` now prints the setting in its parameter header.
-- **Default link delays (T-17).** Core links given no delay now get 10 ms
+- **Default link delays (T-17, 8ca4c42).** Core links given no delay now get 10 ms
   (`Graph.default_propagation_delay`, was 1000 ms); server links 1 ms and
   client links 10 ms as before. A `delayMs` of 0, or a weight of 0, counts
   as not given (a delay of 0 is not physical) and gets the default for its
@@ -83,8 +93,7 @@ commit messages.
   average about 0.5 s (0.5%) longer and end at different times. Rounding
   down to a whole second lost 0.5 s on average, and the 1% of sessions
   drawn shorter than 1 s lasted 0 s; they now last their drawn length,
-  rounded down to the ms. Packet
-  sizes are unchanged. `log_syntax.py` still reads older logs.
+  rounded down to the ms. Packet sizes are unchanged. `log_syntax.py` still reads older logs.
 - `Router.weight_edge` looks up router and host neighbours the same way
   (728db45).
 

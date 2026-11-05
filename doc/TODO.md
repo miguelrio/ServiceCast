@@ -37,13 +37,47 @@ Measured (200-300 s runs, tree-children forwarding on, fix on vs off):
 - 1K CAIDA subset, one placement: 7.9% more messages, about 12% more
   run time (two thirds of it processing the extra messages, which cost
   the same per message as the others), accuracy 61.8% vs 62.9%.
+- 1K CAIDA subset, 5 server placements (seeds 1-5; ms code, 200 s,
+  TAU 20 ms): 5-10% more messages (mean 7.2%); accuracy up on 4
+  placements (+0.2 to +0.65 points) and down on the first (-0.9), mean
+  +0.2 points (62.5% to 62.7%); mean utility gap slightly worse on
+  average (0.451% to 0.458%: better on 2, worse on 3); FIB churn about
+  0.6-1 point lower on every placement. A small, mixed effect on accuracy
+  for the extra messages.
 - Each freed entry starts a chain of messages downstream: about 10 on
   Cogentco, about 5 on the 1K subset. Part of it would be sent anyway at
   the next decision; the rest is the extra traffic above.
+- Where the extra time goes on the 1K subset (86 s on top of 707 s):
+  of 14.4M withdrawals, 6.7M are of announced entries and 5.1M pass the
+  pre-checks; 1.2M of those free an entry. The checks take about 26 s
+  (about 3% of run time), sending the freed announcements about 22 s,
+  and the rest is routers downstream processing the extra messages.
+  Skipping withdrawals of unannounced entries halved the checks and
+  saved about 12 s; the sort-and-scan decision saved nothing over a
+  direct check (the direct check usually stopped early).
 
-Still to do before turning it on: more 1K placements (is the accuracy
-drop real or noise?), and the cost on full CAIDA x 1000, where RIBs are
-larger and there are 10 times the servers.
+- Full CAIDA x 1000 (1,000 servers, 5,000 clients, 100% load, TAU 2 ms,
+  to 30 s simulated, one placement; washington, run alongside 3 others):
+  16.5% more messages on path (182.9M to 213.1M), 18% more run time
+  (12,537 s to 14,792 s), the same peak memory (10.9 GB). Accuracy 44.1%
+  to 46.3% (+2.2 points) and mean utility gap 0.731% to 0.691% on 15,014
+  requests. The gain shrinks during the run: +3.2, +2.4 and +0.8 points
+  in the three 10 s windows, so it is mostly the warm-up, where servers
+  first become known; 30 s is well short of settling. FIB churn 32.6% to
+  29.8%, but only because there are more FIB decisions (114M to 130M):
+  the number of replica changes went up by 4% (16.0M to 16.7M).
+
+Summary: the fix costs messages and run time in proportion to the
+network's size (0-4% on the Topology Zoo, about 7% and 12% on the 1K
+subset, about 17% and 18% on x 1000). It improves accuracy while
+servers are first being learned, but after settling (the 200 s 1K runs)
+the effect is within the placement-to-placement variation. Not yet
+measured: a settled x 1000 run.
+
+Still to decide: on or off for the paper runs. On measures the
+protocol's overhead more honestly (a router would announce an entry
+that nothing beats any more) and gains some accuracy; off saves run
+time (about 18% at full CAIDA scale). Off until then.
 
 #### T-38: Announcement radius (blast radius)
 

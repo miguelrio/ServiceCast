@@ -12,6 +12,18 @@ from Routing import Routing, read_observed_cones
 from collections import OrderedDict
 from Gml import read_gml, write_gml
 import sys
+import gc
+
+# Speed-up (Nov 2026): Python's cyclic garbage collector, with its default
+# thresholds (700, 10, 10), took about 17% of the run time on full CAIDA,
+# mostly in full collections that rescan every object (~8M at full CAIDA).
+# The simulation creates almost no reference cycles (objects are freed by
+# reference counting as usual), so collecting far less often loses nothing:
+# -16% run time, identical output, memory +0.2% (measured on Python 3.11).
+# Set on import so that loading the topology is covered too. gc.freeze()
+# was tried and made it slower. On Python 3.14+ the collector works
+# differently (incremental) and these numbers would need re-measuring.
+gc.set_threshold(100_000, 50, 1000)
 
 
 # PDF notation for the per-request metric lines (see the BEST_REPLICA_UTILITY
