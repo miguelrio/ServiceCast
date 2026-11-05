@@ -130,7 +130,7 @@ def topology_setup(config_file):
 
     # CLIENT_ARRIVAL_LAMBDA is the mean time between requests across all
     # clients (one Poisson process); a session lasts on average
-    # SESSION_SIZE_LAMBDA * SESSION_SIZE_SCALE seconds
+    # SESSION_SIZE_LAMBDA * SESSION_SIZE_SCALE milliseconds
     Generator.multi_client_event_generator(network, clients, config.SERVICE,
                                            arrival_lambda=config.CLIENT_ARRIVAL_LAMBDA,
                                            size_lambda=config.SESSION_SIZE_LAMBDA,

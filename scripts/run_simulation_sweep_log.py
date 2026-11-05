@@ -35,7 +35,6 @@ from typing import NamedTuple
 import numpy as np
 import simpy
 from Graph import Graph
-from units import s_to_ms
 from Network import Network
 from Server import Server
 from Router import Router
@@ -55,9 +54,8 @@ def configure_sweep_variables(server_cf, router_cf, propagation_delay):
     """Set the global knobs that define a single experiment. Verbose output is silenced."""
     Server.change_factor = server_cf
     Router.fib_utility_update_threshold = router_cf
-    # propagation_delay knob is seconds (human interface); the engine
-    # constant is ms (src/units.py)
-    Graph.default_propagation_delay = s_to_ms(propagation_delay)
+    # Propagation delay is milliseconds, like every simulation time value.
+    Graph.default_propagation_delay = propagation_delay
 
 # Print parameters 
 def print_simulation_parameters():
@@ -260,7 +258,7 @@ def worker(task):
     cell, lm = run_single_experiment_log(config_spec, s_cf, r_cf, delay, log_mode, keep_logs)
     served = len(lm.records)
     line = (f"[{k},{i},{j}] "
-            f"Delay: {delay}, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
+            f"Delay: {delay} ms, CF Server: {s_cf:.2f}, CF Router: {r_cf:.3f} => "
             f"Created: {lm.created}, Recv: {lm.recv_total} "
             f"(A:{lm.recv_announce} W:{lm.recv_withdraw}), "
             f"Acc-arr: {cell['accuracy_arrival']:.1f}%, Blocked: {cell['blocked_rate']:.1f}%, "
@@ -331,6 +329,7 @@ def run_sweep_log(config_spec, jobs=1, log_mode="file", keep_logs=False):
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "source": "log",
         "hop_by_hop": config.ROUTER_HOP_BY_HOP,
+        "delay_unit": "ms",
         "delays": config.GRAPH_DELAYS,
         "server_cfs": config.SERVER_CFS,
         "router_cfs": config.ROUTER_FIB_UPTS,

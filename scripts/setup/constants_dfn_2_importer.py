@@ -7,7 +7,7 @@
 # main_importer.py requires every name below.
 
 # --- run --------------------------------------------------------------------
-SIM_DURATION = 360            # simulated seconds
+SIM_DURATION = 360000         # simulated milliseconds
 VERBOSE_LEVEL = -1            # -1: metrics (large runs); 0 and up: protocol debugging (see doc/Logging.md)
 VERBOSE_TABLE = 0
 
@@ -19,13 +19,13 @@ SEED = 15112022               # placement and generator seed
 
 # --- workload ---------------------------------------------------------------
 SERVICE = "§a"                # the single service every client requests
-CLIENT_ARRIVAL_LAMBDA = 0.2   # mean time (s) between requests, all clients together
-SESSION_SIZE_LAMBDA = 10      # mean session length (s) ...
-SESSION_SIZE_SCALE = 10       # ... times this multiplier
+CLIENT_ARRIVAL_LAMBDA = 200   # mean time (ms) between requests, all clients together
+SESSION_SIZE_LAMBDA = 10000   # mean session length (ms) ...
+SESSION_SIZE_SCALE = 10       # ... times this dimensionless multiplier
 
 # --- simulator settings (Importer.mappings) ---------------------------------
 ALPHA = 0.5                   # Utility.alpha: load/delay weighting
-GRAPH_DELAY = 0.1             # Graph.default_propagation_delay (access links)
+GRAPH_DELAY = 100             # Graph.default_propagation_delay in ms (access links)
 ROUTER_HOP_BY_HOP = False     # False: first-decide unicast; True: hop-by-hop anycast
 ROUTER_FIB_UPT = 0.001        # Router.fib_utility_update_threshold
 ROUTER_FORWARD_TO_TREE_CHILDREN_ONLY = True

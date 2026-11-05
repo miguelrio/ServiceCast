@@ -906,7 +906,7 @@ def main():
     n_cap = sum(len(r) == args.max_pops for a, r in as_routers.items() if as_tier[a] == "transit")
     log(f"Observed cones: {sum(c > 0 for c in cone.values())} ASes, {n_entries} entries in {cones_name}; "
         f"{n_cap} transit ASes at {args.max_pops} PoPs")
-    log(f"Wrote {args.output} in {time.perf_counter() - t0:.1f}s")
+    log(f"Wrote {args.output} in {(time.perf_counter() - t0) * 1000:.1f}ms")
 
 
 if __name__ == "__main__":

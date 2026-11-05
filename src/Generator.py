@@ -3,7 +3,7 @@ import numpy as np
 import random as random
 import itertools
 from Verbose import Verbose
-from units import s_to_ms
+from units import MS_PER_S
 
 
 class ServerEventGenerator(EventGenerator):
@@ -68,15 +68,16 @@ class ServerMetricEvent(Event):
 # Generate Events for a Single Client, with a specified address
 class ClientEventGenerator(EventGenerator):
     """ An Event Generator for a Client."""
-    def __init__(self, env, id, adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0):
+    def __init__(self, env, id, adist, sdist, destinations_dist, initial_delay=0, finish=float("inf"), flow_id=0, session_duration=100000):
         super().__init__(env, id,  adist, sdist, destinations_dist, initial_delay, finish, flow_id)
         self.network = None
+        self.session_duration = session_duration
 
     # Prepare a ClientEvent
     def create_event(self):
         """Create an Event"""
         src = self.destinations_dist()
-        e = ClientEvent(self.env.now, self.sdist(), self.event_count, src=self.id, dst=self.destinations_dist(), flow_id=self.flow_id)
+        e = ClientEvent(self.env.now, self.sdist(), self.event_count, src=self.id, dst=self.destinations_dist(), flow_id=self.flow_id, duration=self.session_duration)
         return e
 
 
@@ -91,9 +92,10 @@ class MultiClientEventGenerator(EventGenerator):
 
     # Prepare a ClientEvent
     def create_event(self):
-        """Create an Event"""
+        """Create an Event with independent packet bytes and session duration."""
         src = self.destinations_dist()
-        e = ClientEvent(self.env.now, self.sdist(), self.event_count, src=src, dst=self.id, flow_id=self.flow_id)
+        size, duration = self.sdist()
+        e = ClientEvent(self.env.now, size, self.event_count, src=src, dst=self.id, flow_id=self.flow_id, duration=duration)
         return e
 
     # Process an event
@@ -112,9 +114,8 @@ class MultiClientEventGenerator(EventGenerator):
 
 
 class ClientEvent(Event):
-    """A ClientEvent is an Event that also holds an integer
-    """
-    def __init__(self, time, size, seq, src, dst, flow_id=0):
+    """A ClientEvent carries packet bytes and a session duration in ms."""
+    def __init__(self, time, size, seq, src, dst, flow_id=0, duration=None):
         self.type = "NetworkEvent"
         self.seq = seq
         self.time = time
@@ -122,6 +123,7 @@ class ClientEvent(Event):
         self.src = src
         self.dst = dst
         self.flow_id = flow_id
+        self.duration = duration
 
 class Generator(object):
     """A Generator of events, using server_event_generator() for ServerEventGenerator
@@ -134,7 +136,7 @@ class Generator(object):
     #  A event generator for a server
     @classmethod
     def server_event_generator(cls, network, id, possible_destinations,
-                         exponential_lambda=1,
+                         exponential_lambda=1000,
                          packet_size=100,
                          seed=None):
         """ Generates events from node with 'id', and sends to 'possible_destinations'.
@@ -152,11 +154,9 @@ class Generator(object):
         # We first define our random number generator so that we can reproduce results
         gen = np.random.RandomState(seed=seed)
 
-        # The interarrival times of a poisson process follow an exponential
+        # The interarrival times of a Poisson process are milliseconds.
         def arrival_dist():
-            # exponential_lambda is the mean inter-arrival time in SECONDS
-            # (human-interface knob); the clock is ms (src/units.py)
-            next_time = float(s_to_ms(gen.exponential(exponential_lambda)))
+            next_time = float(gen.exponential(exponential_lambda))
             return next_time
 
         # Assume all packets have the same size given by packet_size
@@ -185,7 +185,7 @@ class Generator(object):
     #  A event generator for a server
     @classmethod
     def server_load_event_generator(cls, network, idstr, possible_service_names,
-                         exponential_lambda=1,
+                         exponential_lambda=1000,
                          packet_size=100,
                          background_load=False,
                          seed=None):
@@ -210,9 +210,8 @@ class Generator(object):
         genA = iter([0, np.inf])
 
         # genB is an iterator 0, then the same number
-        # used if background_load is True
-        # (10 s between background load updates; the clock is ms, src/units.py)
-        genB = itertools.chain([0], itertools.repeat(s_to_ms(10)))
+        # used if background_load is True (10,000 ms between updates)
+        genB = itertools.chain([0], itertools.repeat(10000))
 
         if Verbose.level >= 2:
             print(f"""Server {idstr} server_event_generator parameters:
@@ -272,12 +271,13 @@ class Generator(object):
     # Sends from a specific node with 'id', and sends to 'possible_destinations'
     @classmethod
     def client_event_generator(cls, network, id, possible_destinations,
-                         arrival_lambda=1,
+                         arrival_lambda=1000,
                          packet_size=100,
-                         seed=None):
+                         seed=None,
+                         session_duration=100000):
         """ Generates events from a specific node with 'id', and sends to 'possible_destinations'.
-            'arrival_lambda' is passed to the arrival distribution.
-            'packet_size' is used for the size distribution.
+            'arrival_lambda' and 'session_duration' are milliseconds.
+            'packet_size' is the packet size in bytes.
         """
 
         env = network.env
@@ -293,11 +293,9 @@ class Generator(object):
         # We first define our random number generator so that we can reproduce results
         gen = np.random.RandomState(seed=seed)
 
-        # The interarrival times of a poisson process follow an exponential
+        # The interarrival times of a Poisson process are milliseconds.
         def arrival_dist():
-            # arrival_lambda is the mean inter-arrival time in SECONDS
-            # (human-interface knob); the clock is ms (src/units.py)
-            next_time = float(s_to_ms(gen.exponential(arrival_lambda)))
+            next_time = float(gen.exponential(arrival_lambda))
             return next_time
 
         # Assume all packets have the same size given by packet_size
@@ -311,7 +309,8 @@ class Generator(object):
         # Create the event generator oobject
         event_generator = ClientEventGenerator(env, id=id,
                                                adist=arrival_dist, sdist=size_dist,
-                                               destinations_dist=destinations_dist)
+                                               destinations_dist=destinations_dist,
+                                               session_duration=session_duration)
 
 
         # This line makes event generator member out pointing to node 'id'.
@@ -327,11 +326,11 @@ class Generator(object):
     # Drops Events on clients in 'possible_sources' list
     @classmethod
     def multi_client_event_generator(cls, network, possible_sources, target_name,
-                                     arrival_lambda=1, size_lambda=5, size_scale_factor=10,
+                                     arrival_lambda=1000, size_lambda=10000, size_scale_factor=10,
                                      seed=None):
-        """ Generates events from nodes from 'possible_sources'.
-            'arrival_lambda' is passed to the arrival distribution.
-            'size_lambda' is passed to the size distribution.
+        """ Generates events from nodes in 'possible_sources'.
+            'arrival_lambda' and 'size_lambda' are milliseconds.
+            'size_scale_factor' is dimensionless.
         """
 
         env = network.env
@@ -375,19 +374,21 @@ class Generator(object):
         # gen2 = np.random.RandomState(seed=None)
         gen2 = np.random.RandomState(seed=seed+1 if seed is not None else None)
 
-        # The interarrival times of a poisson process follow an exponential
+        # The interarrival times of a Poisson process are milliseconds.
         def arrival_dist():
-            # arrival_lambda is the mean inter-arrival time in SECONDS
-            # (human-interface knob); the clock is ms (src/units.py)
-            next_time = float(s_to_ms(gen.exponential(arrival_lambda)))
+            next_time = float(gen.exponential(arrival_lambda))
             # WAS next_time = gen.poisson(arrival_lambda)
             return next_time
 
-        # The size / length of the jobs in each request: a session length in
-        # SECONDS (converted to clock ms by Server.size_to_time)
+        # Draw the session directly in integer ms. Packet.size remains bytes:
+        # derive its historical distribution from the same draw, but carry it
+        # independently of the duration so transmission timing cannot be
+        # inflated by the time-unit migration.
         def size_dist():
-            next_size = gen2.exponential(size_lambda)
-            return int(next_size * size_scale_factor)
+            next_duration = gen2.exponential(size_lambda) * size_scale_factor
+            duration = int(next_duration)
+            packet_size = int(next_duration / MS_PER_S)
+            return packet_size, duration
 
         # Send to sources
         def sources_dist():

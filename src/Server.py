@@ -1,7 +1,7 @@
 from Host import Host
 from SimComponents import Packet
 from Verbose import Verbose
-from units import MS_PER_S, s_to_ms
+from units import MS_PER_S
 from enum import Enum
 
 # some default values for the slots and flows functions
@@ -16,13 +16,6 @@ def flows_up_by1(val):
 
 def flows_down_by1(val):
     return val - 1
-
-# Convert a request size into a timeout. A request size is the session
-# length in SECONDS (the human-interface convention, see src/units.py); the
-# clock timeout is milliseconds. The same size field doubles as the packet's
-# byte size for transmission -- only the timeout converts.
-def size_to_time(size):
-    return s_to_ms(size)
 
 class ServerMetricMessageType(Enum):
     Announce = 0
@@ -215,7 +208,7 @@ class Server(Host):
         service_name = getattr(packet, 'service', packet.dst)
 
         # convert packet data into a Request
-        request = Request(packet.src, service_name, packet.id, packet.size)
+        request = Request(packet.src, service_name, packet.id, packet.size, packet.duration)
 
         if self.can_increase_load(request):
             # Do some processing and logging to determine some ideal info.
@@ -379,8 +372,8 @@ class Server(Host):
         # MR: STEP 9 update load (add or subtract)
         # MR: STEP 10 If threshold passes send update
 
-        # dig out size of request
-        size = request.size
+        # The request owns server capacity for this many milliseconds.
+        duration = request.duration
 
         # calculate new info
         new_slots = Server.slots_up_fn(self.used_slots)
@@ -393,7 +386,7 @@ class Server(Host):
         if (potential_slots < 0):
             # there is no more capacity to take a job
             if Verbose.level >= 0:
-                print("{:.3f}: {:5s} SERVER_ERROR increase_load no more capacity for request {}.{} timeout {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size)))
+                print("{:.3f}: {:5s} SERVER_ERROR increase_load no more capacity for request {}.{} timeout {}".format(self.env.now, self.id(), request.src, request.id, duration))
 
             return False
 
@@ -406,7 +399,7 @@ class Server(Host):
             self.load = self.calculate_load()
 
             if Verbose.level >= 1:
-                print("{:.3f}: {:5s} INCREASE_LOAD request {}.{} timeout: {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(size), self.load, self.no_of_flows, potential_slots))
+                print("{:.3f}: {:5s} INCREASE_LOAD request {}.{} timeout: {} load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, duration, self.load, self.no_of_flows, potential_slots))
 
 
             # Destination is likely to be a service name: e.g. §a
@@ -424,7 +417,7 @@ class Server(Host):
         # MR: STEP 9 update load (add or subtract)
         # MR: STEP 10 If threshold passes send update
 
-        yield self.env.timeout(size_to_time(request.size))
+        yield self.env.timeout(request.duration)
 
         new_slots = Server.slots_down_fn(self.used_slots)
         new_flows =  Server.flows_down_fn(self.no_of_flows)
@@ -440,7 +433,7 @@ class Server(Host):
 
 
         if Verbose.level >= 1:
-            print("{:.3f}: {:5s} DECREASE_LOAD request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, size_to_time(request.size),  self.load, self.no_of_flows, potential_slots))
+            print("{:.3f}: {:5s} DECREASE_LOAD request {}.{} after {}  load: {} no_of_flows: {} capacity: {}".format(self.env.now, self.id(), request.src, request.id, request.duration,  self.load, self.no_of_flows, potential_slots))
 
         # Destination is likely to be a service name: e.g. §a
         service_name = request.dst
@@ -477,15 +470,15 @@ class Server(Host):
 
     
 class Request(object):
-    """This holds the details of a client request"""
-    def __init__(self, src, dst, id, size):
-        # create with: Request(packet.src, packet.dst, packet.id, packe.size)
+    """A client request: packet size in bytes and session duration in ms."""
+    def __init__(self, src, dst, id, size, duration):
         self.src = src
         self.dst = dst
         self.id = id
         self.size = size
+        self.duration = duration
 
     def __repr__(self):
-        return "Request: From {} seq: {} service: {} size: {}".format(self.src, self.id, self.dst, self.size)
+        return "Request: From {} seq: {} service: {} size: {} bytes duration: {} ms".format(self.src, self.id, self.dst, self.size, self.duration)
 
         

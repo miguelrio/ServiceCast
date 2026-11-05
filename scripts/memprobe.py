@@ -6,9 +6,9 @@ Usage: python3 scripts/memprobe.py <out_prefix> -- <command> [args...]
 Writes two files:
 
   <out_prefix>.log      the child's stdout+stderr, each line prefixed with its
-                        elapsed wall seconds, so phases in the output can be
+                        elapsed wall milliseconds, so phases in the output can be
                         lined up with the memory curve
-  <out_prefix>.rss.csv  one row per second: elapsed_s,rss_mb,vsz_mb,hwm_mb
+  <out_prefix>.rss.csv  one row per 1000 ms: elapsed_ms,rss_mb,vsz_mb,hwm_mb
                         (hwm is the kernel high-water mark from Linux /proc,
                         so peaks between samples are not lost; it is empty
                         where /proc is unavailable, e.g. macOS)
@@ -18,11 +18,11 @@ is sampled from /proc/<pid>/status, falling back to ps.  The exit code is the
 child's (128+N when the child dies to signal N, 127 if the command is not
 found).  Standard library only.
 
-Example -- a 10 s 0-client run with the memory curve alongside:
+Example -- a 10000 ms 0-client run with the memory curve alongside:
 
     NOCLIENTS=1 PYTHONPATH=src python3 scripts/memprobe.py tmp/run1000 -- \
         python3 -u experiments/main_precomputed_t1.py \
-        topologies/caida_servers_1000_RT.gml 10 -1
+        topologies/caida_servers_1000_RT.gml 10000 -1
 """
 import os
 import subprocess
@@ -50,6 +50,7 @@ def sample_rss_kb(pid):
         pass
     # no /proc (e.g. macOS): ps reports rss/vsz in kB, but no high-water mark
     try:
+        # subprocess's timeout boundary is seconds: allow up to 5000 ms.
         out = subprocess.run(["ps", "-o", "rss=,vsz=", "-p", str(pid)],
                              capture_output=True, text=True, timeout=5).stdout.split()
         if len(out) >= 2:
@@ -76,7 +77,7 @@ def main():
     t0 = time.perf_counter()
     log_f = open(prefix + ".log", "w", buffering=1)
     csv_f = open(prefix + ".rss.csv", "w", buffering=1)
-    csv_f.write("elapsed_s,rss_mb,vsz_mb,hwm_mb\n")
+    csv_f.write("elapsed_ms,rss_mb,vsz_mb,hwm_mb\n")
 
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -92,7 +93,7 @@ def main():
         # then point fd 1 at /dev/null so the shutdown flush cannot fail and
         # replace the child's exit code with 120
         for line in proc.stdout:
-            stamp = "[%9.1fs] " % (time.perf_counter() - t0)
+            stamp = "[%9.1fms] " % (1000.0 * (time.perf_counter() - t0))
             try:
                 log_f.write(stamp + line)
             except OSError:
@@ -120,16 +121,18 @@ def main():
             if hwm:
                 peak_hwm = max(peak_hwm, int(hwm))
             csv_f.write("%.1f,%.1f,%.1f,%s\n" % (
-                time.perf_counter() - t0, rss / 1024, vsz / 1024,
+                1000.0 * (time.perf_counter() - t0), rss / 1024, vsz / 1024,
                 int(hwm) / 1024 if hwm else ""))
+        # time.sleep takes seconds at this boundary: sample every 1000 ms.
         time.sleep(1.0)
 
+    # Thread.join takes seconds at this boundary: wait up to 5000 ms.
     reader.join(timeout=5)
     # the child is reaped here: /proc/<pid> is gone, so nothing can be sampled
     # any more -- the summary reports what the loop saw.  VmHWM is monotonic,
     # so the tracked maximum is the kernel's peak over the run.
-    summary = "memprobe: rc=%d, wall %.1f s" % (proc.returncode,
-                                                time.perf_counter() - t0)
+    summary = "memprobe: rc=%d, wall %.1f ms" % (
+        proc.returncode, 1000.0 * (time.perf_counter() - t0))
     if peak:
         summary += ", peak sampled RSS %.1f MB" % (peak / 1024)
     if peak_hwm:

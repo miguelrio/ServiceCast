@@ -208,7 +208,7 @@ def main():
             f.write("  ]\n")
         f.write("]\n")
     log(f"Observed cones: {n_entries} entries in {cones_name}")
-    log(f"Wrote {args.output} in {time.time() - t0:.0f}s")
+    log(f"Wrote {args.output} in {(time.time() - t0) * 1000:.0f}ms")
 
 
 if __name__ == "__main__":

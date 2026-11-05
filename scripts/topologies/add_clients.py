@@ -120,7 +120,7 @@ def main():
     biggest = sorted(counts, key=counts.get, reverse=True)[:5]
     log(f"Tagged {len(counts)} routers in {len(ases)} eyeball ASes with {total:,} clients; top countries: {top}")
     log("Largest: " + ", ".join(f"{topo.nodes[r]['label']} ({topo.nodes[r]['city']}) {counts[r]:,}" for r in biggest))
-    log(f"Wrote {args.output} in {time.perf_counter() - t0:.1f}s")
+    log(f"Wrote {args.output} in {(time.perf_counter() - t0) * 1000:.1f}ms")
 
 
 if __name__ == "__main__":

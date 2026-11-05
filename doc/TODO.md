@@ -388,7 +388,7 @@ only end-of-run totals (`SUMMARY_SERVER_METRICS`, `SUMMARY_FIB_ROUTER`).
 
 Candidates:
 
-- a network-wide progress line every simulated second (or a set
+- a network-wide progress line every 1000 simulated ms (or a set
   interval): wall time and memory; requests, blocked and not forwarded;
   server load mean, spread and maximum; load changes, announcements and
   withdrawals; FIB changes; RIB size mean, 99th percentile and maximum;
@@ -399,7 +399,7 @@ Candidates:
 - per-server lines (announcements sent and suppressed by damping);
 - run statistics (set-up and run time, peak memory).
 
-To decide: which of these, the interval for each (simulated seconds,
+To decide: which of these, the interval for each (simulated milliseconds,
 or wall time), the verbose level that enables them, and the line
 formats, so that `log_syntax.py` and `quick_stats.py` can read them.
 Any per-call timing (e.g. of `decide_announcements`) should stay
@@ -410,8 +410,8 @@ optional, since it adds overhead to every decision.
 Hypothesis: Pareto dominance limits each router's RIB to roughly
 c * ln(servers) once loads spread out. A 30 s probe showed RIBs about
 twice H_n at 10-50 servers, probably because loads are still near zero
-early in a run. Test: run 10, 25, 50, 100 and 500 servers to 200 s,
-snapshotting each router's RIB and non-dominated set size every 10 s,
+early in a run. Test: run 10, 25, 50, 100 and 500 servers to 200000 ms,
+snapshotting each router's RIB and non-dominated set size every 10000 ms,
 and compare the median and 90th percentile with H_n. The per-router RIB
 summary lines proposed under "New metrics" would provide the data.
 

@@ -27,7 +27,6 @@ from Router import Router
 from Server import Server
 from Utility import Utility
 from Verbose import Verbose
-from units import s_to_ms
 import simpy
 
 # Dfn (Topology Zoo, 58 routers) with 4 servers and 8 clients attached
@@ -49,8 +48,8 @@ def dfn_with_hosts():
     return text[:-1] + "".join(extra) + "]\n"
 
 
-def run(tree_children_only, requests_until=20, until=2000):
-    """Run with requests for requests_until s, then drain until `until` s.
+def run(tree_children_only, requests_until=20000, until=2000000):
+    """Run with requests for requests_until ms, then drain until `until` ms.
     Returns the counters and the per-request outcome lines."""
     Router.forward_to_tree_children_only = tree_children_only
     Router.hop_by_hop = False
@@ -68,9 +67,9 @@ def run(tree_children_only, requests_until=20, until=2000):
         for server in network.server_names():
             Generator.server_load_event_generator(network, server, ["§a"], seed=15112022)
         clients = Generator.multi_client_event_generator(
-            network, network.client_names(), "§a", arrival_lambda=0.05,
-            size_lambda=10, size_scale_factor=1, seed=15112022)
-        clients.generator.finish = s_to_ms(requests_until)
+            network, network.client_names(), "§a", arrival_lambda=50,
+            size_lambda=10000, size_scale_factor=1, seed=15112022)
+        clients.generator.finish = requests_until
         network.start(until=until)
     # nothing left to happen: every session ended, every update delivered
     # (left in the queue: the run's own stop event, and the server load

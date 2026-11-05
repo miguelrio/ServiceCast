@@ -463,10 +463,10 @@ def print_progress(label, done, total, start_time):
     pct = done / total if total else 1.0
     filled = int(bar_len * pct)
     bar = "#" * filled + "-" * (bar_len - filled)
-    elapsed = time.perf_counter() - start_time
+    elapsed_ms = (time.perf_counter() - start_time) * 1000
     end = "\n" if done >= total else ""
     print(
-        f"\r{label} [{bar}] {done}/{total} ({pct * 100:5.1f}%) {elapsed:6.1f}s",
+        f"\r{label} [{bar}] {done}/{total} ({pct * 100:5.1f}%) {elapsed_ms:6.1f}ms",
         end=end,
         file=sys.stderr,
         flush=True,
@@ -648,12 +648,12 @@ def main():
                 f.writelines(extra)
             f.write(line)
 
-    total_elapsed = time.perf_counter() - run_start
+    total_elapsed_ms = (time.perf_counter() - run_start) * 1000
     print(
         f"Processed {len(router_ids)} routers, {len(destination_ids)} destinations "
         f"({'all routers + servers' if args.all_destinations else 'servers only'}). "
         f"Wrote {total_entries} routing-table entries to {args.output} "
-        f"in {total_elapsed:.2f}s."
+        f"in {total_elapsed_ms:.2f}ms."
     )
     if args.ignore_policy:
         print(f"Policy ignored (plain shortest paths); {no_route} router/destination pairs unreachable.")
