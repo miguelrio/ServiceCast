@@ -90,7 +90,8 @@ def parse_log_lines(lines, filename=None, warn_header=False):
         lines, filename, warn=warn_header
     )
     if parameters is not None:
-        verbose_level = parameters.get("Verbose.level")
+        # main.py logs (5 Nov 2026) name it VERBOSE_LEVEL; older logs Verbose.level
+        verbose_level = parameters.get("VERBOSE_LEVEL", parameters.get("Verbose.level"))
         if isinstance(verbose_level, int):
             stats["log_verbose_level"] = verbose_level
 

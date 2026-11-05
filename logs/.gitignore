@@ -1,0 +1,4 @@
+# Run logs are not committed
+*
+!.gitignore
+!README.md

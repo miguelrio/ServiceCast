@@ -1,5 +1,10 @@
 # Setup Constants
 
+These constants files (`scripts/setup/`) are read by the older run and
+sweep scripts. `experiments/main.py` does not use them: its config files
+use the setting names listed by `--dump-config` (see
+[Workflow](Workflow.md)).
+
 These constants are used for setting up experimental runs.
 
 The constants can be used for:

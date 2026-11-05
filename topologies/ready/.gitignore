@@ -1,0 +1,3 @@
+# CAIDA-derived topologies and their sidecars are not committed (licences, size)
+caida*
+*.cones.txt

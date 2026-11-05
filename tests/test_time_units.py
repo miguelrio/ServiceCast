@@ -2,6 +2,8 @@
 # Run with: PYTHONPATH=src python3 tests/test_time_units.py
 
 import math
+import os
+import tempfile
 
 import numpy as np
 import simpy
@@ -27,10 +29,17 @@ def test_network_start_uses_ms_directly():
 
 
 def test_importer_does_not_rescale_ms():
-    importer = Importer({"Graph": Graph})
-    importer.GRAPH_DELAY = 100
-    importer.update("Graph.default_propagation_delay", "GRAPH_DELAY")
-    assert Graph.default_propagation_delay == 100
+    # a config's GRAPH_DELAY of 100 sets the default link delay to 100 ms,
+    # not rescaled
+    default = Graph.default_propagation_delay
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
+        f.write("GRAPH_DELAY = 100\n")
+    try:
+        Importer().load(f.name).apply()
+        assert Graph.default_propagation_delay == 100
+    finally:
+        os.unlink(f.name)
+        Graph.default_propagation_delay = default
 
 
 def test_session_duration_and_packet_size_are_independent():

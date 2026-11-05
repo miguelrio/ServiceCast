@@ -1,5 +1,9 @@
 ## Starting
 
+For ordinary runs use `experiments/main.py` with a config file: see
+[Workflow](Workflow.md). This page describes what a run does inside, for
+writing scripts that build and run a network directly.
+
 After the Network topology has been [created](Topology.md), 
 it is necessary to set up the routing tables for the network, and
 configure some event generators for the Clients and Servers, and

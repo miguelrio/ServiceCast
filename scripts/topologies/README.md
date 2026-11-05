@@ -20,8 +20,11 @@ routing tables itself at start-up, so the GMLs carry no tables. See
 | `tier1_pops.csv` | curated PoP cities of the tier-1s, with the source of each |
 | `gml_lines.py` | line-based GML reader shared by the scripts |
 | `provenance.py` | the GMLs' `provenance` block; `check` and `strip` commands |
+| `make_zoo_gml.py` | **placeholder, to be revised soon:** a Topology Zoo GML to a simulator-ready GML (link delays, N servers and N clients on random low-degree routers, provenance, `simulatorReady 1`) |
 
-Requires Python 3 with numpy and scipy. Run from this directory:
+Requires Python 3 with numpy and scipy. The commands below run from this
+directory and leave their output here; for real builds work in the
+git-ignored `topologies/build/` instead (see `doc/Workflow.md`):
 
 ```bash
 ./fetch_location_data.sh
@@ -38,6 +41,23 @@ two files together. To cut a topology down for quick tests:
 ```bash
 python3 subset_caida_topology.py caida_real.gml -o caida_1k.gml --ases 1000
 ```
+
+Topology Zoo networks (`topologies/gml/`) go through `make_zoo_gml.py`, a
+placeholder until it is reviewed (its delay rule, placement rule and
+whether to split it into conversion and placement steps are open; see the
+notes at the top of the script):
+
+```bash
+python3 make_zoo_gml.py ../../topologies/gml/Dfn.gml ../../topologies/ready/dfn_s10_c10.gml 10 10
+```
+
+or, from the repository root (as `doc/Workflow.md` does):
+
+```bash
+python3 scripts/topologies/make_zoo_gml.py topologies/gml/Dfn.gml topologies/ready/dfn_s10_c10.gml 10 10
+```
+
+See `doc/Workflow.md` for the whole path from a topology to a run.
 
 1K ASes is about 6.3K routers, 10K ASes about 22.9K. The subsets keep every
 tier-1, cloud provider and CDN PoP, so they are mostly core; check

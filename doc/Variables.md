@@ -1,5 +1,10 @@
 ## System variables
 
+With `experiments/main.py`, each of these is set by its config name (for
+example `ALPHA`, `METRIC_LOAD_FN = 'logarithmic'`) in a config file or
+with `--set`; `--dump-config` lists them all, and `src/Importer.py` maps
+each name to its class attribute. See [Workflow](Workflow.md).
+
 The system variables which are used for configuring each experimental
 run are outlined here.
 

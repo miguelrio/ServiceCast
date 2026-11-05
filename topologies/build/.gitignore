@@ -1,0 +1,4 @@
+# Intermediate topology files are not committed
+*
+!.gitignore
+!README.md

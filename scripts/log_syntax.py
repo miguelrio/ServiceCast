@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import itertools
 import re
+import sys
 from typing import Iterable, Iterator, NamedTuple
 
 
@@ -105,7 +106,18 @@ class MetricsSummary(NamedTuple):
     counts: dict[str, int]
 
 
+# A trailing "# ..." comment on a header value, as main.py writes the source
+# of each setting ("SERVER_CF = 0.05   # command line"); not inside quotes.
+_TRAILING_COMMENT_RE = re.compile(r"""\s+#[^'"]*$""")
+
+
 def _parse_parameter_value(value: str):
+    value = _TRAILING_COMMENT_RE.sub("", value)
+    # main.py writes strings quoted, as in a config file ('valley_free')
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+        return value[1:-1]
+    if value == "None":
+        return None
     if value == "True":
         return True
     if value == "False":
@@ -128,6 +140,25 @@ def strip_memprobe_stamps(lines: Iterable[str]) -> Iterator[str]:
             if match:
                 line = line[match.end():]
         yield line
+
+
+# The last line of a run that completed (experiments/main.py, 5 Nov 2026)
+DONE_LINE = "DONE"
+
+
+def _watch_done(lines: Iterable[str], filename: str | None) -> Iterator[str]:
+    """Yield the body lines; once they run out, print a note on stderr if the
+    last non-blank one is not DONE.  Only for logs from experiments/main.py
+    (older logs never had the line)."""
+    last = None
+    for line in lines:
+        if line.strip():
+            last = line.strip()
+        yield line
+    if last != DONE_LINE:
+        print(f"Note: {filename or 'log'} has no final {DONE_LINE} line: the run did not "
+              "complete (crashed, killed or still running); results are from the partial log",
+              file=sys.stderr)
 
 
 def parse_log_header(
@@ -160,13 +191,25 @@ def parse_log_header(
                 print(f"Warning, malformed simulation parameters in {filename}")
             return None, itertools.chain(consumed, [line], source)
 
+        if line.startswith("RUN ---"):
+            # 5 Nov 2026: a run with no client generator (CLIENTS = 0, or the
+            # old NOCLIENTS=1) prints no size_scale_factor line, so the header
+            # also ends where the run starts
+            body = itertools.chain([line], source)
+            if "command_line" in parameters:
+                return parameters, _watch_done(body, filename)
+            return parameters, body
         consumed.append(line)
+        if line.lstrip().startswith("#"):
+            continue  # a comment line in main.py's header
         match = _PARAMETER_RE.match(line)
         if match:
             parameters[match.group("key").strip()] = _parse_parameter_value(
                 match.group("value")
             )
         if _HEADER_END_RE.match(line):
+            if "command_line" in parameters:  # a log from experiments/main.py
+                return parameters, _watch_done(source, filename)
             return parameters, source
 
     if warn and filename:

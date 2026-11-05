@@ -66,6 +66,14 @@ def sigmoid(value, scale, midpoint=0.5, exponent=5):
     )
     return 1 / (1 + ratio ** exponent)
 
+# The metric utility functions by name, for config files (Importer)
+FUNCTIONS = {
+    "linear": linear,
+    "logarithmic": logarithmic,
+    "sigmoid": sigmoid,
+}
+
+
 class MetricUtility:
     # The following can be reset from the outside
     # to change the behaviour of the algorithms

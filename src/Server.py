@@ -51,14 +51,18 @@ class Server(Host):
     # class variables
     
     # capacity as no of slots
-    slots = 10
+    # 5 Nov 2026: 50 (was 10), the value every experiment uses
+    slots = 50
 
     # ServerMetric packets created by all servers, as PACKET_CREATED lines
     # would show (end-of-run count, see Network.print_metrics_summary)
     server_metrics_created = 0
 
     # flow change factor  10% -> 0.1
-    change_factor = 0.1
+    # 5 Nov 2026: 0.0001 (was 0.1), so by default a server announces every
+    # load change (the difference is rounded to 3 decimals, so anything
+    # below 0.001 acts as 0), without being exactly 0
+    change_factor = 0.0001
 
     # only send changes at second boundaries
     # probably only used for debugging

@@ -36,13 +36,24 @@ def same_as(x,y):
      return x == y
 
 
+# The comparison functions by name, for config files (Importer)
+COMPARATORS = {
+    "less_than": less_than,
+    "greater_than": greater_than,
+    "same_as": same_as,
+}
+
+
 class Router(object):
     """ A Router in the emulation.
       Requires a put() method as a callback from the PacketGenerator.
     """
 
     # threshold for FIB utility change factor  10% -> 0.1
-    fib_utility_update_threshold = 0.1
+    # 5 Nov 2026: 0.0001 (was 0.1; runs so far used 0.001), so by default the
+    # FIB changes on any real improvement in utility, while differences from
+    # float rounding (~1e-16) never flip it
+    fib_utility_update_threshold = 0.0001
 
     # routing mode: True for hop-by-hop anycast, False for first-decide unicast
     hop_by_hop = False

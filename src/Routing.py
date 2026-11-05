@@ -55,6 +55,7 @@ from Verbose import Verbose
 
 TIER_RANK = {"stub": 0, "transit": 1, "tier1": 2}
 C2P_ORIENTATIONS = ("customer-provider", "provider-customer")
+POLICIES = ("valley_free", "shortest")
 
 # Route classes, in order of preference.
 ROUTE_NONE, ROUTE_CUSTOMER, ROUTE_PEER, ROUTE_PROVIDER = 0, 1, 2, 3
@@ -103,6 +104,8 @@ class Routing:
                 no_transit[idx[name]] = True
         counts["no_transit_routers"] = int(no_transit.sum())
 
+        if cls.policy not in POLICIES:
+            raise ValueError("Routing.policy must be one of {}, not {!r}".format(POLICIES, cls.policy))
         ignore_policy = cls.policy == "shortest"
 
         cones = None
@@ -210,6 +213,11 @@ class Routing:
         if network.embedded_servers and cones is None and Verbose.level >= 0:
             print("Routing: {} embedded servers but no observed cones: announced everywhere".format(
                 len(network.embedded_servers)))
+        if counts.get("links_p2p") and not counts.get("links_c2p") and not ignore_policy:
+            # on stderr, so the log is unchanged
+            print("Routing: WARNING: {} p2p links but no c2p links: with valley-free routing "
+                  "no route crosses more than one peering link".format(counts["links_p2p"]),
+                  file=sys.stderr)
         if counts.get("untyped_links_in_typed_topology") and Verbose.level >= 0:
             print("Routing: {} router links have no type in a topology with typed links; "
                   "treated as internal".format(counts["untyped_links_in_typed_topology"]))

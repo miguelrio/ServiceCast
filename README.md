@@ -21,6 +21,12 @@ run are outlined [here](doc/Variables.md)
 Information about building a topology are [here](doc/Topology.md)
 
 
+## Workflow
+
+The steps from a topology to results (topology scripts, config file,
+`experiments/main.py`, log analysis) are described [here](doc/Workflow.md)
+
+
 ## Starting
 
 This shows [how to start](doc/Starting.md) the experimental runs

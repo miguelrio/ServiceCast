@@ -48,6 +48,7 @@ from log_syntax import (
     parse_event_header,
     parse_gap_line,
     parse_log_header,
+    DONE_LINE,
     parse_not_forwarded_event,
 )
 from quick_stats import _consume_gap
@@ -93,15 +94,20 @@ def read_log(path, time_unit=None):
         requests = []      # (arrival ms, kind, parsed line)
         readings = {}      # server -> [(t ms, load after t)]
         finished = False
+        done_seen = False
         summary_t = None   # the end-of-run SUMMARY_ lines carry the end time
         last_t = 0.0
-        slot = 1.0 / parameters.get("Server.slots", 1)
+        # main.py logs (5 Nov 2026) name settings as in a config; older logs
+        # use the class attribute names
+        slot = 1.0 / parameters.get("SERVER_SLOTS", parameters.get("Server.slots", 1))
 
         for line in lines:
             header = parse_event_header(line)
             if header is None:
                 if _RUN_DONE_RE.match(line):
                     finished = True
+                elif line.strip() == DONE_LINE:
+                    done_seen = True
                 continue
             t = header.timestamp * scale
             last_t = max(last_t, t)
@@ -130,7 +136,11 @@ def read_log(path, time_unit=None):
                 readings.setdefault(gap.minload[1], []).append(
                     (gap.minload[0] * scale, gap.minload[2]))
 
-    until = parameters.get("until")
+    # a main.py log (it has command_line) is complete only with its final
+    # DONE line (5 Nov 2026); older logs end with summaries and "run:"
+    if "command_line" in parameters:
+        finished = done_seen
+    until = parameters.get("UNTIL", parameters.get("until"))
     if until is not None:
         until *= scale
     if summary_t is not None:

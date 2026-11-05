@@ -19,6 +19,19 @@ def user_utility_default(alpha, metric_utility):
     return alpha * metric_utility['load'] + (1 - alpha) * metric_utility['delay']
 
 
+# The geometric mean of the load and delay metric utilities, weighted by alpha
+def user_utility_geometric(alpha, metric_utility):
+    """The weighted geometric mean of the load and delay metric utilities"""
+    return metric_utility['load'] ** alpha * metric_utility['delay'] ** (1 - alpha)
+
+
+# The user utility functions by name, for config files (Importer)
+FUNCTIONS = {
+    "arithmetic": user_utility_default,
+    "geometric": user_utility_geometric,
+}
+
+
 class Utility:
     # The following can be reset from the outside
     # to change the behaviour of the algorithms

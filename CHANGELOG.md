@@ -8,32 +8,74 @@ commit messages.
 
 ## Not yet committed
 
-- **Slower garbage collection (T-83).** `src/Network.py` sets
+- **New code defaults (T-16).** `Server.slots` 50 (was 10),
+  `Server.change_factor` 0.0001 (was 0.1) and
+  `Router.fib_utility_update_threshold` 0.0001 (was 0.1). By default a
+  server now announces every load change and a router's FIB follows any
+  real improvement in utility (0.0001 rather than 0, so float rounding
+  never flips a FIB). **Changes results** for any script that relied on
+  the old defaults; scripts that set these values themselves, such as
+  `main_precomputed_t1.py` (50, 0.01, 0.001), are unaffected. Against the
+  0.001 FIB threshold used so far, routers may also switch on improvements
+  between 0.0001 and 0.001. The change factor of 0.0001 and the 0.01 used
+  so far behave the same at 50 slots (one slot is 0.02).
+- **New run entry point `experiments/main.py` and a rewritten `Importer`
+  (T-16).**
+  `python3 experiments/main.py [CONFIG] [--set NAME=VALUE ...] [--dump-config]`.
+  Each setting comes from `--set`, else the config file (a Python file of
+  `NAME = value` lines), else its default in the code. One table of 36
+  settings in `src/Importer.py`; run settings (topology, run length, seed,
+  workload, clients) are attributes of the new `src/Run.py`. All times in
+  ms. Unknown names and invalid values (routing policy, function names) are
+  errors; utility and comparison functions are chosen by name; the metric
+  utility functions can now be set. The topology must be given
+  (`GML_FILE`; no default). `CLIENTS` (None: all of the file's clients; 0:
+  none; N: the first N) replaces `NOCLIENTS`/`NCLIENTS_USE`. Runs default
+  to `VERBOSE_LEVEL` -1 (the class default stays 1) and to `UNTIL` 500000.
+  The log goes to stdout and ends with a `DONE` line only if the run
+  completed; `log_syntax.py` (and so `quick_stats.py`, `window_stats.py`,
+  `plot_load.py`) prints a note when a `main.py` log has no `DONE`. The log
+  header lists the command line, config file, git commit, GML and sidecar
+  checksums (16 hex characters), then every setting in config form with
+  its source (`SERVER_CF = 0.05   # command line`); `--dump-config` prints
+  the same block as a config file. The header also ends at the `RUN ---`
+  line, so 0-client runs parse. The header is printed before anything else, including
+  warnings, so a log that merges stderr (`memprobe.py`) still starts with
+  it; GML progress lines go to stderr. `window_stats.py` counts a `main.py`
+  log as complete only with its `DONE` line. The GML
+  should be simulator-ready, in `topologies/ready/` (new, with a README):
+  provenance, servers placed and the mark `simulatorReady 1`; for now a
+  file without these gets a warning (they will become errors). A missing
+  or mismatched sidecar, a file with no servers, or no clients (unless
+  `CLIENTS = 0`) stops the run. `Routing.policy` now rejects unknown values
+  (a typo used to mean valley-free) and warns on stderr when a topology has
+  p2p but no c2p links. Output is unchanged: `configs/precomputed_t1.py`
+  gives logs identical to `main_precomputed_t1.py` apart from the header.
+  **No longer accepted (for Wes and anyone with their own scripts):**
+    - the old Importer interface (`Importer(globals()).import_from_path`,
+      `configure_system_variables`): `scripts/run_simulation_sweep_log.py`
+      and `experiments/main_importer.py`, `main_dfn_2_import.py`,
+      `main_dfn_equiv_import.py` no longer run;
+    - environment variables (`SERVER_CF`, `SERVER_SLOTS`,
+      `TREE_CHILDREN_ONLY`, `TAU`/`ARRIVAL_LAMBDA`, `NOCLIENTS`,
+      `NCLIENTS_USE`) in `main.py`: use `--set`;
+    - JSON configs;
+    - the old header rows (`Server.slots = 50`, `until = ...`):
+      `main.py` logs name settings as in a config (`SERVER_SLOTS = 50`,
+      `UNTIL = ...`). `window_stats.py` and `quick_stats.py` read both;
+      other readers of header names need the new ones;
+    - GMLs without provenance or `simulatorReady` (Wes's
+      `scenario-explorer` and `topology_sweep_*` files, the older CAIDA
+      and zoo files) will be refused once the warnings become errors.
+
+## 5 Nov 2026
+
+- **Slower garbage collection (T-83, 8e3e9f7).** `src/Network.py` sets
   `gc.set_threshold(100_000, 50, 1000)` when it is imported (Python's
   default is `(700, 10, 10)`). Same output; on full CAIDA x 1000 about
   15% less run time (the collector took 17% of it, now 1%) for 0.2% more
   memory; about 9% less on the 1K subset. To get Python's defaults back,
   call `gc.set_threshold(700, 10, 10)` after importing `Network`.
-- **New run entry point `experiments/main.py` and a rewritten `Importer`
-  (T-16).** `python3 experiments/main.py [CONFIG] [--set NAME=VALUE ...]`:
-  each setting comes from `--set`, else the config file (`.py` or `.json`),
-  else its default in the code; no environment variables. One table of 36
-  settings in `src/Importer.py`; run settings (topology, run length, seed,
-  workload, clients used) are attributes of the new `src/Run.py`. Unknown
-  names and invalid values (routing policy, function names) are errors.
-  Utility and comparison functions are chosen by name; the metric utility
-  functions can now be set. All times in ms, as in the simulator. The log
-  header keeps the old lines and adds `config_file`, `git_commit` and every
-  resolved setting. `Routing.policy` now rejects unknown values (a typo
-  used to mean valley-free) and warns on stderr when a topology has p2p but
-  no c2p links. **Breaks** the old Importer interface (`import_from_path`),
-  used by `scripts/run_simulation_sweep_log.py` and the three
-  `experiments/*import*.py` scripts. Output is unchanged:
-  `configs/precomputed_t1.py` gives logs identical to
-  `main_precomputed_t1.py` apart from the header.
-
-## 5 Nov 2026
-
 - **Tree-children forwarding on by default (T-13, 8ca4c42).**
   `Router.forward_to_tree_children_only` is now True: a router sends a
   ServerMetric update only to neighbours whose unicast next hop to the
