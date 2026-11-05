@@ -8,7 +8,14 @@ commit messages.
 
 ## Not yet committed
 
-- **New code defaults (T-16).** `Server.slots` 50 (was 10),
+- New `experiments/sweep_simple.py`: an example sweep, two nested loops of
+  `main.py` calls (server change factor x FIB update threshold on the DFN
+  example, 360 s runs), with no options or checks. Referenced from
+  `doc/Workflow.md`.
+
+## 5 Nov 2026
+
+- **New code defaults (T-16, e4b39d7).** `Server.slots` 50 (was 10),
   `Server.change_factor` 0.0001 (was 0.1) and
   `Router.fib_utility_update_threshold` 0.0001 (was 0.1). By default a
   server now announces every load change and a router's FIB follows any
@@ -20,7 +27,7 @@ commit messages.
   between 0.0001 and 0.001. The change factor of 0.0001 and the 0.01 used
   so far behave the same at 50 slots (one slot is 0.02).
 - **New run entry point `experiments/main.py` and a rewritten `Importer`
-  (T-16).**
+  (T-16, e4b39d7).**
   `python3 experiments/main.py [CONFIG] [--set NAME=VALUE ...] [--dump-config]`.
   Each setting comes from `--set`, else the config file (a Python file of
   `NAME = value` lines), else its default in the code. One table of 36
@@ -51,7 +58,7 @@ commit messages.
   (a typo used to mean valley-free) and warns on stderr when a topology has
   p2p but no c2p links. Output is unchanged: `configs/precomputed_t1.py`
   gives logs identical to `main_precomputed_t1.py` apart from the header.
-  **No longer accepted (for Wes and anyone with their own scripts):**
+  **No longer accepted (for anyone with their own scripts):**
     - the old Importer interface (`Importer(globals()).import_from_path`,
       `configure_system_variables`): `scripts/run_simulation_sweep_log.py`
       and `experiments/main_importer.py`, `main_dfn_2_import.py`,
@@ -64,11 +71,9 @@ commit messages.
       `main.py` logs name settings as in a config (`SERVER_SLOTS = 50`,
       `UNTIL = ...`). `window_stats.py` and `quick_stats.py` read both;
       other readers of header names need the new ones;
-    - GMLs without provenance or `simulatorReady` (Wes's
+    - GMLs without provenance or `simulatorReady` (the
       `scenario-explorer` and `topology_sweep_*` files, the older CAIDA
       and zoo files) will be refused once the warnings become errors.
-
-## 5 Nov 2026
 
 - **Slower garbage collection (T-83, 8e3e9f7).** `src/Network.py` sets
   `gc.set_threshold(100_000, 50, 1000)` when it is imported (Python's

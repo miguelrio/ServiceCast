@@ -232,6 +232,10 @@ for cf in 0.001 0.01 0.05; do
 done
 ```
 
+`experiments/sweep_simple.py` is the same loop in Python, over two settings
+(server change factor x FIB update threshold on the DFN example): copy it
+as a starting point for other sweeps.
+
 ## 4. The log and analysis
 
 The log starts with a header:
