@@ -100,16 +100,26 @@ class Network:
         self.network_diameter_val = 0
 
 
+    # Nov 2026 (T-17): the delay (ms) of a link given no weight (or 0), from the
+    # class defaults in Graph: a client's access link, a server's link, or
+    # else a core link. Every link delay default comes from here (and from
+    # src/Gml.py, which applies the same rule to GML edges without delayMs);
+    # function arguments no longer carry their own defaults.
+    @staticmethod
+    def default_link_delay(node1, node2):
+        if isinstance(node1, Client) or isinstance(node2, Client):
+            return Graph.default_client_attachment_delay_ms
+        if isinstance(node1, Server) or isinstance(node2, Server):
+            return Graph.default_server_attachment_delay_ms
+        return Graph.default_propagation_delay
+
     # Convert from a graph to a network
     #
     # Options:
-    # use_default_weights=False -- (default) use value of weight from graph
-    # use_default_weights=True  -- use Graph.default_propagation_delay for weight
-    #
     # drop_external=True  -- (default) drop nodes which are labelled External
     # drop_external=False -- keep nodes which are labelled External
     @classmethod
-    def from_graph(cls, graph, env, use_default_weights=False, drop_external=True):
+    def from_graph(cls, graph, env, drop_external=True):
         """ Create a network from a Graph representation of an adjacency list
         """
 
@@ -241,15 +251,15 @@ class Network:
                                 demand_edges.append((name, neighbour_name))
                             continue
 
+                        # Nov 2026 (T-17): an edge with no weight, or a
+                        # weight of 0 (a delay of 0 is not physical), gets
+                        # the class default for its kind of link. Before, both
+                        # got Graph.default_propagation_delay whatever the
+                        # kind (and use_default_weights=True, never used, put
+                        # it on every link).
                         actual_weight = weight
-
-                        # double check weight
-                        if use_default_weights:
-                            actual_weight = Graph.default_propagation_delay
-                        else:
-                            # check if weight is 0
-                            if weight == 0:
-                                actual_weight = Graph.default_propagation_delay
+                        if not actual_weight:
+                            actual_weight = Network.default_link_delay(current, neighbour_obj)
 
 
                         # add the neighbours for current to neighbour_obj
@@ -318,6 +328,14 @@ class Network:
         print("{:.3f}: {:5s} SUMMARY_SERVER_METRICS created: {} announce: {} withdraw: {}".format(
             now, "Net ", Server.server_metrics_created,
             Router.recv_server_metric.get('A', 0), Router.recv_server_metric.get('W', 0)))
+        # Nov 2026 (T-13): updates not sent because of
+        # forward_to_tree_children_only, and updates dropped as off the
+        # unicast route; with the flag on the first matches the second of a
+        # run with it off, so announce + not_sent is comparable across runs
+        print("{:.3f}: {:5s} SUMMARY_TREE_CHILDREN not_sent announce: {} withdraw: {} invalid_drops announce: {} withdraw: {} (forward_to_tree_children_only = {})".format(
+            now, "Net ", Router.tree_skipped['A'], Router.tree_skipped['W'],
+            Router.invalid_route_drops_op.get('A', 0), Router.invalid_route_drops_op.get('W', 0),
+            Router.forward_to_tree_children_only))
         for router_id in sorted(Router.fib_actions):
             c = Router.fib_actions[router_id]
             print("{:.3f}: {:5s} SUMMARY_FIB_ROUTER SET: {} KEEP: {} CHANGED: {} REMOVED: {}".format(
@@ -356,7 +374,7 @@ class Network:
 
         
     # add a host to the network and link it to a specified router
-    def add_host(self, host, router, weight=1):
+    def add_host(self, host, router, weight=None):
         """Add an edge from a Host to a Router.
            Pass in a Host and a Router.
         """
@@ -368,7 +386,7 @@ class Network:
             raise TypeError("host must be a Host")
 
     # add a client to the network and link it to a specified router
-    def add_client(self, host, router, weight=1, count=1):
+    def add_client(self, host, router, weight=None, count=1):
         """Add an edge from a Client to a Router.
            Pass in a name or a Client, and a Router.
         """
@@ -392,7 +410,7 @@ class Network:
             raise TypeError("host must be a Client or a name")
 
     # add a server to the network and link it to a specified router
-    def add_server(self, host, router, weight=1):
+    def add_server(self, host, router, weight=None):
         """Add an edge from a Server to a Router.
            Pass in a name or a Server, and a Router.
         """
@@ -416,9 +434,10 @@ class Network:
     # add new nodes if needed
     # return the new edge
     # or None, if nothing created
-    def add_edge(self,n1, n2, weight=1):
+    def add_edge(self,n1, n2, weight=None):
         """Add an edge from one Router to another Router.
            Pass in 2 Routers. Binds in the Environment to both Routers.
+           With no weight, the link gets Network.default_link_delay.
         """
 
         # does n1 exist
@@ -491,6 +510,11 @@ class Network:
                     r2 = self.routers[n2.id()]
             # bind the Environment to the router
             r2.set_env(self)
+
+        # Nov 2026 (T-17): no weight or 0 (not physical) -> the class default
+        # for this kind of link (the argument defaulted to 1 ms before)
+        if not weight:
+            weight = Network.default_link_delay(r1, r2)
 
         # add the neighbours for the 2 nodes
         (status1, link1) = r1.add_neighbour(r2, weight)

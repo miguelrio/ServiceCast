@@ -108,19 +108,25 @@ Each GML link's delay (its weight) is set as follows; delays are in ms:
 
 - A link touching an `Internal 0` node (a server's or client's
   attachment link, or a link to a Topology Zoo external peer): its
-  `delayMs` if the GML gives one (and it is not 0), otherwise
+  `delayMs` if the GML gives one, otherwise
   `Graph.default_client_attachment_delay_ms` (10 ms) for a client link,
   `Graph.default_server_attachment_delay_ms` (1 ms) for a server link,
-  or `Graph.default_propagation_delay` for any other.
+  or `Graph.default_propagation_delay` (10 ms) for any other.
 - A link touching a hyperedge node with no location:
   `Graph.default_propagation_delay`.
 - Any other link: its `delayMs`, or else the great-circle distance
   between the two nodes' Latitude/Longitude at 0.009 ms per km.
-- A remaining weight of 0 is replaced by
-  `Graph.default_propagation_delay` when the Network is built.
+- A `delayMs` of 0 counts as not given (a delay of 0 is not physical):
+  the link gets the default for its kind, as above (core links
+  `Graph.default_propagation_delay`, 10 ms).
 
-Hosts attached in code (`add_server`, `add_client`) keep the weight
-passed to them.
+The defaults are class attributes of `Graph`, and they are the only
+link-delay defaults. Links built in code without a weight
+(`Network.add_edge`, `add_server`, `add_client`, `Graph.from_dict`
+entries with no weight) get the same defaults by kind of link
+(`Network.default_link_delay`): client link 10 ms, server link 1 ms,
+any other link `Graph.default_propagation_delay`. A weight passed
+explicitly is used as given, except 0, which counts as not given.
 
 
 

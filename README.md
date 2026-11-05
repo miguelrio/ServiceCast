@@ -30,3 +30,9 @@ This shows [how to start](doc/Starting.md) the experimental runs
 ## Classes and Objects
 
 The Classes and Objects utilized are [here](doc/Classes.md)
+
+
+## Changes
+
+Changes to simulator behaviour and defaults, especially those that change
+results, are listed in the [change log](CHANGELOG.md)

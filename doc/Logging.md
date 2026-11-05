@@ -130,12 +130,40 @@ the counts of its SET / KEEP / CHANGED / REMOVED decisions (the
 1. INVALID_ROUTE_DROPS - printed just before the summaries: the number of
 ServerMetric updates routers dropped because they arrived off the unicast
 path to their replica, and the `forward_to_tree_children_only` setting.
-With that setting on, routers don't send those updates, so the count is 0.
+With that setting on (the default), routers don't send those updates, so
+the count is 0.
+
+1. SUMMARY_TREE_CHILDREN - the updates `forward_to_tree_children_only`
+did not send (`not_sent`, announcements and withdrawals), and the updates
+dropped as off the unicast path (`invalid_drops`, by operation). With the
+setting on, `not_sent` equals the `invalid_drops` of the same run with it
+off (apart from updates still in flight when the run ends), so received
+plus not sent is comparable across the two. This is exact only while the
+two runs stay the same: with the setting off, the off-path updates also
+take transmission time on the outgoing port and delay the updates queued
+behind them, so on a busy network the runs drift apart and the counts
+agree only roughly (about 0.3% on the 1K CAIDA subset over 200 s).
+
+The end of a run (Dfn, 60 s, the setting on; times are ms):
 
 ```
-360.000: INVALID_ROUTE_DROPS 0 (forward_to_tree_children_only = True)
-360.000: Net   SUMMARY_SERVER_METRICS created: 1890 announce: 102571 withdraw: 16092
-360.000: AAC   SUMMARY_FIB_ROUTER SET: 16 KEEP: 1103 CHANGED: 104 REMOVED: 2
+60000.000: INVALID_ROUTE_DROPS 0 (forward_to_tree_children_only = True)
+60000.000: Net   SUMMARY_SERVER_METRICS created: 814 announce: 15890 withdraw: 5385
+60000.000: Net   SUMMARY_TREE_CHILDREN not_sent announce: 12521 withdraw: 6797 invalid_drops announce: 0 withdraw: 0 (forward_to_tree_children_only = True)
+60000.000: AAC   SUMMARY_FIB_ROUTER SET: 1 KEEP: 200 CHANGED: 2 REMOVED: 0
+```
+
+`quick_stats.py` shows the update messages in the same three rows
+whichever way the setting was: on path (the receiver acts on them), off
+path (not sent with the setting on; sent and dropped on arrival with it
+off) and the total, which is the same in both. For the run above:
+
+```
+update messages (tree-children forwarding on: off-path messages were not sent):
+                      total               announce               withdraw
+  on path            21,275          15,890  74.7%           5,385  25.3%
+  off path           19,318          12,521  64.8%           6,797  35.2%
+  total              40,593          28,411  70.0%          12,182  30.0%
 ```
 
 When a log also has the per-update lines (level 0 and up), `quick_stats.py`

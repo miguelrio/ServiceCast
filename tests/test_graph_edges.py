@@ -137,8 +137,49 @@ def test_unknown_name_raises_value_error():
 
 def test_from_dict_edges():
     graph = Graph.from_dict({'a': ['b', ('c', 3)], 'b': ['a'], 'c': []})
-    assert graph.edges() == [('a', 'c', 3), ('a', 'b', 1)]
+    # no weight given: None, the class default is applied when the Network
+    # is built (Nov 2026, T-17; was 1)
+    assert graph.edges() == [('a', 'c', 3), ('a', 'b', None)]
     assert graph.contains_edge("a", "b") and graph.contains_edge("c", "a")
+
+
+# Nov 2026 (T-17): links given no delay, or a delay of 0 (not physical),
+# get the class defaults in Graph by kind of link
+def test_default_link_delays():
+    import simpy
+    from Network import Network
+    from Gml import parse_gml
+    from Verbose import Verbose
+    Verbose.level = -2
+
+    def delay(network, a, b):
+        return network.routers[a].outgoing_ports[b].out.propagation_delay
+
+    graph = Graph.from_dict({'r1': ['r2', ('r3', 0)], 'r2': [], 'r3': []})
+    network = Network.from_graph(graph, simpy.Environment(), drop_external=False)
+    network.add_server("s1", network.routers['r1'])
+    network.add_client("c1", network.routers['r2'])
+    network.add_edge('r2', 'r3')
+    assert delay(network, 'r1', 'r2') == Graph.default_propagation_delay == 10
+    assert delay(network, 'r1', 'r3') == Graph.default_propagation_delay
+    assert delay(network, 'r2', 'r3') == Graph.default_propagation_delay
+    assert delay(network, 'r1', 's1') == Graph.default_server_attachment_delay_ms == 1
+    assert delay(network, 'r2', 'c1') == Graph.default_client_attachment_delay_ms == 10
+
+    gml = '''graph [
+  node [ id 0 label "a" Latitude 51.5 Longitude 0.0 Internal 1 type "router" ]
+  node [ id 1 label "b" Latitude 51.5 Longitude 0.0 Internal 1 type "router" ]
+  node [ id 2 label "srv" Internal 0 type "server" ]
+  node [ id 3 label "cli" Internal 0 type "client" ]
+  edge [ source 0 target 1 delayMs 0 ]
+  edge [ source 2 target 0 type "hosts" delayMs 0 ]
+  edge [ source 3 target 1 type "access" ]
+]
+'''
+    network = Network.from_graph(parse_gml(gml), simpy.Environment(), drop_external=False)
+    assert delay(network, 'a', 'b') == Graph.default_propagation_delay
+    assert delay(network, 'a', 'srv') == Graph.default_server_attachment_delay_ms
+    assert delay(network, 'b', 'cli') == Graph.default_client_attachment_delay_ms
 
 
 if __name__ == "__main__":

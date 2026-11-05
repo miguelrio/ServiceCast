@@ -20,8 +20,11 @@
 # debugging on small networks or short runs only (see doc/Logging.md).
 #
 # Environment:
-#   TREE_CHILDREN_ONLY=1  only send ServerMetric updates to neighbours whose
-#                         unicast next hop to the replica is this router
+#   TREE_CHILDREN_ONLY=0  send ServerMetric updates to every neighbour, not
+#                         only those whose unicast next hop to the replica is
+#                         this router (the default since Nov 2026, T-13)
+#   ANNOUNCE_FREED=1      after a withdrawal, announce the entries it was
+#                         dominating at once (T-12; off by default for now)
 
 import os
 import sys
@@ -61,10 +64,16 @@ def topology_setup():
     # first-decide unicast (False)
     Router.hop_by_hop = False
 
-    # TREE_CHILDREN_ONLY=1: only send ServerMetric updates to neighbours whose
-    # unicast next hop to the replica is this router (skips sends the
-    # receiver would drop as off the unicast path)
-    Router.forward_to_tree_children_only = os.environ.get("TREE_CHILDREN_ONLY") == "1"
+    # Only send ServerMetric updates to neighbours whose unicast next hop to
+    # the replica is this router (skips sends the receiver would drop as off
+    # the unicast path). On by default since Nov 2026 (T-13);
+    # TREE_CHILDREN_ONLY=0 turns it off.
+    Router.forward_to_tree_children_only = os.environ.get("TREE_CHILDREN_ONLY", "1") != "0"
+
+    # ANNOUNCE_FREED=1: after a withdrawal, announce at once the entries the
+    # withdrawn one was dominating (T-12, Nov 2026; off by default while its
+    # cost and effect on accuracy are measured)
+    Router.announce_freed_after_withdraw = os.environ.get("ANNOUNCE_FREED") == "1"
 
     # Default propagation delay for links without a usable GML weight
     # (hyperedges and missing-meta fallbacks). Engine constants are in ms
@@ -95,6 +104,7 @@ def topology_setup():
     Verbose.level = {Verbose.level}
     Router.hop_by_hop = {Router.hop_by_hop}
     Router.forward_to_tree_children_only = {Router.forward_to_tree_children_only}
+    Router.announce_freed_after_withdraw = {Router.announce_freed_after_withdraw}
     Graph.default_propagation_delay = {Graph.default_propagation_delay}
     Graph.default_server_attachment_delay_ms = {Graph.default_server_attachment_delay_ms}
     Graph.default_client_attachment_delay_ms = {Graph.default_client_attachment_delay_ms}

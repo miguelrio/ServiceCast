@@ -4,14 +4,18 @@
 # Run with:  PYTHONPATH=scripts python3 tests/test_metrics_summary.py
 # (also runs under pytest)
 
+import re
+
 from log_syntax import parse_log_header, parse_metrics_summary
-from quick_stats import parse_log_lines
+from quick_stats import parse_log_lines, format_stats
 
 
 # formats from Network.print_metrics_summary and
 # Router.incoming_server_metrics_packet
 SERVER_SUMMARY = "{:.3f}: {:5s} SUMMARY_SERVER_METRICS created: {} announce: {} withdraw: {}"
 FIB_SUMMARY = "{:.3f}: {:5s} SUMMARY_FIB_ROUTER SET: {} KEEP: {} CHANGED: {} REMOVED: {}"
+TREE_SUMMARY = ("{:.3f}: {:5s} SUMMARY_TREE_CHILDREN not_sent announce: {} withdraw: {} "
+                "invalid_drops announce: {} withdraw: {} (forward_to_tree_children_only = {})")
 RECV = "{:.3f}: {:5s} RECV_PACKET  ServerMetric {} srv_001.1 (0.000) [srv_001.1] MT(0.000) managed in {} after 0.100"
 CREATED = "{:.3f}: {:5s} PACKET_CREATED srv_001.{} (0.000) ServerMetric in srv_001 after 0.000"
 
@@ -117,6 +121,51 @@ def test_level_1_fib_attributed_to_wrong_router():
     assert "fib_router r1" in names
     assert "fib_router r2" in names
     assert stats["fib_totals"]["SET"] == 2
+
+
+# Nov 2026 (T-13): update messages as on path / off path / total rows,
+# the same with tree-children forwarding on and off
+def message_rows(tree_line, announce, withdraw):
+    body = [OUTCOME_GAP, SERVER_SUMMARY.format(30, "Net ", 12, announce, withdraw)]
+    if tree_line:
+        body.append(tree_line)
+    text = format_stats(parse_log_lines(header(-1) + lines(*body)))
+    # {row label: [total, announce, withdraw, announce %, withdraw %]}
+    rows = {}
+    for r in text.splitlines():
+        m = re.match(r"  (on path|off path|total) +([\d,]+) +([\d,]+) +([\d.]+)% +([\d,]+) +([\d.]+)%$", r)
+        if m:
+            label, t, a, ap, w, wp = m.groups()
+            rows[label] = [int(t.replace(",", "")), int(a.replace(",", "")), int(w.replace(",", "")), float(ap), float(wp)]
+    return rows
+
+
+def test_parse_tree_summary():
+    s = parse_metrics_summary(TREE_SUMMARY.format(30, "Net ", 8, 4, 0, 0, True))
+    assert s.kind == "tree_children"
+    assert s.counts == {"not_sent_announce": 8, "not_sent_withdraw": 4,
+                        "invalid_announce": 0, "invalid_withdraw": 0, "tree_children_only": 1}
+
+
+def test_messages_tree_children_on():
+    rows = message_rows(TREE_SUMMARY.format(30, "Net ", 30, 20, 0, 0, True), 60, 40)
+    assert rows["on path"] == [100, 60, 40, 60.0, 40.0]
+    assert rows["off path"] == [50, 30, 20, 60.0, 40.0]
+    assert rows["total"] == [150, 90, 60, 60.0, 40.0]
+
+
+def test_messages_tree_children_off():
+    # the same traffic, with the off-path messages sent and dropped
+    rows = message_rows(TREE_SUMMARY.format(30, "Net ", 0, 0, 30, 20, False), 90, 60)
+    assert rows["on path"] == [100, 60, 40, 60.0, 40.0]
+    assert rows["off path"] == [50, 30, 20, 60.0, 40.0]
+    assert rows["total"] == [150, 90, 60, 60.0, 40.0]
+
+
+def test_messages_without_tree_summary():
+    rows = message_rows(None, 60, 40)
+    assert set(rows) == {"total"}
+    assert rows["total"] == [100, 60, 40, 60.0, 40.0]
 
 
 def test_header_without_terminator():

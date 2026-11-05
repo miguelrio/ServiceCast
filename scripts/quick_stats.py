@@ -108,6 +108,8 @@ def parse_log_lines(lines, filename=None, warn_header=False):
         if summary is not None:
             if summary.kind == "server_metrics":
                 server_metrics_summary = summary.counts
+            elif summary.kind == "tree_children":
+                stats["tree_children"] = summary.counts
             else:
                 fib_router_summaries[summary.router] = summary.counts
             continue
@@ -190,6 +192,44 @@ def _format_fib_stability_summary(stats):
     )
 
 
+# Nov 2026 (T-13): update messages as three rows, the same whether
+# tree-children forwarding was on or off: on path (valid: the receiver acts
+# on them), off path (invalid: the receiver is not on the unicast route to
+# the replica through the sender), and the total. With forwarding on, the
+# off-path messages were not sent; with it off, they were sent and dropped
+# on arrival. The total is what a run with it off sends, so it compares
+# across the two. Logs without the SUMMARY_TREE_CHILDREN line give the
+# total of messages received only.
+def _format_update_messages(announces, withdraws, tree):
+    def row(label, a, w):
+        t = a + w
+        a_pct = a / t * 100 if t else 0.0
+        w_pct = w / t * 100 if t else 0.0
+        return f"  {label:<10} {t:>14,}  {a:>14,} {a_pct:5.1f}%  {w:>14,} {w_pct:5.1f}%\n"
+
+    head = f"  {'':<10} {'total':>14}  {'announce':>21}  {'withdraw':>21}\n"
+    if not tree:
+        return ("update messages received (no on/off-path split in this log):\n"
+                + head + row("total", announces, withdraws))
+    on = tree.get("tree_children_only")
+    if on is None:   # older line without the setting: off-path sends mean it was off
+        on = int(not (tree["invalid_announce"] + tree["invalid_withdraw"]))
+    if on:
+        # every message received was on path; the off-path ones were not sent
+        on_a, on_w = announces, withdraws
+        off_a, off_w = tree["not_sent_announce"], tree["not_sent_withdraw"]
+        note = "tree-children forwarding on: off-path messages were not sent"
+    else:
+        # every message was received; the off-path ones were then dropped
+        off_a, off_w = tree["invalid_announce"], tree["invalid_withdraw"]
+        on_a, on_w = announces - off_a, withdraws - off_w
+        note = "tree-children forwarding off: off-path messages were sent and dropped on arrival"
+    return (f"update messages ({note}):\n" + head
+            + row("on path", on_a, on_w)
+            + row("off path", off_a, off_w)
+            + row("total", on_a + off_a, on_w + off_w))
+
+
 def summary_missing(stats):
     """True when the update and FIB counts can only come from the end-of-run
     SUMMARY_ lines (verbose < 0 for updates, < 1 for FIB) and the log has
@@ -235,16 +275,11 @@ def format_stats(stats, include_fib_stability=True):
     # or FIB counts at all; say so rather than print zeros
     missing = summary_missing(stats)
     level = stats.get("log_verbose_level")
-    messages = announces + withdraws
     if missing and level < 0:
         update_line = "server update events and messages: not available (no end-of-run summary: run incomplete?)\n"
     else:
-        announce_pct = announces / messages * 100 if messages else 0.0
-        withdraw_pct = withdraws / messages * 100 if messages else 0.0
-        update_line = (
-            f"server update events: {updates:,}; "
-            f"total update messages: {messages:,} ({announces:,} [{announce_pct:.3g}%] announcements, {withdraws:,} [{withdraw_pct:.3g}%] withdrawals)\n"
-        )
+        update_line = f"server update events: {updates:,}\n" + _format_update_messages(
+            announces, withdraws, stats.get("tree_children"))
 
     if not include_fib_stability:
         fib_stability_line = ""

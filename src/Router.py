@@ -4,7 +4,7 @@ from Link import LinkEnd
 from Host import Host
 from Verbose import Verbose
 from Utility import Utility
-from Server import ServerMetricMessageType
+from Server import Server, ServerMetricMessageType
 from enum import Enum
 # importing "collections" for defaultdict
 import collections
@@ -54,10 +54,30 @@ class Router(object):
     # toward the replica is this router (children in the replica's
     # shortest-path tree). Others would drop them as not on the unicast route.
     # NB: reads the neighbour's FIB directly - a simulation shortcut.
-    forward_to_tree_children_only = False
+    # Nov 2026 (T-13): on by default (was off). Message counts stay comparable
+    # with runs that have it off: see tree_skipped and skipped_sent.
+    forward_to_tree_children_only = True
 
-    # count of ServerMetric updates dropped as not from the unicast route
+    # Nov 2026 (T-12): after a withdrawal, announce entries the withdrawn
+    # one was dominating (see announce_freed_entries). False (the default
+    # for now) gives the original behaviour: they wait for the next
+    # announcement to arrive. Off until its cost and effect on accuracy are
+    # measured on more placements and the full CAIDA topology (on the 1K
+    # CAIDA subset: about 8% more messages and 12% more run time).
+    announce_freed_after_withdraw = False
+
+    # count of ServerMetric updates dropped as not from the unicast route,
+    # in total and by operation (A / W)
     invalid_route_drops = 0
+    invalid_route_drops_op = {'A': 0, 'W': 0}
+
+    # ServerMetric updates not sent because of forward_to_tree_children_only
+    # (A / W): exactly the ones a run with it off would send and then drop as
+    # INVALID_ROUTE_DROPS (except any still in flight when the run ends), as
+    # long as the two runs stay the same: with the flag off these updates
+    # also take port transmission time, so on a busy network the runs drift
+    # apart and the counts agree only roughly (Nov 2026, T-13: 0.3% on 1K)
+    tree_skipped = {'A': 0, 'W': 0}
 
     # end-of-run counts (see Network.print_metrics_summary):
     # ServerMetric receptions by operation (A / W), as RECV_PACKET lines would show
@@ -76,6 +96,8 @@ class Router(object):
     @classmethod
     def reset_counters(cls):
         cls.invalid_route_drops = 0
+        cls.invalid_route_drops_op = {'A': 0, 'W': 0}
+        cls.tree_skipped = {'A': 0, 'W': 0}
         cls.recv_server_metric = {'A': 0, 'W': 0}
         cls.fib_actions = {}
 
@@ -134,6 +156,16 @@ class Router(object):
         # set of neighbours the metric was sent to; a dict, not a set, so
         # iteration order is deterministic and matches insertion order)
         self.sent_table = dict()
+
+        # Nov 2026 (T-13), with forward_to_tree_children_only: the neighbours
+        # that a run without it would also have in sent_table[replica] (those
+        # skipped as not tree children). For one replica that set is always
+        # empty, all such neighbours but one, or all of them, so it is kept
+        # as: no key = empty; a neighbour name = all but that one; True = all.
+        # A replica with skipped neighbours also has a sent_table key (maybe
+        # an empty dict), so the decisions below, which test whether a
+        # replica was sent, behave exactly as with the flag off.
+        self.skipped_sent = dict()
 
         # best replica info
         self.best_replica = None
@@ -240,7 +272,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         return links
 
-    def add_neighbour(self, neighbour_obj, propdelay=1, rate=LINKRATE):
+    # Nov 2026 (T-17): propdelay has no default (it was 1 ms); callers pass
+    # the link's delay, defaults come from Network.default_link_delay
+    def add_neighbour(self, neighbour_obj, propdelay, rate=LINKRATE):
         """Add a neighbour to this router"""
         neighbour = neighbour_obj.id()
             
@@ -392,6 +426,7 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
 
         if not valid_route:
             Router.invalid_route_drops += 1
+            Router.invalid_route_drops_op[packet.operation] = Router.invalid_route_drops_op.get(packet.operation, 0) + 1
             return
 
         # Only sent if propagation_time < anouncement_distance 
@@ -555,8 +590,9 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if Verbose.level >= 2:
                 print("{:.3f}: {:5s} UPDATE_METRIC metric {} msgID: {} creationTime: {:.6f}  load: {} delay: {}".format(self.env.now, self.id(), replica, msgID, creationTime, metrics['load'], metrics['delay'] ))
 
-            # mark this replica, if in sent_table
-            if replica in self.sent_table and self.sent_table[replica]:
+            # mark this replica, if in sent_table (a key is only there while
+            # the replica is sent to someone, counting skipped tree non-children)
+            if replica in self.sent_table:
                 # it is in the sent_table
                 marked = existing
                 if Verbose.level >= 2:
@@ -688,6 +724,24 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             if Verbose.level >= 2:
                 print("{:.3f}: {:5s} WITHDRAW_SEARCH_RESULTS link_end: {} replica: {} ==> {}".format(self.env.now, self.id(), link_end, replica, candidate))
 
+            # T-12: can removing this entry free another one? Checked before
+            # the sent table and RIB entry are cleared below. Only if:
+            #   - the withdrawn entry was announced (sent_table key). An
+            #     unannounced one was beaten by another entry, which also
+            #     beats everything it beat, so it frees nothing (5 Nov: skips
+            #     about 40% of the checks on Cogentco). The exception: a
+            #     router with one router neighbour has no key for an entry
+            #     from that neighbour (nobody to send it to), and if a server
+            #     is attached such an entry can free the server's, which
+            #     then goes to the neighbour. Hardly possible (the remote
+            #     entry has a core link more), and cheap there (small RIB),
+            #     so checked anyway;
+            #   - some other entry is not announced (sent_table keys are the
+            #     announced replicas, a subset of the RIB's).
+            recheck = (Router.announce_freed_after_withdraw and
+                       (replica in self.sent_table or self._stub_with_server()) and
+                       len(self.sent_table) - (replica in self.sent_table) < len(self.service_RIB) - 1)
+
             # now check the sent table: neighbours we announced this replica to
             sent_neighbours = self.sent_table.get(replica, {})
 
@@ -697,11 +751,19 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             #self.print_sent_table()
 
 
+            # withdrawals not sent to skipped tree non-children (T-13)
+            if replica in self.skipped_sent:
+                self.count_skipped_withdraws(replica, link_end.src_node.id())
+
             if no_found_in_sent_table == 0:
                 # nothing in sent_table
                 # so no withdrawals sent on
                 if Verbose.level >= 2:
                     print("{:.3f}: {:5s} SENT_TABLE_NOTHING in sent_table: for {}".format(self.env.now, self.id(), replica))
+
+                # drop an empty key left by skipped tree non-children
+                if replica in self.sent_table:
+                    self.clear_sent_table(replica)
 
                 # now delete the candidate metric from the RIB
                 self.delete_rib_entry(candidate)
@@ -771,9 +833,61 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 if Verbose.level >= 2:
                     print("{:.3f}: {:5s} WITHDRAW_BEST_REPLICA_END replica: {}".format(self.env.now, self.id(), replica))
 
+            # T-12: announce the entries the withdrawn one was dominating
+            if recheck:
+                self.announce_freed_entries(candidate)
+
             if Verbose.level >= 2:
                 print("{:.3f}: {:5s} WITHDRAW_END".format(self.env.now, self.id()))
         
+
+    # Nov 2026 (T-12): after a withdrawal, announce the entries that are no
+    # longer dominated. The original code only deleted the withdrawn entry
+    # and passed the withdrawal on, so an entry that only the withdrawn one
+    # was beating stayed unannounced until the next announcement for any
+    # replica reached this router (and made it decide again).
+    #
+    # The result is that of deciding again over the remaining entries and
+    # announcing what is decided but not yet announced (removing an entry
+    # cannot make another one dominated, so there is nothing to withdraw).
+    # Other comparisons than the default decide again in full.
+    #
+    # With the default comparisons dominance is transitive, so only the
+    # unannounced entries that the withdrawn one was at least as good as
+    # (the candidates) can be freed. If there is one, _decide_skyline (sort
+    # and scan, the same rule as a full decision) runs over the remaining
+    # RIB and the decided candidates are announced. (5 Nov: replaced a check
+    # of each candidate against every other entry, k x n pairs, plus a copy
+    # of the RIB on every withdrawal; same messages.) Deciding over only the
+    # announced entries plus the candidates is not enough: an entry with no
+    # sent_table key (nobody to send it to) can still beat a candidate.
+    # tests/test_announce_freed.py checks this against a full decision.
+    #
+    # withdrawn: the RIB entry just removed.
+    def announce_freed_entries(self, withdrawn):
+        Announce, Withdraw = ServerMetricMessageType.Announce, ServerMetricMessageType.Withdraw
+        sent = self.sent_table
+        if not self.uses_default_comparisons():
+            decided = self.decide_announcements(list(self.service_RIB.values()))
+            decided_replicas = set(d['replica'] for d in decided)
+            out = [(e, Announce) for e in decided if e['replica'] not in sent]
+            out += [(self.service_RIB[r], Withdraw) for r in list(sent)
+                    if r in self.service_RIB and r not in decided_replicas]
+        else:
+            wd, wl = withdrawn['delay'], withdrawn['load']
+            rib = list(self.service_RIB.values())
+            out = []
+            for e in rib:
+                if e['replica'] not in sent and wd <= e['delay'] and wl <= e['load']:
+                    out = [(d, Announce) for d in self._decide_skyline(rib)
+                           if d['replica'] not in sent and wd <= d['delay'] and wl <= d['load']]
+                    break
+
+        if Verbose.level >= 2:
+            print("{:.3f}: {:5s} ANNOUNCE_FREED after withdrawal of {}: {}".format(
+                self.env.now, self.id(), withdrawn['replica'], [(e['replica'], str(t)) for e, t in out]))
+        if out:
+            self.announce_metrics(out)
 
     # the replica capacity only and expose to Network
     def expose_replica_connected_capacity(self, packet):
@@ -832,6 +946,10 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
         for metric_to_send, msg_type in announcements:
             replica = metric_to_send['replica']
             came_from = metric_to_send['neighbour']
+            # T-13: skipped tree non-children, for the not-sent counts
+            skipped_state = self.skipped_sent.get(replica)
+            n_skipped = 0
+            came_from_skipped = False
 
             if debug:
                 if self.is_neighbour_host(replica):
@@ -851,6 +969,8 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     # don't send to where it came from
                     if debug:
                         print("{:.3f}: {:5s} NO_RETURN to {} - metric {}".format(self.env.now, self.id(), neighbour, replica))
+                    if tree_children_only and dst_node.unicast_forwarding_table.get(replica) != me:
+                        came_from_skipped = True
                     continue
 
                 if tree_children_only and dst_node.unicast_forwarding_table.get(replica) != me:
@@ -858,6 +978,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                     # (reads the neighbour's forwarding table directly: a simulation shortcut)
                     if debug:
                         print("{:.3f}: {:5s} NOT_TREE_CHILD {} - metric {}".format(self.env.now, self.id(), neighbour, replica))
+                    # T-13: would a run with the flag off send this? It
+                    # follows the same sent-table rules as below.
+                    n_skipped += 1
+                    in_sent = skipped_state is True or (skipped_state is not None and neighbour != skipped_state)
+                    if msg_type == Announce:
+                        if not in_sent:
+                            Router.tree_skipped['A'] += 1
+                    elif in_sent:
+                        Router.tree_skipped['W'] += 1
                     continue
 
                 # a candidate for forwarding
@@ -890,6 +1019,16 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
                 else:
                     print("UNKNOWN ServerMetricMessageType " + msg_type)
 
+            # T-13: after an Announce, the skipped neighbours (all but came_from)
+            # are in the flag-off sent table too
+            if n_skipped and msg_type == Announce:
+                if skipped_state is None:
+                    skipped_state = came_from if came_from_skipped else True
+                elif skipped_state is not True and skipped_state != came_from:
+                    skipped_state = True
+                self.skipped_sent[replica] = skipped_state
+                self.sent_table.setdefault(replica, {})
+
             # if the msg_type is Withdraw, clear sent_table
             if msg_type == Withdraw:
                 self.clear_sent_table(replica)
@@ -906,7 +1045,15 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             self._ports = [(neighbour, port, port.out.dst_node, isinstance(port.out.dst_node, Host))
                            for neighbour, port in self.outgoing_ports.items()]
             self._ports_n = len(self.outgoing_ports)
+            self._is_stub_with_server = (sum(1 for p in self._ports if not p[3]) == 1 and
+                                         any(isinstance(p[2], Server) for p in self._ports))
         return self._ports
+
+    # one router neighbour and a server attached (see the T-12 pre-check in
+    # incoming_server_metrics_packet_withdraw), from the cache above
+    def _stub_with_server(self):
+        self._ports_by_neighbour()
+        return self._is_stub_with_server
 
     # Create a new packet from a metric
     def metric_to_packet(self, metric_to_send, msg_type, neighbour):
@@ -1620,6 +1767,23 @@ currently {'b': (routerB,1), 'c':  (routerC,4)},
             print ("{:.3f}: {:5s} CLEAR_SENT_TABLE metric {}".format(self.env.now, self.id(), metric_replica) )
 
         self.sent_table.pop(metric_replica, None)
+        self.skipped_sent.pop(metric_replica, None)
+
+    # T-13: count the Withdraws a run without forward_to_tree_children_only
+    # would send to the skipped tree non-children of replica (the
+    # skipped_sent set, except came_from); the caller clears the set.
+    def count_skipped_withdraws(self, replica, came_from):
+        state = self.skipped_sent.get(replica)
+        if state is None:
+            return
+        me = self._routerid
+        n = 0
+        for neighbour, port, dst_node, is_host in self._ports_by_neighbour():
+            if is_host or neighbour == came_from or dst_node.unicast_forwarding_table.get(replica) == me:
+                continue
+            if state is True or neighbour != state:
+                n += 1
+        Router.tree_skipped['W'] += n
 
     # Print metric table
     def print_metric_table(self):

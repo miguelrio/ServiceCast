@@ -2,18 +2,21 @@ from Verbose import Verbose
 
 # A Graph
 class Graph:
-    # Default propagation delay for links in the network (in milliseconds:
-    # the simulator clock is ms, see src/units.py). Overridden by experiment
-    # files (typically 100 ms = 0.1 s) and used only when the GML edge has no
-    # delayMs of its own. GML delayMs values are milliseconds too.
-    default_propagation_delay = 1000
+    # Default propagation delay for core (router-router) links in the
+    # network, in milliseconds (the simulator clock is ms, see src/units.py).
+    # Used only when a link is given no delay: a GML edge without delayMs
+    # or with delayMs 0 (a delay of 0 is not physical), hyperedges, or a link
+    # built in code without a weight (see Network.default_link_delay). GML delayMs values are milliseconds too.
+    # Some older experiment files set their own value (e.g. 100 ms).
+    # Nov 2026 (T-17): 10 ms, was 1000 ms (1 s, far longer than real core
+    # links: median about 6 ms on the 1K CAIDA subset, 16.5 ms on full CAIDA).
+    default_propagation_delay = 10
 
     # Attachment links (server hosts / client access), team rule 2026-10-22:
     # a delayMs on the GML edge always wins over default/config/CLI; these
     # defaults apply only when the edge carries none. A written 0 counts as
-    # unspecified, the engine-wide sentinel (Network.from_graph replaces 0
-    # weights). Milliseconds, like every delay (src/units.py). Future
-    # config/CLI overrides slot in between the GML value and these defaults.
+    # not given (a delay of 0 is not physical). Milliseconds, like every delay (src/units.py). Future config/CLI
+    # overrides slot in between the GML value and these defaults.
     default_server_attachment_delay_ms = 1
     default_client_attachment_delay_ms = 10
 
@@ -94,8 +97,10 @@ class Graph:
 
             for next in nextLinks:
                 # a next might be: 'a'  or ('a', 10)
+                # (no weight: None, the class default when the Network is
+                # built; Nov 2026, T-17, was 1)
                 name = ""
-                weight = 1
+                weight = None
 
                 if type(next) == str:
                     name = next
@@ -175,7 +180,9 @@ class Graph:
         #     return False
         
     # Add edges
-    def add_edge(self, s, d, weight=1):
+    # weight None: no delay given; Network.from_graph applies the class
+    # default for the kind of link (Nov 2026, T-17: was 1)
+    def add_edge(self, s, d, weight=None):
         if Verbose.level >= 2:
             print("graph add_edge " + str(self.name_of(s)) + " " + str(self.name_of(d)) + " " + str(weight))
 
@@ -384,7 +391,7 @@ class Graph:
             node = self.graph[i]
             while node:
                 print("\t-> {}".format(self.name_of(node.vertex)), end="")
-                if node.weight > 1:
+                if node.weight is not None and node.weight > 1:
                     print(" ({})".format(node.weight), end="")
                 if node.next != None:
                     print("")
@@ -405,7 +412,7 @@ class Graph:
 
 # Adjacency nodes are linked together
 class AdjNode:
-    def __init__(self, value, weight=1):
+    def __init__(self, value, weight=None):
         self.vertex = value     # the value of this node
         self.next = None        # a link to the next node
         self.weight = weight    # a weight

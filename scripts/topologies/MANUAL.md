@@ -349,7 +349,7 @@ Both apply two rules beyond plain Gao-Rexford:
 
 Link delays follow the simulator's rules (`src/Gml.py`,
 `src/Network.py`): a router link uses its `delayMs`, and a `delayMs` of 0
-becomes `--default-delay-ms` (100 ms, the experiments'
+becomes `--default-delay-ms` (10 ms, the simulator's
 `Graph.default_propagation_delay`); a server's `hosts` link uses its
 `delayMs` unless it is missing or 0, then 1 ms. The builder writes a
 non-zero `delayMs` on every link, so these defaults only matter for GMLs

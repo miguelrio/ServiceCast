@@ -642,8 +642,9 @@ def parse_gml_lines(lines, label, destringizer):
             # attachment link (server hosts / client access): a delayMs on the
             # GML edge always wins over default/config/CLI; only when the edge
             # carries none does the per-host default apply (10 ms client,
-            # 1 ms server). A written 0 counts as unspecified, the engine-wide
-            # sentinel (Network.from_graph replaces 0 weights).
+            # 1 ms server). A written 0 counts as not given: a delay of 0 is
+            # not physical (core links with 0 get the default in
+            # Network.from_graph).
             if 'delayMs' in edge and float(edge['delayMs']) != 0:
                 weight = float(edge['delayMs'])
             else:

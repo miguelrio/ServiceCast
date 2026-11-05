@@ -65,7 +65,7 @@ automatic size guard, use your judgment on the graph's actual size.
 
 Edge weights, as in the simulator (src/Gml.py, src/Network.py):
   - router links: the edge's `delayMs`; a `delayMs` of 0 is replaced by
-    --default-delay-ms (100 ms, the experiments' Graph.default_propagation_delay);
+    --default-delay-ms (10 ms, the simulator's Graph.default_propagation_delay);
     without `delayMs`, great-circle distance between the two endpoints'
     Latitude/Longitude (km) at 0.009 ms/km
   - attachment links (an endpoint marked Internal 0, e.g. a server's hosts
@@ -107,10 +107,11 @@ KM_PER_DEGREE_DELAY_MS_PER_KM = 0.009
 EARTH_RADIUS_KM = 6371.0
 
 # The simulator's default delays (src/Graph.py), all in ms: a router link
-# whose delayMs is 0 gets Graph.default_propagation_delay, which the
-# experiment files set to 100 ms (--default-delay-ms); an attachment link
-# without a non-zero delayMs gets 1 ms (server) or 10 ms (client).
-ENGINE_DEFAULT_PROPAGATION_DELAY = 100.0
+# whose delayMs is 0 gets Graph.default_propagation_delay, 10 ms
+# (--default-delay-ms; Nov 2026, T-17: was 100 ms, the value older
+# experiment files set); an attachment link without a non-zero delayMs
+# gets 1 ms (server) or 10 ms (client).
+ENGINE_DEFAULT_PROPAGATION_DELAY = 10.0
 SERVER_ATTACHMENT_DELAY = 1.0
 CLIENT_ATTACHMENT_DELAY = 10.0
 
@@ -138,8 +139,8 @@ def edge_weights(nodes, edges, default_delay=ENGINE_DEFAULT_PROPAGATION_DELAY):
         hosts edge): delayMs if present and not 0, else 1 ms for a server
         (Graph.default_server_attachment_delay_ms), 10 ms for a client;
       - router links: delayMs if present, a delayMs of 0 replaced by
-        default_delay (Graph.default_propagation_delay, which the
-        experiments set to 100 ms); without delayMs, great-circle km at
+        default_delay (Graph.default_propagation_delay, 10 ms); without
+        delayMs, great-circle km at
         0.009 ms/km.
     """
     has_delay = np.fromiter(("delayMs" in e for e in edges), dtype=bool, count=len(edges))
@@ -528,7 +529,7 @@ def main():
         type=float,
         default=ENGINE_DEFAULT_PROPAGATION_DELAY,
         help="Delay of a router link whose delayMs is 0, as the simulator's Graph.default_propagation_delay "
-        "(default 100, the value the experiment files set).",
+        "(default 10).",
     )
     args = ap.parse_args()
     run_start = time.perf_counter()

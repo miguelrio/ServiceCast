@@ -27,7 +27,7 @@ FIB_STABILITY_KEYWORDS = frozenset({
     "REMOVED_BEST_REPLICA_FROM_FIB",
 })
 # end-of-run totals printed at Verbose.level >= -1 (Network.print_metrics_summary)
-SUMMARY_KEYWORDS = frozenset({"SUMMARY_SERVER_METRICS", "SUMMARY_FIB_ROUTER"})
+SUMMARY_KEYWORDS = frozenset({"SUMMARY_SERVER_METRICS", "SUMMARY_FIB_ROUTER", "SUMMARY_TREE_CHILDREN"})
 EVENT_KEYWORDS = tuple(sorted(
     GAP_KEYWORDS | FIB_STABILITY_KEYWORDS | SUMMARY_KEYWORDS | {
         "PACKET_CREATED",
@@ -334,10 +334,25 @@ def parse_metrics_summary(
 ) -> MetricsSummary | None:
     """Parse an end-of-run SUMMARY_ line, e.g.
     SUMMARY_SERVER_METRICS created: 12 announce: 340 withdraw: 5
-    <router> SUMMARY_FIB_ROUTER SET: 1 KEEP: 20 CHANGED: 3 REMOVED: 0"""
+    <router> SUMMARY_FIB_ROUTER SET: 1 KEEP: 20 CHANGED: 3 REMOVED: 0
+    SUMMARY_TREE_CHILDREN not_sent announce: 8 withdraw: 4 invalid_drops announce: 0 withdraw: 0 (...)"""
     header = header or parse_event_header(line)
     if header is None or header.keyword not in SUMMARY_KEYWORDS:
         return None
+    if header.keyword == "SUMMARY_TREE_CHILDREN":
+        # Nov 2026 (T-13): the same key names appear twice, so read by position
+        match = re.search(r"not_sent announce:\s+(\d+) withdraw:\s+(\d+) "
+                          r"invalid_drops announce:\s+(\d+) withdraw:\s+(\d+)", header.payload)
+        if match is None:
+            return None
+        values = [int(v) for v in match.groups()]
+        counts = dict(zip(
+            ("not_sent_announce", "not_sent_withdraw", "invalid_announce", "invalid_withdraw"), values))
+        # the setting, as 1 (on) or 0 (off), when the line gives it
+        flag = re.search(r"forward_to_tree_children_only = (True|False)", header.payload)
+        if flag is not None:
+            counts["tree_children_only"] = int(flag.group(1) == "True")
+        return MetricsSummary("tree_children", None, counts)
     counts = {key: int(value) for key, value in re.findall(r"(\w+):\s+(\d+)", header.payload)}
     if header.keyword == "SUMMARY_SERVER_METRICS":
         return MetricsSummary("server_metrics", None, counts)

@@ -66,7 +66,9 @@ class Host(object):
             print (self.type + " " + str(self.hostid) + " running")
 
       
-    def add_neighbour(self, neighbour_obj, propdelay=1, rate=LINKRATE):
+    # Nov 2026 (T-17): propdelay has no default (it was 1 ms); callers pass
+    # the link's delay, defaults come from Network.default_link_delay
+    def add_neighbour(self, neighbour_obj, propdelay, rate=LINKRATE):
         """Add a neighbour from this host to a router"""
         link = None
 

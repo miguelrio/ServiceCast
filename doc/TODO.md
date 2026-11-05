@@ -19,50 +19,31 @@ routers downstream do not see that server. Measured on the 1K-router,
 100-server topology at full load (100 s): 545 of 1,000 routers held one
 such entry at the end of the run.
 
-Proposal: announce freed entries straight after a withdrawal. With the
-default comparators (transitive dominance) only a little work is
-needed:
+**Implemented, off by default (Nov 2026):** `Router.announce_freed_after_withdraw`
+(`ANNOUNCE_FREED=1` in `main_precomputed_t1.py`). After a withdrawal,
+`announce_freed_entries` announces the entries that are no longer
+dominated. With the default comparators it does little work: nothing if
+the withdrawn entry was not announced (it frees nothing) or every other
+entry is announced; otherwise one pass for a candidate (an unannounced
+entry the withdrawn one was at least as good as), and only if there is
+one, the sort-and-scan decision. Other comparators decide again in full.
+`tests/test_announce_freed.py` checks it against a full decision.
 
-- if the withdrawn entry was not in the router's decided set, or the
-  router has no dominated entries, nothing can change (most
-  withdrawals);
-- otherwise check only the dominated entries against the remaining
-  decided set and announce those no longer beaten.
+Measured (200-300 s runs, tree-children forwarding on, fix on vs off):
 
-Expected cost about 1-3% of run time (a full re-decision on every
-withdrawal would cost about 25-35%). Messages: mostly the same ones,
-sent earlier, since the next decision would announce them anyway; a few
-extra when the freed entry is dominated or changes again before that
-next decision. Margin comparators (e.g. "same within 5%") are not
-strictly transitive, so they would need a full re-decision. The change
-alters results, so measure run time, message counts and accuracy
-against the current code before adopting it.
+- Topology Zoo DFN and Cogentco, 5 placements each: 0-4% more messages;
+  accuracy the same or up to 0.7 points better on 9 of 10, 0.2 points
+  worse on one.
+- 1K CAIDA subset, one placement: 7.9% more messages, about 12% more
+  run time (two thirds of it processing the extra messages, which cost
+  the same per message as the others), accuracy 61.8% vs 62.9%.
+- Each freed entry starts a chain of messages downstream: about 10 on
+  Cogentco, about 5 on the 1K subset. Part of it would be sent anyway at
+  the next decision; the rest is the extra traffic above.
 
-#### T-13: Count the messages `TREE_CHILDREN_ONLY` does not send
-
-`TREE_CHILDREN_ONLY` is mainly a simulator speed-up. As a protocol
-option it would need each router to know its neighbours' routing
-tables. With it on, a router skips a neighbour whose next hop to the
-replica is not this router (`NOT_TREE_CHILD`, logged at Verbose 2
-only). Those messages are never sent, so they are missing from
-`SUMMARY_SERVER_METRICS` and from the "total update messages" line in
-`quick_stats.py`. With it off, they are sent, counted on arrival and
-then dropped (`INVALID_ROUTE_DROPS`, which `quick_stats.py` does not
-read). Message counts from runs with the flag on and off are therefore
-not comparable.
-
-Add an end-of-run count of the messages that would have been sent,
-split into announcements and withdrawals, and report it in
-`quick_stats.py` next to the totals. Also report `INVALID_ROUTE_DROPS`
-for runs with the flag off. Getting this exact is not simple: with the
-flag off, these messages also go through the sent table (an
-announcement already sent to that neighbour is not sent again, and
-withdrawals follow the sent table). Counting the skips alone would
-over-count. Matching the flag-off count means keeping sent-table
-entries for the skipped neighbours too, which costs some of the time
-and memory the flag saves. The receiver drops these messages without
-acting on them, so they have no further effect. With the sent-table
-entries kept, the count would match the flag-off runs exactly.
+Still to do before turning it on: more 1K placements (is the accuracy
+drop real or noise?), and the cost on full CAIDA x 1000, where RIBs are
+larger and there are 10 times the servers.
 
 #### T-38: Announcement radius (blast radius)
 
@@ -95,84 +76,6 @@ An alternative is to change the service name to an address
 at the first Router.
 
 ## Configuration and defaults
-
-#### T-17: Default link delay is hard-coded and inconsistent
-
-A link touching an `Internal 0` node (every server and client
-attachment) now uses its GML `delayMs` when given and not 0, else
-`Graph.default_server_attachment_delay_ms` (1 ms) or
-`Graph.default_client_attachment_delay_ms` (10 ms); delays are ms
-throughout. The routing tables are computed in the simulator from the
-network's own link weights, so the route adders' copy of the rule is no
-longer needed. `Network.from_graph` still replaces any 0 weight with
-`Graph.default_propagation_delay`. The points below about the default
-value remain open.
-
-Before that change, links touching an `Internal 0` node (every server
-and client attachment) never used the GML `delayMs`: `Gml.py` checked
-for external nodes before it read `delayMs`, so these links got
-`Graph.default_propagation_delay`.
-The default value is set in several places that must agree but are not
-linked to each other:
-
-- `src/Graph.py`: class default `default_propagation_delay = 1`
-- Experiment scripts: 7 set it to `0.1`, 1 sets it to `1`, others take
-  it from a parameter (`knobs["prop_delay"]`, `GRAPH_DELAY` via
-  `Importer.py`)
-- `scripts/setup/constants_*.py`: `GRAPH_DELAY = 1` (dfn_2),
-  `0.1` (dfn_equiv), `GRAPH_DELAYS = [0.1 ... 4.0]` (v1 sweep)
-- (resolved) `scripts/add_routing_tables.py` and
-  `scripts/add_routing_tables_valley_free.py` hard-coded the default, so
-  precomputed tables silently went wrong if an experiment used any other
-  value (the delay-utility < 0 crash on 2026-10-08). Both scripts are
-  removed: the simulator computes the tables from its own link weights.
-- `Host.add_neighbour` / `Router.add_neighbour`: `propdelay=1` defaults
-
-To do:
-- Make the default link delay a single configured parameter, as the
-  older experiment scripts did. Nothing should hard-code it.
-- The route adders should read the same value (a command-line option,
-  or a value recorded in the GML), not a constant.
-- Choose a sensible default for seconds: about `0.005` (5 ms) for an
-  access link. 0.1 s is far longer than the core links (median 6 ms
-  on the 1K topology, 16.5 ms on CAIDA).
-- Decide whether access links should use the GML `delayMs` when it is
-  present, rather than always using the default.
-
-For the next meeting (checked Oct 2026, after the ms change; the list
-above is partly out of date). Proposal: 10 ms for links with no delay,
-1 ms for servers and 10 ms for clients everywhere. Places that depend on
-the default and would change:
-- `src/Graph.py`: `default_propagation_delay = 1000` (ms); used for GML
-  edges with no delay, hyperedges, 0 weights in `Network.from_graph`,
-  and edges built in code without a weight.
-- `src/Network.py`: `add_server(..., weight=1)` and
-  `add_client(..., weight=1)`: 1 ms defaults, not the agreed 10 ms for
-  clients (relevant for clients added at run time).
-- Experiments that set `Graph.default_propagation_delay = 100` and
-  pass it to `add_server` / `add_client` as the access-link delay:
-  `main_dfn`, `main_dfn_equiv`, `main_dfn_2`, `main_cog`; the same
-  setting only as a fallback in `main_precomputed_t1`, `main_mig_t1`.
-- `Importer` experiments (`main_importer`, `main_dfn_2_import`,
-  `main_dfn_equiv_import`) attach hosts with the default, from
-  `GRAPH_DELAY` in seconds: 0.1 in `constants_dfn_2_importer`,
-  `constants_cog_importer`, `constants_dfn_equiv`; 1 in
-  `constants_dfn_2`.
-- Tests: `tests/bench_rib_store.py` (100), `tests/test_routing.py` (100).
-- Sweeps vary the delay on purpose (`constants_scaling.py` 0.1-4 s,
-  `constants_v1.py` `GRAPH_DELAYS`): keep as an experiment parameter.
-- The old toy experiments (`main_e1` etc.) rely on the defaults: their
-  unweighted links get `default_propagation_delay` (now 1000 ms) while
-  links with a weight in code (e.g. `('c', 4)`) are now 4 ms.
-Changing these changes results of the DFN, COG and toy experiments.
-- Check consistency across the simulator, the topology generator and
-  the route adders:
-  - units: the simulator reads seconds, but the CAIDA GMLs were written
-    in milliseconds
-  - which edges count as links: client-server `demand` edges were
-    loaded as links and silenced 51 servers on CAIDA. The loader now
-    ignores them (2026-10-14); the generator should stop writing them
-  - the same link-weight rule everywhere
 
 #### T-08: Damping uses an absolute load change
 
@@ -329,6 +232,29 @@ differ between runs. This has always been so; the GML-based
 experiments and the simulator code are not affected. To make them
 repeatable, iterate `sorted(nextLinks, key=str)` in `Graph.from_dict`
 (one line), or run them with `PYTHONHASHSEED=0`.
+
+#### T-85: Move old sweep scripts and other leftovers out of the way
+
+Move to a subfolder (e.g. `old/`) or delete, together with T-33.
+Candidates:
+- the change-factor matrix sweep: `scripts/run_simulation_sweep.py`,
+  `scripts/run_simulation_sweep_log.py`, `scripts/measure_one.py`,
+  `scripts/plot_change_factor_matrix.py`, `scripts/quick_look.py`,
+  `scripts/log_metrics.py` (its log parser; `log_syntax.py` stays, as
+  `quick_stats.py`, `window_stats.py` and `plot_load.py` use it);
+- the scaling benchmark: `scripts/run_scaling_benchmark.py`;
+- their settings: `scripts/setup/constants_*.py`,
+  `scripts/setup/scenario-explorer-12.html`;
+- their docs: `doc/Constants.md`, `doc/matrix_metrics_explained.md`,
+  `doc/matrix_metrics_log_mode_explained.md`;
+- to check: `scripts/placement.py`, `scripts/utility_function_test.py`,
+  `results/`, and the ad hoc tests in `tests/` that are not `test_*.py`.
+
+These scripts are not kept up to date with the simulator. For example,
+`run_simulation_sweep.py` counts messages by wrapping `LinkEnd.put`,
+which packets no longer pass through since the Nov 2026 speed-ups, so
+its message counts are 0; and `log_metrics.py` counts messages only from
+level-0 `RECV_PACKET` lines and does not read the `SUMMARY_` lines.
 
 ## Performance and memory
 
