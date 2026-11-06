@@ -26,15 +26,15 @@ prints everything the level below prints.
 | Level | Prints |
 | --- | --- |
 | -2 | Silent: nothing per event, no ground-truth calculations. For timing runs. |
-| -1 | Metrics: the parameter header, the per-request lines (`OUTCOME_GAP`, `DECISION_GAP`, `STALENESS_ERR`, `REQUEST_NOT_FORWARDED`, blocked requests) and end-of-run `SUMMARY_` counts of ServerMetrics and per-router FIB actions. |
+| -1 | Metrics: the parameter header, arrival/outcome request lines, and end-of-run `SUMMARY_` counts of ServerMetrics and per-router FIB actions. |
 | 0 | + per-update lines (`PACKET_CREATED`, `RECV_PACKET`). |
-| 1 | + FIB stability lines and other decision detail. |
+| 1 | + selection-time gap lines, FIB stability lines and other decision detail. |
 | 2+ | + progressively more debug detail. |
 
 `quick_stats.py` and `plot_load.py` give the same results from a level -1 log
 as from a level 1 log, at a small fraction of the size. Other scripts that
 count `RECV_PACKET` or FIB lines themselves (e.g. `log_metrics.py` for the
-matrix sweep) need level 0 or above.
+matrix sweep) need level 1 for the complete current metric set.
 
 **Level -1 is the expected level for large networks and long runs.** Levels
 0 and above print one or more lines per update message, so they are for
@@ -46,9 +46,12 @@ about 25 MB at -1, 110 GB at 0 and 1.7 TB at 1). See `../doc/Logging.md`.
 
 | Script | Purpose |
 | --- | --- |
-| `run_simulation_sweep_log.py` | Default matrix-data collector. Runs the simulation across the configured change-factor grid, captures its logs, parses them through `log_metrics.py`, and writes a JSON matrix in `matrix_data/`. Per-cell logs are deleted unless `--keep-logs` is supplied. |
-| `run_simulation_sweep.py` | Legacy in-memory, monkey-patch collector for the same matrix experiment. It is kept as an independent cross-check for the log-based collector. |
-| `plot_change_factor_matrix.py` | Runs or reads a matrix sweep and renders heatmaps in `matrix_plots/`. Its default source is the log-based collector; use `--source probe` for the legacy collector. |
+| `../experiments/sweep.py` | Default matrix-data collector. Runs one `main.py` subprocess per cell, validates its final `DONE`, parses its log through `log_metrics.py`, and writes a manifest plus the JSON matrix in `matrix_data/`. |
+| `sweep_metrics.py` | Shared per-request summaries, per-cell metrics, and matrix assembly for `experiments/sweep.py`. |
+| `plot_change_factor_matrix.py` | Reads the matrix JSON supplied with `-d` and renders heatmaps in `matrix_plots/`. Historical probe JSON uses the same command. |
+
+The two obsolete collectors and their old `constants_v1.py` configuration are in
+[`../legacy/`](../legacy/). They are not supported run entry points.
 
 The current log syntax is documented in `../doc/Logging.md`. The matrix metrics
 and the distinction between the log and probe collectors are documented in
@@ -93,68 +96,64 @@ dropped.
 
 ### Running a sweep
 
-You can run a simulation sweep, and read in the experimental setup
-using the ```-c``` flag like this:
+Run the 3 x 3 DFN threshold definition from the repository root:
 
-```python3 scripts/run_simulation_sweep_log.py -c scripts/setup/constants_v1.py ```
+```bash
+python3 experiments/sweep.py experiments/sweeps/dfn_thresholds.py --jobs 3
+```
 
+The sweep definition names the ordinary `main.py` base config, fixed overrides,
+and the `SERVER_CF` and `ROUTER_FIB_UPT` axes. An optional `GRAPH_DELAY` axis adds
+a third matrix dimension. Use `--jobs 0` for the number of cores minus two, and
+`--output DIR` to choose a new output directory.
 
-this will generate a directory for each run and create the JSON
-results file:
+The driver writes per-cell logs, `manifest.json`, and:
 
-```results/sweep-20260806-193542/matrix_data/sweep_data_log_first_decide.json```
+```text
+results/sweep-<timestamp>/matrix_data/sweep_data_log_first_decide.json
+```
 
-This filename is produced as the output (onto stdout) of running the script.
-
-
-Using the ```-c``` flag allows us to setup various experimental
-configurations, and then do different sweep runs.
+It prints this JSON filename on stdout. Every cell must exit zero and end its log
+with `DONE`; a failed or incomplete cell prevents matrix output.
 
 
 ### Generating the plots
 
-You can process the output of the sweep and do a plot like this:
+```bash
+python3 scripts/plot_change_factor_matrix.py -d results/sweep-<timestamp>/matrix_data/sweep_data_log_first_decide.json
+```
 
-```python3 scripts/plot_change_factor_matrix.py -d results/sweep-20260806-193542/matrix_data/sweep_data_log_first_decide.json```
-
-which will read the JSON file and produce the plot files in the directory:
-
-```results/sweep-20260806-193542/matrix_plots/```
+This produces plots in `results/sweep-<timestamp>/matrix_plots/`.
 
 
 ### Combining the scripts
 
-It is possible to combine the scripts in a single run, by piping them
-together.  As the 
-```run_simulation_sweep_log``` script outputs the JSON filename on
-*stdout*, we can tell ```plot_change_factor_matrix``` to read the
-filename from its *stdin* using ```-d -```.
+The sweep writes the JSON filename to stdout, so the plotter can read it from
+stdin using `-d -`:
 
-We can now do this:
-
-```python3 scripts/run_simulation_sweep_log.py -c scripts/setup/constants_v1.py | python3 scripts/plot_change_factor_matrix.py -d -```
-
+```bash
+python3 experiments/sweep.py experiments/sweeps/dfn_thresholds.py | python3 scripts/plot_change_factor_matrix.py -d -
+```
 
 
 ### Usage
 
-#### run\_simulation\_sweep\_log.py
+#### sweep.py
 
-```
-usage: run_simulation_sweep_log.py [-h] [-l {file,stream}] [-k] [-j JOBS] [-o OUTPUT] -c CONFIG
+```text
+usage: sweep.py [-h] [-j JOBS] [-o OUTPUT] definition
 
-Log-only change-factor matrix collector.
+Run a matrix sweep through experiments/main.py.
+
+positional arguments:
+  definition            Python sweep definition file
 
 options:
   -h, --help            show this help message and exit
-  -l {file,stream}, --log-mode {file,stream}
-                        file: write per-cell .log then delete (default). stream: capture in memory.
-  -k, --keep-logs       Keep per-cell .log files instead of deleting.
-  -j JOBS, --jobs JOBS  Parallel worker processes (independent cells). Use 0 for auto (8 on this machine: cores-2).
+  -j JOBS, --jobs JOBS  concurrent main.py processes; 0 selects cores minus two
+                        (default: 1)
   -o OUTPUT, --output OUTPUT
-                        Output directory path for place to store JSON.
-  -c CONFIG, --config CONFIG
-                        Name of config file for this run
+                        new output directory (default: results/sweep-<timestamp>)
 ```
 
 

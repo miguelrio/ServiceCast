@@ -5,19 +5,18 @@
 > from the simulation's own log text — the `OUTCOME_GAP` / `DECISION_GAP` /
 > `STALENESS_ERR` notation — see
 > [`matrix_metrics_log_mode_explained.md`](matrix_metrics_log_mode_explained.md).
-> The probe build described here is kept as the independent cross-check
-> ([`validate_log_vs_probe.py`](validate_log_vs_probe.py)); both produce the same
-> metrics from the same runs.
+> The probe build described here is retained only for historical reference in
+> `legacy/`; it is not a current cross-check for the active `main.py` sweep.
 
 In this mode, all metrics shown in the change-factor matrix plots come from **one
 place**: the simulation is instrumented by *monkey patching* three functions during
 each run (plus one counter read off the routers afterwards). Nothing is read from
 logs or files.
 
-- **Where collection happens:** [`run_single_experiment`](run_simulation_sweep.py#L241) — runs one simulation, returns an `ExperimentResult`
-- **Where the 3 wrappers live:** [`SimulationProbes`](run_simulation_sweep.py#L115) — installs all three together, restores them on exit
-- **Where 4 metrics are derived:** [`summarise_records`](run_simulation_sweep.py#L99)
-- **Where every cell is filled:** [`run_sweep`](run_simulation_sweep.py#L295-L308)
+- **Where collection happens:** [`run_single_experiment`](../legacy/run_simulation_sweep.py#L241) — runs one simulation, returns an `ExperimentResult`
+- **Where the 3 wrappers live:** [`SimulationProbes`](../legacy/run_simulation_sweep.py#L115) — installs all three together, restores them on exit
+- **Where 4 metrics are derived:** [`summarise_records`](../legacy/run_simulation_sweep.py#L99)
+- **Where every cell is filled:** [`run_sweep`](../legacy/run_simulation_sweep.py#L295-L308)
 - **Where they are plotted:** [`plot_change_factor_matrix.py`](plot_change_factor_matrix.py)
 
 Each plot cell `[k, i, j]` is one full 3600000 ms simulation run for a single
@@ -32,9 +31,9 @@ is stored as a 3D array indexed `[delay][router_cf][server_cf]`.
 
 Each patch saves the original method, wraps it to record a measurement, then
 delegates to the original (so simulation behaviour is unchanged). They are bundled
-in the [`SimulationProbes`](run_simulation_sweep.py#L115) context manager, installed
+in the [`SimulationProbes`](../legacy/run_simulation_sweep.py#L115) context manager, installed
 together via `ExitStack` and restored automatically after the run
-([lines 154-156](run_simulation_sweep.py#L154-L156)):
+([lines 154-156](../legacy/run_simulation_sweep.py#L154-L156)):
 
 ```python
 with SimulationProbes() as probes:        # run_single_experiment, L254
@@ -84,7 +83,7 @@ log's notation (Logging.md / `GAP_NOTATIONS`) these are exactly
 `t_sel` (deciding router's vantage) and at `t_arr`, never the FIB estimate
 `SEL_UTIL_EST`. Metrics 3–6 use the selection-time pair; the per-request error
 `BEST_UTIL_SEL - SEL_UTIL_SEL` equals `A - C` (DECISION_GAP minus STALENESS_ERR).
-After the run, [`summarise_records`](run_simulation_sweep.py#L101) computes the
+After the run, [`summarise_records`](../legacy/run_simulation_sweep.py#L101) computes the
 errors once:
 
 ```python
@@ -106,7 +105,7 @@ already excluded, so this matches `quick_stats`' `(equal+same)/(total−blocked)
 
 ### 7. `fib_updates` — SERVICE_FIB Updates (Routing Churn)
 - **Source:** each router's own `service_fib_updates` counter, summed after the run
-  ([L257](run_simulation_sweep.py#L257)):
+  ([L257](../legacy/run_simulation_sweep.py#L257)):
   ```python
   fib_updates = sum(getattr(r, 'service_fib_updates', 0) for r in network.routers.values())
   ```
@@ -183,7 +182,7 @@ propagation-delay facet axis while the selection-time metrics stay flat.
   computed arithmetically in `summarise_records`, not counted live. Blocked
   requests are excluded from the records.
 - The metric set is named in exactly one place — `METRIC_FIELDS`
-  ([L60](run_simulation_sweep.py#L60)) — which drives both the per-cell
+  ([L60](../legacy/run_simulation_sweep.py#L60)) — which drives both the per-cell
   accumulation and the JSON `matrix_<field>` keys.
 - Every metric is a 3D array over `(delay, router_cf, server_cf)`; see the
   faceted plots for the delay axis.

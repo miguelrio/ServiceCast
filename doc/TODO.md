@@ -130,10 +130,10 @@ level instead: about 2% slower, and per-request lines printed to
 stdout. Results are unchanged. To fix (switch to -2, or decide that
 -1 is what they want):
 
-- `scripts/run_simulation_sweep.py`: sets `Verbose.level = -1` for its
+- `legacy/run_simulation_sweep.py`: sets `Verbose.level = -1` for its
   in-process runs, so it will now print every request's gap lines to
   the console.
-- `scripts/run_simulation_sweep_log.py`: its comment refers to "the
+- `legacy/run_simulation_sweep_log.py`: its comment refers to "the
   probe path's silent -1".
 - `scripts/measure_one.py`: "null" log mode runs at -1 and says event
   counters are unavailable there. They are now available from the
@@ -206,28 +206,26 @@ experiments and the simulator code are not affected. To make them
 repeatable, iterate `sorted(nextLinks, key=str)` in `Graph.from_dict`
 (one line), or run them with `PYTHONHASHSEED=0`.
 
-#### T-85: Move old sweep scripts and other leftovers out of the way
+#### T-85: Move remaining old scripts and other leftovers out of the way
 
-Move to a subfolder (e.g. `old/`) or delete, together with T-33.
-Candidates:
-- the change-factor matrix sweep: `scripts/run_simulation_sweep.py`,
-  `scripts/run_simulation_sweep_log.py`, `scripts/measure_one.py`,
-  `scripts/plot_change_factor_matrix.py`, `scripts/quick_look.py`,
-  `scripts/log_metrics.py` (its log parser; `log_syntax.py` stays, as
-  `quick_stats.py`, `window_stats.py` and `plot_load.py` use it);
-- the scaling benchmark: `scripts/run_scaling_benchmark.py`;
-- their settings: `scripts/setup/constants_*.py`,
-  `scripts/setup/scenario-explorer-12.html`;
-- their docs: `doc/Constants.md`, `doc/matrix_metrics_explained.md`,
-  `doc/matrix_metrics_log_mode_explained.md`;
-- to check: `scripts/placement.py`, `scripts/utility_function_test.py`,
-  `results/`, and the ad hoc tests in `tests/` that are not `test_*.py`.
+The old change-factor collectors and `constants_v1.py` moved to `legacy/` on
+6 Nov 2026. The active matrix path is `experiments/sweep.py` plus
+`scripts/log_metrics.py`, `scripts/sweep_metrics.py` and
+`scripts/plot_change_factor_matrix.py`; these are not move candidates.
 
-These scripts are not kept up to date with the simulator. For example,
-`run_simulation_sweep.py` counts messages by wrapping `LinkEnd.put`,
-which packets no longer pass through since the Nov 2026 speed-ups, so
-its message counts are 0; and `log_metrics.py` counts messages only from
-level-0 `RECV_PACKET` lines and does not read the `SUMMARY_` lines.
+Remaining candidates:
+- the scaling benchmark's own run path: `scripts/run_scaling_benchmark.py`,
+  `scripts/measure_one.py`, `scripts/placement.py` and
+  `scripts/setup/constants_scaling.py`; migrate it to `main.py` or move it;
+- `scripts/quick_look.py`, which reads scaling-benchmark CSV output;
+- old Importer-era settings and experiments not used by the active path;
+- old documentation after its active content has been separated;
+- `results/`, and the ad hoc tests in `tests/` that are not `test_*.py`.
+
+The legacy probe is not a current cross-check: it counts messages by wrapping
+`LinkEnd.put`, which packets no longer pass through since the Nov 2026 speed-ups,
+so its message counts are 0. `log_metrics.py` remains active and intentionally
+counts per-event lines at verbose level 1 rather than reading `SUMMARY_` lines.
 
 ## Performance and memory
 
@@ -255,7 +253,7 @@ would only matter with asymmetric latencies, and even then a copy of
 the client->server value would be wrong; requests are one-way, so
 nothing uses the server->client direction.
 
-Readers to update first: `scripts/run_simulation_sweep.py` reads
+Readers to update first: `legacy/run_simulation_sweep.py` reads
 `latency_table[server][client]` (agree the change with the script's
 owner), and several old experiments print
 `latency_table['s1']['c1']` at start-up (`main_e1`, `main_sa`,

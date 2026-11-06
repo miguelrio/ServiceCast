@@ -12,6 +12,16 @@ commit messages.
 
 (nothing yet)
 
+## 6 Nov 2026
+
+- New `experiments/sweep.py`: runs the change-factor matrix as independent
+  `main.py` subprocesses, validates each final `DONE`, keeps per-cell logs and a
+  manifest, and writes the existing matrix JSON format. The 3 x 3 DFN definition
+  is `experiments/sweeps/dfn_thresholds.py`; shared aggregation is in
+  `scripts/sweep_metrics.py`. The obsolete change-factor collectors and their
+  old `constants_v1.py` configuration are now in `legacy/`; they are historical
+  references, not supported entry points.
+
 ## 5 Nov 2026
 
 - New `experiments/sweep_simple.py` (158e594): an example sweep, two nested loops of

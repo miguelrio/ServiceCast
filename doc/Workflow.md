@@ -236,6 +236,18 @@ done
 (server change factor x FIB update threshold on the DFN example): copy it
 as a starting point for other sweeps.
 
+For the change-factor matrix, `experiments/sweep.py` adds log parsing and the
+existing matrix JSON output. Its definition names a normal base config, fixed
+command-line overrides, and the threshold axes:
+
+```bash
+python3 experiments/sweep.py experiments/sweeps/dfn_thresholds.py --jobs 3
+```
+
+Each cell is a separate `main.py` process. The driver requires a zero exit status
+and a final `DONE`, keeps the logs, writes `manifest.json`, and prints the matrix
+JSON path on stdout. The selected log metrics require `VERBOSE_LEVEL = 1`.
+
 ## 4. The log and analysis
 
 The log starts with a header:

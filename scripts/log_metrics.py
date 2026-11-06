@@ -13,7 +13,7 @@ touches model state and never changes a log line. Two entry points:
   Single streaming pass over an iterable of lines (an open file *or* a captured
   stdout stream). Assembles the up-to-three gap lines of each request into one
   record shaped exactly like the in-memory probe's, so it feeds
-  `run_simulation_sweep.summarise_records` unchanged.
+  `sweep_metrics.summarise_records`.
 
 Which log lines feed which metric (all emitted at `Verbose.level >= 1`):
   created                      <- `PACKET_CREATED ... ServerMetric`   (Server.py)

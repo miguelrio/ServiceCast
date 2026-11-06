@@ -4,13 +4,12 @@ There are two ways to build the change-factor matrix:
 
 | Mode | How it reads metrics | Code |
 |------|----------------------|------|
-| **Pure-log** (default, this doc) | Runs the simulation with logging **on**, then derives every metric from the **log text** only — the same three gap lines per request the log notation defines. Touches nothing inside the simulation. | [`run_simulation_sweep_log.py`](run_simulation_sweep_log.py) |
-| **Monkey-patch** (legacy) | Wraps 3 simulation functions and reads in-memory state. Sets `Verbose.level=-1`, which used to be silent and is now the metrics level (silent is -2; see `doc/TODO.md`). Kept as the independent cross-check. | [`run_simulation_sweep.py`](run_simulation_sweep.py) — see [`matrix_metrics_explained.md`](matrix_metrics_explained.md) |
+| **Pure-log** (default, this doc) | Runs each cell through `experiments/main.py` with logging **on**, then derives every metric from the **log text** only — the same three gap lines per request the log notation defines. Touches nothing inside the simulation. | [`sweep.py`](../experiments/sweep.py) |
+| **Monkey-patch** (legacy) | Wraps 3 simulation functions and reads in-memory state. Sets `Verbose.level=-1`, which used to be silent and is now the metrics level (silent is -2; see `doc/TODO.md`). Kept only for historical reference. | [`run_simulation_sweep.py`](../legacy/run_simulation_sweep.py) — see [`matrix_metrics_explained.md`](matrix_metrics_explained.md) |
 
-Both run the *identical* simulation (same topology, seed, parameters) and produce the
-same JSON shape, so the heatmaps are directly comparable. The only difference is
-**where the numbers come from** — which is exactly what
-[`validate_log_vs_probe.py`](validate_log_vs_probe.py) checks.
+The matrix JSON shape is shared, so historical heatmaps from the two collectors
+can be compared when they used the same topology, seed, and run parameters. The
+legacy probe is not a supported validation path for the current simulator.
 
 ---
 
@@ -18,20 +17,18 @@ same JSON shape, so the heatmaps are directly comparable. The only difference is
 
 ```
 for each grid cell (server_cf, router_cf, delay):
-    1. run the simulation with Verbose.level = 1   (logging ON)
-    2. capture its printed log into a temp .log file
-    3. parse the log text  -> counts + per-request records
-    4. delete the .log file
-    5. reduce records -> the same metrics the monkey-patch build produces
+    1. run experiments/main.py with VERBOSE_LEVEL = 1
+    2. write its stdout to the cell's .log file
+    3. require a zero exit status and a final DONE
+    4. parse the log text  -> counts + per-request records
+    5. reduce records -> the cell metrics and matrix JSON
 ```
 
 - Nothing in the simulation or any log line is changed — the collector is a pure **reader**.
 - `Verbose.level = 1` is the lowest level that prints every line we need: `log_metrics.py`
   counts the per-update `RECV_PACKET` and FIB lines itself (it does not read the
-  end-of-run `SUMMARY_` lines), and the FIB lines need `>=1`. The gap lines appear
-  from level -1 up.
-- By default each cell's `.log` is written, parsed, then **deleted** (`--log-mode file`), so disk
-  stays bounded. `--log-mode stream` keeps it in memory instead.
+  end-of-run `SUMMARY_` lines), and the FIB and selection-time gap lines need `>=1`.
+- Each cell's `.log` and `.stderr` files are kept beside the sweep's `manifest.json`.
 
 ---
 
@@ -94,9 +91,9 @@ The keywords keep accuracy exact despite the 5-dp rounding of printed utilities:
 - A request with only an `OUTCOME_GAP` line (no FIB decision recorded) falls back
   to the arrival pair for its selection pair, mirroring the probe.
 
-The records then feed the **shared** `summarise_records`
-([run_simulation_sweep.py](run_simulation_sweep.py)), so the accuracy/error math
-is defined in one place for both modes.
+The records then feed `summarise_records` in
+[`sweep_metrics.py`](../scripts/sweep_metrics.py), which also performs the matrix
+aggregation for the new driver.
 
 > **Precision note:** the log rounds utilities to 5 decimals, so `mean/max` errors match
 > the monkey-patch build to ~1e-5. Counts (`created`, `accuracy`, `blocked_rate`, `fib_updates`)
@@ -123,30 +120,30 @@ genuinely different evaluations. They converge only as the propagation delay app
 
 ## How to run it
 
-Log mode is the default — no `--source` flag needed:
+Run from the repository root:
 
 ```bash
 # Full log-based sweep + heatmaps, parallelised (0 = auto, cores-2):
-python plot_change_factor_matrix.py --jobs 0
+python3 experiments/sweep.py experiments/sweeps/dfn_thresholds.py --jobs 0 | python3 scripts/plot_change_factor_matrix.py -d -
 
 # Just the data (no plots):
-python run_simulation_sweep_log.py --jobs 0
-
-# Legacy monkey-patch build (cross-check only):
-python plot_change_factor_matrix.py --source probe
+python3 experiments/sweep.py experiments/sweeps/dfn_thresholds.py --jobs 0
 ```
 
-- `--jobs N`: one worker per CPU core (each cell is an independent, ~1-core simulation). Use `0`
-  for auto. More than your core count gives nothing.
+- `--jobs N`: one `main.py` subprocess per cell. Use `0` for auto. More than your
+  core count gives nothing.
 - The output JSON is tagged `"source": "log"`, and every plot's **title and filename** say
   `Collected: Pure Log` vs `Monkey-Patch (legacy)`, so the two builds never get mixed up.
 
-## How we know it's correct
+## How we check it
 
-[`validate_log_vs_probe.py`](validate_log_vs_probe.py) runs both builds on the same cells and checks
-them: counts must match exactly, errors within `1e-5`, and it reports the `recv_*` vs send-based
-difference. Run it any time:
+`tests/test_sweep.py` checks configuration resolution, cell generation, matrix
+shape, failed and incomplete cells, and repeated parallel manifest updates:
 
 ```bash
-python validate_log_vs_probe.py            # small smoke grid
+PYTHONPATH=src:scripts python3 tests/test_sweep.py
 ```
+
+For an end-to-end check, run the DFN definition sequentially and in parallel and
+compare the matrices (apart from `generated_at`). A direct `main.py` run with one
+cell's resolved overrides must also give the same parsed metrics as the sweep.
