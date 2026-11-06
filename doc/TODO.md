@@ -148,95 +148,34 @@ stdout. Results are unchanged. To fix (switch to -2, or decide that
   per-request lines; at 0 it lacks DECISION_GAP / STALENESS_ERR.
   `quick_stats.py` handles both.
 
-#### T-16: One global seed for every random choice
+#### T-16: `main.py` follow-ups
 
-There is no single seed setting. The `Importer` scripts take `SEED`
-from their constants file (`scripts/setup/constants_*.py`), but the
-older `experiments/main_*.py` scripts, including
-`main_precomputed_t1.py`, hard-code `seed=15112022` in each generator
-call, so running another seed needs an edited copy. Add one global
-seed (a `SEED` environment variable or command-line option, with the
-constants file as the default) that reaches everything random: server
-and client placement, server load generators, client request
-generation (arrival times, sizes and which client sends each request)
-and any other draws (`gen2` in `multi_client_event_generator` uses
-seed + 1). Nothing should use numpy's unseeded global generator;
-`multi_client_event_generator` did until its client choice was moved
-to `gen`.
+`experiments/main.py` (e4b39d7, 5 Nov 2026) is the one run entry point:
+code defaults, then a config file, then `--set` overrides (see
+`doc/Workflow.md`). It covers the earlier T-16 entries here: one `SEED`
+for the run, `ROUTING_POLICY` (unknown values refused), utility and
+comparison functions and `ALPHA` as settings, the tree-children flag as a
+setting, the parsed graph freed after the network is built, and its own
+checkout's `src/` and `scripts/` first on the path. Still open:
 
-#### T-16: Set the routing policy through `Importer`
-
-To do with the `Importer` work. `Routing.policy` (`"valley_free"`, the
-default, or `"shortest"`) can only be set in Python before
-`calculate_forwarding_tables()`. Add `("Routing.policy",
-"ROUTING_POLICY")` to the `Importer` mappings, and a `ROUTING_POLICY`
-environment variable to `main_precomputed_t1.py` (like `TAU`). Also
-reject unknown values in `src/Routing.py`: today only `"shortest"` is
-checked, so a typo silently gives valley-free routing
-(`c2p_orientation` already raises). The start-up message prints
-`valley_free` even when the topology has no `c2p`/`p2p` links, where
-the routes are plain shortest-delay paths; say so in the message. Also
-warn when a topology has `p2p` links but no `c2p` links: valley-free
-routing then leaves many router-server pairs unreachable (a route
-learned from a peer is never passed to another peer).
-
-#### T-16: Set utility functions through `Importer`
-
-`Importer` cannot set
-`MetricUtility.metric_utility_fn['load']` / `['delay']` or
-`MetricUtility.metric_scale['load']`, because they are dict entries
-(see the comment in `src/Importer.py`). `main_dfn_2.py` uses a
-logarithmic load utility and a geometric user utility; configs run
-through `Importer` get the linear defaults. Also decide which
-functions are canonical.
-
-#### T-16: `Utility.alpha` is hard-coded in `main_precomputed_t1.py`
-
-It is fixed at 0.5, with no environment variable like `TAU` or
-`SERVER_SLOTS`, so testing another alpha needs an edited copy. Add an
-`ALPHA` variable. Note that at alpha 0.5 a router only removes a FIB
-entry when a server is both full and at the network's maximum delay,
-so normal runs never exercise `REMOVED`; validating the FIB counters
-needed alpha 1.0, `TAU=0.1`, `SERVER_SLOTS=1`.
-
-#### T-16: `TREE_CHILDREN_ONLY` through `Importer` is untested
-
-The flag is mapped in `src/Importer.py`, but only the
-`main_precomputed_t1.py` environment variable (`TREE_CHILDREN_ONLY=1`)
-has been tested. Other experiment scripts have no switch for it.
-
-#### T-16: Scripts can silently run another checkout's code
-
-The experiment and analysis scripts import from whatever `src/` is on
-`PYTHONPATH`. If the shell profile points at one checkout (e.g. the
-main `ServiceCast`), running a script in another (a worktree such as
-`ServiceCast-refactor`) silently mixes that checkout's experiment
-script with the other's simulator. Either have scripts put their own
-repository's `src/` (and `scripts/`) first on `sys.path`, or document
-running with `PYTHONPATH=src:scripts` from the repository root.
-
-#### T-16: Free the parsed graph once the network is built
-
-To do in the new `main.py`. After `Network.from_graph()` nothing uses
-the parsed `Graph` again (the `Network` keeps its own copies of node
-types, tiers, external flags and link types), but the experiment
-scripts keep it alive in a local variable for the whole run. Only the
-caller can drop that reference (`Network` cannot delete the caller's
-variable, and emptying the graph inside `from_graph` would be a
-surprising side effect). Best: the new `main.py` loads the network
-with one builder call, so the graph never reaches the script and is
-freed when the builder returns. `Network.from_gml_file()` exists but
-needs extending first: use `Graph.from_gml_file` (as
-`main_precomputed_t1.py` does), pass through `drop_external` (CAIDA
-runs need `False`), and report the parse and build times. Scripts
-that build the graph themselves can add `del graph` straight after
-`Network.from_graph()`. Either way the routing tables and the run then
-reuse its memory. Tested (24 Oct 2026) on
-`main_precomputed_t1.py`: output identical at verbose -2 to 3, with
-and without clients. Saving: about 0.5-0.85 GiB per CAIDA x 1000 run
-with a stripped GML (the graph is ~0.9 GiB, and only part of freed
-memory is reused); 1.8 GiB (7.9 -> 6.1 GiB peak) at 100 servers with
-a GML that still carries routing tables, where the graph is larger.
+- **Server load generator seed.** `Generator.server_load_event_generator`
+  draws from `gen2 = np.random.RandomState(seed=0)` whatever the run's
+  `SEED` (it drives the background load, off by default). Derive it from
+  the run seed, as `multi_client_event_generator` does (`seed + 1`).
+  This changes results for runs with background load.
+- **Which utility functions are canonical.** The functions can now be
+  chosen by name (`METRIC_LOAD_FN`, `METRIC_DELAY_FN`, `USER_UTILITY_FN`;
+  linear by default), but which ones the paper runs use is still to be
+  decided (with T-20). `main_dfn_2.py` used a logarithmic load utility
+  and a geometric user utility.
+- **Other scripts can run another checkout's code.** `main.py` puts its
+  own repository's `src/` and `scripts/` first on `sys.path`, but the
+  analysis scripts in `scripts/` and the older experiment scripts still
+  import from whatever `src/` is on `PYTHONPATH`. With the shell profile
+  pointing at one checkout, running them in another (a worktree, or a
+  `git archive` copy) silently mixes the two. Either give them the same
+  path set-up, or document running them with `PYTHONPATH=src:scripts`
+  from the repository root.
 
 #### T-20: Change the utility function
 
@@ -324,44 +263,56 @@ owner), and several old experiments print
 direction). An accessor such as `network.latency(client, server)`
 would keep them working.
 
-#### T-83: Further speed-ups (optional)
+#### T-83: Further speed-ups (done; options left for later)
 
-Optional; some of these are being tried (Nov 2026). From a profile of
-CAIDA with 1000 servers, 50 clients, 60 s simulated,
-`TREE_CHILDREN_ONLY=1` (Oct 2026): 35.5M load messages, simulation
-19,700 s under the profiler. The announcement-distance prototype (21%)
-has already been commented out (see T-38).
+Closed 6 Nov 2026. In Nov 2026 the simulator became about 2.5-3x
+faster (79abb0e: arrival times as plain floats, sort-and-scan in
+`decide_announcements`, a cached neighbour list in `announce_metrics`,
+one simpy timeout per hop), then about 15% faster again at full scale
+with slower garbage collection (8e3e9f7). What was tried on full CAIDA
+(about 97K routers, 1000 servers, 5000 clients, full load):
 
-Since then (Nov 2026) the simulator is about 2.5-3x faster: arrival
-times as plain floats, sort-and-scan in `decide_announcements`, a
-cached neighbour list in `announce_metrics`, and packet delivery with
-one simpy timeout per hop instead of a process and queue per link.
-The shares below are from before these changes; profile again before
-acting on them.
-- `announce_metrics`: each router now caches its
-  `(neighbour, port, destination, is_host)` list. Still possible:
-  precompute each router's tree children per server (routing is
-  fixed), so the loop only visits them; one entry per router-server
-  pair (~1-1.5 GiB as Python lists at CAIDA x 1000, ~0.4 GiB as numpy,
-  so best done with the routing-table arrays). A trial with a children
-  cache for routers with 32 or more ports (plus two smaller changes)
-  gave only about 5% on CAIDA x 1000, for about 0.8 GiB more memory.
-  A later trial on the faster code (Nov 2026), caching tree children
-  for every router, gave about 15% on the 1K and 10K subsets with
-  identical output; full CAIDA memory and speed not yet checked.
-- Utility evaluation code (`MetricUtility.evaluate`, `check_in_range`)
-  is generic: a dict comprehension per call, `min(max())`, and an error
-  message string built on every call though only needed on failure.
-  Small now that RIB utilities are stored (most evaluations are gone).
-- Per-request ground-truth records (`Network.py`, the three dicts of
-  utilities, loads and latencies per request) grow memory slowly, about
-  1 MiB per simulated second at CAIDA x 1000 with 50 clients; watch it
-  in very long runs.
-- GML parsing (~26-63 s for full CAIDA, depending on the machine):
-  the tokenizer does ~10 `match.group()` calls, an enum and a namedtuple
-  per token; `match.lastindex` and plain tuples would make it 2-3x
-  faster. Or cache the built network in a binary file per topology.
-  Only worth it for many short runs.
+- **Raised garbage-collector thresholds: committed (8e3e9f7).** Python's
+  cycle collector took about 17% of the run time, mostly in full
+  collections rescanning ~8M objects. `src/Network.py` now sets
+  `gc.set_threshold(100_000, 50, 1000)` on import: about 15% less run
+  time, identical output, memory +0.2%.
+- **`gc.freeze()` after set-up: slower.** The collector's share rose to
+  about 22%: with the set-up objects frozen, Python 3.11 starts full
+  collections more often.
+- **Tree-children cache in `announce_metrics`: not committed.** Caching
+  each router's tree children per server gave about 15% on the 1K and
+  10K subsets with identical output, but only 2.6% on full CAIDA, for
+  13% more memory (about 1.4 GB). An earlier variant (routers with 32 or
+  more ports) gave about 5% for 0.8 GB.
+
+Subset timings overstated both cache trials, so any further change
+should be timed on full CAIDA before it is adopted.
+
+Options left, optional and for later (shares from a full-CAIDA profile,
+Nov 2026):
+- Reuse the result of `uses_default_comparisons()` instead of working
+  it out for every received message: about 2% at full scale (3.5% on
+  the 1K subset), same output.
+- Small changes, together about 3-4%, same output: `Router.id()` (about
+  3.5% of samples on its own) replaced by the stored id in hot paths,
+  fewer `round()` and `str()` calls outside printing, `Server.to_val`
+  as a lookup instead of a `match`, and the generic utility evaluation
+  (`MetricUtility.evaluate`, `check_in_range`: a dict comprehension and
+  an error message built on every call).
+- An incremental FIB choice, or an incremental decided-set choice (see
+  the next entry): update the result for the one changed entry instead
+  of rescanning the RIB. More code, and ties must come out exactly as
+  now.
+- Faster GML parsing (~26-63 s for full CAIDA, depending on the
+  machine): the tokenizer does ~10 `match.group()` calls, an enum and a
+  namedtuple per token; `match.lastindex` and plain tuples would make it
+  2-3x faster. Or cache the built network in a binary file per
+  topology. Only worth it for many short runs.
+
+Memory to watch: the per-request ground-truth records (`Network.py`,
+three dicts of utilities, loads and latencies per request) grow about
+1 MiB per simulated second at CAIDA x 1000 with 50 clients.
 
 #### T-83: `decide_announcements` with other comparison functions
 

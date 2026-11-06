@@ -3,18 +3,21 @@
 Changes to simulator behaviour, defaults and outputs, newest first,
 especially those that **change results**. Each entry gives the date, the
 to-do ID where there is one (T-nn), and what a run will show differently.
+Each entry is committed together with the change it describes; its
+commit hash is added in a later update.
 Started in Nov 2026; the entries before that are summarised from the
 commit messages.
 
 ## Not yet committed
 
-- New `experiments/sweep_simple.py`: an example sweep, two nested loops of
-  `main.py` calls (server change factor x FIB update threshold on the DFN
-  example, 360 s runs), with no options or checks. Referenced from
-  `doc/Workflow.md`.
+(nothing yet)
 
 ## 5 Nov 2026
 
+- New `experiments/sweep_simple.py` (158e594): an example sweep, two nested loops of
+  `main.py` calls (server change factor x FIB update threshold on the DFN
+  example, 360 s runs), with no options or checks. Referenced from
+  `doc/Workflow.md`.
 - **New code defaults (T-16, e4b39d7).** `Server.slots` 50 (was 10),
   `Server.change_factor` 0.0001 (was 0.1) and
   `Router.fib_utility_update_threshold` 0.0001 (was 0.1). By default a
